@@ -2,6 +2,8 @@ const svg = d3.select("svg");
 const width = +svg.attr("width");
 const height = +svg.attr("height");
 
+const DEFAULT_METRIC = "risk_score";
+
 const projection = d3.geoIdentity().reflectY(true);
 const path = d3.geoPath().projection(projection);
 
@@ -23,14 +25,20 @@ const tooltip = d3.select("body")
 d3.json("data/processed/blocks.geojson").then(data => {
     geoData = data;
     projection.fitSize([width, height], geoData);
-    render("risk_score");
-    updateDescription("risk_score");
+    render(DEFAULT_METRIC);
+    updateDescription(DEFAULT_METRIC);
 });
 
 d3.select("#metric").on("change", function() {
     const metric = this.value;
     render(metric);
     updateDescription(metric);
+});
+
+d3.select("#reset").on("click", function() {
+    d3.select("#metric").property("value", DEFAULT_METRIC);
+    render(DEFAULT_METRIC);
+    updateDescription(DEFAULT_METRIC);
 });
 
 function updateDescription(metric) {
@@ -74,7 +82,6 @@ function render(metric) {
             tooltip.transition().duration(200).style("opacity", 0);
         });
 
-    // Legend
     const legendWidth = 250;
     const legendHeight = 12;
 

@@ -13,23 +13,24 @@ body {
     box-shadow: 0 0 10px rgba(0,0,0,0.1);
 }
 
-h1 {
+.controls {
     margin-bottom: 10px;
 }
 
-.controls {
-    margin-bottom: 10px;
+select, button {
+    padding: 6px;
+    font-size: 14px;
+    margin-left: 5px;
+}
+
+button {
+    cursor: pointer;
 }
 
 .description {
     margin-bottom: 15px;
     font-size: 14px;
     color: #444;
-}
-
-select {
-    padding: 5px;
-    font-size: 14px;
 }
 
 .map-container {
