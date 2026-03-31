@@ -1,18 +1,25 @@
-# Wildfire Risk Mapping (Minimal Demo)
+# Wildfire Risk Mapping
 
-## Quick start
+## Overview
+Block-group level wildfire risk mapping system with interactive visualization.
 
-```bash
+## Current Features
+- Mock data pipeline
+- Risk computation
+- GeoJSON export
+- D3 interactive map
+
+## How to Run
 pip install -r requirements.txt
 python src/pipeline/run_pipeline.py
-```
 
-Then open:
-```
-index.html
-```
+Open index.html
+
+## Structure
+- src/: pipeline code
+- data/: datasets
+- visualization: frontend
 
 ## Notes
-- Data is mock but structured to match real pipeline
-- Replace ingestion with real datasets later
-- Frontend is static (GitHub Pages ready)
+- Uses mock data initially
+- Replace with real datasets later

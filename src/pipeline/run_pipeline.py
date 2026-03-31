@@ -1,3 +1,7 @@
+"""Pipeline Orchestrator
+Runs full workflow: ingestion → preprocessing → features → model → export
+"""
+
 from src.ingestion.load_blocks import generate_mock_blocks
 from src.preprocessing.preprocess_blocks import preprocess
 from src.features.build_features import build_features
@@ -6,10 +10,19 @@ from src.export.export_geojson import export_geojson
 from src.utils.config import OUTPUT_GEOJSON
 
 def run():
+    # Step 1: Load data
     gdf = generate_mock_blocks()
+
+    # Step 2: Preprocess
     gdf = preprocess(gdf)
+
+    # Step 3: Feature engineering
     gdf = build_features(gdf)
+
+    # Step 4: Risk model
     gdf = compute_risk(gdf)
+
+    # Step 5: Export
     export_geojson(gdf, OUTPUT_GEOJSON)
 
 if __name__ == "__main__":
