@@ -9,17 +9,21 @@ from src.ingestion.load_real_blocks import load_real_blocks
 
 logger = get_logger()
 
-USE_REAL_DATA = False  # toggle
+USE_REAL_DATA = True
 
 def step_ingestion():
     logger.info("Step 1: Ingestion")
 
-    if USE_REAL_DATA:
-        gdf = load_real_blocks()
-        logger.info("Loaded REAL geometry")
-    else:
+    try:
+        if USE_REAL_DATA:
+            gdf = load_real_blocks()
+            logger.info(f"Loaded REAL geometry: {len(gdf)} rows")
+        else:
+            gdf = generate_mock_blocks()
+            logger.info("Loaded MOCK data")
+    except Exception as e:
+        logger.warning(f"Falling back to mock due to error: {e}")
         gdf = generate_mock_blocks()
-        logger.info("Loaded MOCK data")
 
     validate_columns(gdf)
     validate_nulls(gdf)

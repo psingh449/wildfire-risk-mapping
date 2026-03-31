@@ -4,7 +4,7 @@ const height = +svg.attr("height");
 
 const DEFAULT_METRIC = "risk_score";
 
-const projection = d3.geoIdentity().reflectY(true);
+const projection = d3.geoMercator();
 const path = d3.geoPath().projection(projection);
 
 let geoData;
@@ -17,39 +17,43 @@ const descriptions = {
     resilience_score: "Ability to respond to and recover from wildfire events."
 };
 
+// Tooltip (single instance)
 const tooltip = d3.select("body")
-  .append("div")
-  .attr("class", "tooltip")
-  .style("opacity", 0);
+    .append("div")
+    .attr("class", "tooltip")
+    .style("opacity", 0);
 
 d3.json("data/processed/blocks.geojson").then(data => {
     geoData = data;
+
     projection.fitSize([width, height], geoData);
+
     render(DEFAULT_METRIC);
     updateDescription(DEFAULT_METRIC);
 });
 
-d3.select("#metric").on("change", function() {
+// Dropdown change
+d3.select("#metric").on("change", function () {
     const metric = this.value;
     render(metric);
     updateDescription(metric);
 });
 
-d3.select("#reset").on("click", function() {
+// Reset button
+d3.select("#reset").on("click", function () {
     d3.select("#metric").property("value", DEFAULT_METRIC);
     render(DEFAULT_METRIC);
     updateDescription(DEFAULT_METRIC);
 });
 
 function updateDescription(metric) {
-    d3.select("#description")
-        .text(descriptions[metric]);
+    d3.select("#description").text(descriptions[metric]);
 }
 
 function render(metric) {
 
     const color = d3.scaleSequential(d3.interpolateReds)
-        .domain([0,1]);
+        .domain([0, 1]);
 
     svg.selectAll("*").remove();
 
@@ -59,7 +63,7 @@ function render(metric) {
         .attr("d", path)
         .attr("fill", d => color(d.properties[metric]))
         .attr("stroke", "#333")
-        .on("mouseover", function(event, d) {
+        .on("mouseover", function (event, d) {
             const p = d.properties;
 
             tooltip.transition().duration(200).style("opacity", .9);
@@ -70,18 +74,19 @@ function render(metric) {
                 <b>Vulnerability:</b> ${p.vulnerability_score.toFixed(2)}<br/>
                 <b>Resilience:</b> ${p.resilience_score.toFixed(2)}
             `)
-            .style("left", (event.pageX + 10) + "px")
-            .style("top", (event.pageY - 20) + "px");
+                .style("left", (event.pageX + 10) + "px")
+                .style("top", (event.pageY - 20) + "px");
         })
-        .on("mousemove", function(event) {
+        .on("mousemove", function (event) {
             tooltip
-              .style("left", (event.pageX + 10) + "px")
-              .style("top", (event.pageY - 20) + "px");
+                .style("left", (event.pageX + 10) + "px")
+                .style("top", (event.pageY - 20) + "px");
         })
-        .on("mouseout", function() {
+        .on("mouseout", function () {
             tooltip.transition().duration(200).style("opacity", 0);
         });
 
+    // Legend
     const legendWidth = 250;
     const legendHeight = 12;
 
@@ -113,7 +118,7 @@ function render(metric) {
         .style("fill", `url(#${gradientId})`);
 
     const scale = d3.scaleLinear()
-        .domain([0,1])
+        .domain([0, 1])
         .range([0, legendWidth]);
 
     const axis = d3.axisBottom(scale)
