@@ -68,12 +68,14 @@ function render(metric) {
 
             tooltip.transition().duration(200).style("opacity", .9);
             tooltip.html(`
-                <b>Risk:</b> ${p.risk_score.toFixed(2)}<br/>
-                <b>Hazard:</b> ${p.hazard_score.toFixed(2)}<br/>
-                <b>Exposure:</b> ${p.exposure_score.toFixed(2)}<br/>
-                <b>Vulnerability:</b> ${p.vulnerability_score.toFixed(2)}<br/>
-                <b>Resilience:</b> ${p.resilience_score.toFixed(2)}
-            `)
+    <b>Risk:</b> ${p.risk_score.toFixed(2)}<br/>
+    <b>Hazard:</b> ${p.hazard_score.toFixed(2)}<br/>
+    <b>Exposure:</b> ${p.exposure_score.toFixed(2)}<br/>
+    <b>Vulnerability:</b> ${p.vulnerability_score.toFixed(2)}<br/>
+    <b>Resilience:</b> ${p.resilience_score.toFixed(2)}<br/>
+    <hr/>
+    <b>Population:</b> ${Math.round(p.exposure_population)}
+`)
                 .style("left", (event.pageX + 10) + "px")
                 .style("top", (event.pageY - 20) + "px");
         })

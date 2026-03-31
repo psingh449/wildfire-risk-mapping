@@ -14,7 +14,7 @@ HAZARD_WEIGHTS = {
 }
 
 EXPOSURE_WEIGHTS = {
-    "exposure_population": 1/3,
+    "exposure_population_norm": 1/3,
     "exposure_housing": 1/3,
     "exposure_building_value": 1/3,
 }
