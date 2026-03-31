@@ -3,5 +3,9 @@ __pycache__/
 .env
 .venv/
 .DS_Store
-data/raw/*
+# Ignore raw source data
+data/raw/census/
+
+# Allow processed input file
+!data/raw/block_groups.geojson
 data/interim/*
