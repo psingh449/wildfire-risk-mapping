@@ -7,6 +7,12 @@ const path = d3.geoPath().projection(projection);
 
 let geoData;
 
+// Tooltip div (single instance)
+const tooltip = d3.select("body")
+  .append("div")
+  .attr("class", "tooltip")
+  .style("opacity", 0);
+
 d3.json("data/processed/blocks.geojson").then(data => {
     geoData = data;
     projection.fitSize([width, height], geoData);
@@ -32,58 +38,70 @@ function render(metric) {
         .attr("stroke", "#333")
         .on("mouseover", function(event, d) {
             const p = d.properties;
-            const tooltip = `
-                Risk: ${p.risk_score.toFixed(2)}<br/>
-                Hazard: ${p.hazard_score.toFixed(2)}<br/>
-                Exposure: ${p.exposure_score.toFixed(2)}
-            `;
 
-            d3.select("body")
-              .append("div")
-              .attr("class", "tooltip")
-              .html(tooltip)
-              .style("left", event.pageX + "px")
-              .style("top", event.pageY + "px");
+            tooltip.transition().duration(200).style("opacity", .9);
+            tooltip.html(`
+                <b>Risk:</b> ${p.risk_score.toFixed(2)}<br/>
+                <b>Hazard:</b> ${p.hazard_score.toFixed(2)}<br/>
+                <b>Exposure:</b> ${p.exposure_score.toFixed(2)}<br/>
+                <b>Vulnerability:</b> ${p.vulnerability_score.toFixed(2)}<br/>
+                <b>Resilience:</b> ${p.resilience_score.toFixed(2)}<br/>
+                <hr/>
+                <b>Population:</b> ${Math.round(p.exposure_population)}<br/>
+                <b>Building Value:</b> ${Math.round(p.exposure_building_value)}
+            `)
+            .style("left", (event.pageX + 10) + "px")
+            .style("top", (event.pageY - 20) + "px");
+        })
+        .on("mousemove", function(event) {
+            tooltip
+              .style("left", (event.pageX + 10) + "px")
+              .style("top", (event.pageY - 20) + "px");
         })
         .on("mouseout", function() {
-            d3.selectAll(".tooltip").remove();
+            tooltip.transition().duration(200).style("opacity", 0);
         });
 
-    // Legend
-    const legendWidth = 200;
-    const legendHeight = 10;
+    // Improved Legend
+    const legendWidth = 250;
+    const legendHeight = 12;
 
-    const legendScale = d3.scaleLinear()
-        .domain([0,1])
-        .range([0, legendWidth]);
-
-    const legend = svg.append("g")
+    const legendGroup = svg.append("g")
         .attr("transform", "translate(20,20)");
 
-    const gradient = svg.append("defs")
-        .append("linearGradient")
-        .attr("id", "gradient");
+    const gradientId = "legend-gradient";
+
+    const defs = svg.append("defs");
+
+    const gradient = defs.append("linearGradient")
+        .attr("id", gradientId);
 
     gradient.selectAll("stop")
-        .data(d3.range(0, 1.01, 0.1))
+        .data(d3.range(0, 1.01, 0.05))
         .enter()
         .append("stop")
         .attr("offset", d => d * 100 + "%")
         .attr("stop-color", d => color(d));
 
-    legend.append("rect")
+    legendGroup.append("text")
+        .attr("y", -8)
+        .attr("class", "legend-title")
+        .text(metric.toUpperCase());
+
+    legendGroup.append("rect")
         .attr("width", legendWidth)
         .attr("height", legendHeight)
-        .style("fill", "url(#gradient)");
+        .style("fill", `url(#${gradientId})`);
 
-    const axis = d3.axisBottom(legendScale)
-        .ticks(5);
+    const scale = d3.scaleLinear()
+        .domain([0,1])
+        .range([0, legendWidth]);
 
-    legend.append("g")
+    const axis = d3.axisBottom(scale)
+        .ticks(5)
+        .tickFormat(d3.format(".1f"));
+
+    legendGroup.append("g")
         .attr("transform", `translate(0,${legendHeight})`)
         .call(axis);
-
-    legend.append("text")
-        .attr("y", -5)
-        .text(metric.toUpperCase());
 }

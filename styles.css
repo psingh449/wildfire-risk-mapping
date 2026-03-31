@@ -5,9 +5,16 @@ body {
 .tooltip {
     position: absolute;
     background: white;
-    border: 1px solid black;
-    padding: 5px;
+    border: 1px solid #333;
+    padding: 8px;
     pointer-events: none;
+    font-size: 12px;
+    border-radius: 4px;
+}
+
+.legend-title {
+    font-size: 12px;
+    font-weight: bold;
 }
 
 svg {
