@@ -1,5 +1,39 @@
 body {
-    font-family: Arial;
+    font-family: Arial, sans-serif;
+    margin: 0;
+    background-color: #f5f5f5;
+}
+
+.container {
+    width: 1000px;
+    margin: 20px auto;
+    background: white;
+    padding: 20px;
+    border-radius: 6px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+
+h1 {
+    margin-bottom: 10px;
+}
+
+.controls {
+    margin-bottom: 15px;
+}
+
+select {
+    padding: 5px;
+    font-size: 14px;
+}
+
+.map-container {
+    border: 1px solid #ccc;
+}
+
+.footer {
+    margin-top: 10px;
+    font-size: 12px;
+    color: #666;
 }
 
 .tooltip {
@@ -15,8 +49,4 @@ body {
 .legend-title {
     font-size: 12px;
     font-weight: bold;
-}
-
-svg {
-    border: 1px solid #ccc;
 }

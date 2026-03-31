@@ -8,18 +8,30 @@
 </head>
 <body>
 
-<h2>Wildfire Risk Map</h2>
+<div class="container">
+    <h1>Wildfire Risk Mapping</h1>
 
-<select id="metric">
-  <option value="risk_score">Risk</option>
-  <option value="hazard_score">Hazard</option>
-  <option value="exposure_score">Exposure</option>
-  <option value="vulnerability_score">Vulnerability</option>
-  <option value="resilience_score">Resilience</option>
-</select>
+    <div class="controls">
+        <label for="metric">Select Metric:</label>
+        <select id="metric">
+            <option value="risk_score">Risk</option>
+            <option value="hazard_score">Hazard</option>
+            <option value="exposure_score">Exposure</option>
+            <option value="vulnerability_score">Vulnerability</option>
+            <option value="resilience_score">Resilience</option>
+        </select>
+    </div>
 
-<svg width="800" height="600"></svg>
+    <div class="map-container">
+        <svg width="900" height="600"></svg>
+    </div>
+
+    <div class="footer">
+        <p>Block-group level wildfire risk visualization (prototype)</p>
+    </div>
+</div>
 
 <script src="main.js"></script>
+
 </body>
 </html>
