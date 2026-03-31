@@ -18,7 +18,13 @@ h1 {
 }
 
 .controls {
+    margin-bottom: 10px;
+}
+
+.description {
     margin-bottom: 15px;
+    font-size: 14px;
+    color: #444;
 }
 
 select {

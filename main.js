@@ -7,7 +7,14 @@ const path = d3.geoPath().projection(projection);
 
 let geoData;
 
-// Tooltip div (single instance)
+const descriptions = {
+    risk_score: "Overall wildfire risk combining hazard, exposure, vulnerability, and resilience.",
+    hazard_score: "Likelihood and intensity of wildfire occurrence.",
+    exposure_score: "Amount of population and assets exposed to wildfire.",
+    vulnerability_score: "Sensitivity of the population to wildfire impacts.",
+    resilience_score: "Ability to respond to and recover from wildfire events."
+};
+
 const tooltip = d3.select("body")
   .append("div")
   .attr("class", "tooltip")
@@ -17,11 +24,19 @@ d3.json("data/processed/blocks.geojson").then(data => {
     geoData = data;
     projection.fitSize([width, height], geoData);
     render("risk_score");
+    updateDescription("risk_score");
 });
 
 d3.select("#metric").on("change", function() {
-    render(this.value);
+    const metric = this.value;
+    render(metric);
+    updateDescription(metric);
 });
+
+function updateDescription(metric) {
+    d3.select("#description")
+        .text(descriptions[metric]);
+}
 
 function render(metric) {
 
@@ -45,10 +60,7 @@ function render(metric) {
                 <b>Hazard:</b> ${p.hazard_score.toFixed(2)}<br/>
                 <b>Exposure:</b> ${p.exposure_score.toFixed(2)}<br/>
                 <b>Vulnerability:</b> ${p.vulnerability_score.toFixed(2)}<br/>
-                <b>Resilience:</b> ${p.resilience_score.toFixed(2)}<br/>
-                <hr/>
-                <b>Population:</b> ${Math.round(p.exposure_population)}<br/>
-                <b>Building Value:</b> ${Math.round(p.exposure_building_value)}
+                <b>Resilience:</b> ${p.resilience_score.toFixed(2)}
             `)
             .style("left", (event.pageX + 10) + "px")
             .style("top", (event.pageY - 20) + "px");
@@ -62,7 +74,7 @@ function render(metric) {
             tooltip.transition().duration(200).style("opacity", 0);
         });
 
-    // Improved Legend
+    // Legend
     const legendWidth = 250;
     const legendHeight = 12;
 
