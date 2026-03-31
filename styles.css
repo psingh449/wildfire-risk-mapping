@@ -9,3 +9,7 @@ body {
     padding: 5px;
     pointer-events: none;
 }
+
+svg {
+    border: 1px solid #ccc;
+}
