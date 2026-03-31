@@ -46,4 +46,5 @@ def generate_mock_blocks(n=49):
             data.append(row)
 
     gdf = gpd.GeoDataFrame(data, geometry="geometry")
+    gdf.set_crs(epsg=4326, inplace=True)
     return gdf
