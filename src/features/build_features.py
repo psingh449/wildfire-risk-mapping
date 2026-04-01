@@ -69,4 +69,8 @@ def build_features(gdf):
     gdf["vulnerability_score"] = weighted_sum(gdf, VULNERABILITY_WEIGHTS)
     gdf["resilience_score"] = weighted_sum(gdf, RESILIENCE_WEIGHTS)
 
+    assert gdf["hazard_score"].between(0, 1).all()
+    assert gdf["exposure_score"].between(0, 1).all()
+    assert gdf["resilience_score"].between(0, 1).all()
+
     return gdf
