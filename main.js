@@ -74,7 +74,9 @@ function render(metric) {
     <b>Vulnerability:</b> ${p.vulnerability_score.toFixed(2)}<br/>
     <b>Resilience:</b> ${p.resilience_score.toFixed(2)}<br/>
     <hr/>
-    <b>Population:</b> ${Math.round(p.exposure_population)}
+    <b>Population:</b> ${Math.round(p.exposure_population)}<br/>
+    <b>Building Value:</b> $${Math.round(p.building_value_est).toLocaleString()}<br/>
+    <b>EAL:</b> $${Math.round(p.eal).toLocaleString()}
 `)
                 .style("left", (event.pageX + 10) + "px")
                 .style("top", (event.pageY - 20) + "px");
