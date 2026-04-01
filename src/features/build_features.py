@@ -61,7 +61,7 @@ def build_features(gdf):
         gdf["vuln_vehicle_access_norm"] = 1 - gdf["vuln_vehicle_access_norm"]
 
     # -------------------------------
-    # 3. Compute component scores
+    # 3. Compute component scores 
     # -------------------------------
 
     gdf["hazard_score"] = weighted_sum(gdf, HAZARD_WEIGHTS)
