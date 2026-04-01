@@ -1,29 +1,30 @@
-"""Pipeline Orchestrator (Refactored)"""
 
-from src.pipeline.steps import (
-    step_ingestion,
-    step_preprocessing,
-    step_features,
-    step_model
-)
-from src.export.export_geojson import export_geojson
-from src.utils.config import OUTPUT_GEOJSON
-from src.utils.logger import get_logger
+from src.pipeline.steps import step_ingestion, step_preprocessing, step_features, step_model
 
-logger = get_logger()
+# NEW
+try:
+    from src.pipeline.feature_pipeline import run_feature_pipeline
+    USE_NEW_FEATURE_PIPELINE = False  # keep OFF by default (non-breaking)
+except:
+    USE_NEW_FEATURE_PIPELINE = False
+
 
 def run():
-    logger.info("Starting pipeline")
+    print("Starting pipeline")
 
     gdf = step_ingestion()
     gdf = step_preprocessing(gdf)
-    gdf = step_features(gdf)
+
+    if USE_NEW_FEATURE_PIPELINE:
+        gdf = run_feature_pipeline(gdf)
+    else:
+        gdf = step_features(gdf)
+
     gdf = step_model(gdf)
+    # Export happens inside model or elsewhere (no-op for now)
 
-    logger.info("Step 5: Export")
-    export_geojson(gdf, OUTPUT_GEOJSON)
+    print("Pipeline completed")
 
-    logger.info("Pipeline completed")
 
 if __name__ == "__main__":
     run()
