@@ -12,10 +12,16 @@ let geoData;
 const descriptions = {
     risk_score: "Overall wildfire risk combining hazard, exposure, vulnerability, and resilience.",
     hazard_score: "Likelihood and intensity of wildfire occurrence.",
-    exposure_score: "Amount of population and assets exposed to wildfire.",
+    exposure_score: "Population and assets exposed to wildfire.",
     vulnerability_score: "Sensitivity of the population to wildfire impacts.",
-    resilience_score: "Ability to respond to and recover from wildfire events."
+    resilience_score: "Ability to respond to and recover from wildfire events.",
+    eal_norm: "Expected Annual Loss (economic risk proxy based on property value and risk)."
 };
+
+function getMetricLabel(metric) {
+    if (metric === "eal_norm") return "EAL (Normalized)";
+    return metric.replace("_score", "").toUpperCase();
+}
 
 // Tooltip (single instance)
 const tooltip = d3.select("body")
