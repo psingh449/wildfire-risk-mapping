@@ -78,7 +78,7 @@ These gaps suggest the need for a **national block‑level wildfire risk framewo
 
 As demonstrated by the following illustration, the **county‑level average of 0.39 conceal neighborhood‑scale wildfire danger**.
 
-<img src="proposal.png" alt="County averaging effect" width="400" height="400"/>
+<img src="report1.png" alt="County averaging effect" width="400" height="400"/>
 
 
 

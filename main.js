@@ -9,6 +9,9 @@ const path = d3.geoPath().projection(projection);
 
 let geoData;
 
+// ✅ NEW (Commit 18)
+let DEBUG_MODE = true;
+
 const descriptions = {
     risk_score: "Overall wildfire risk combining hazard, exposure, vulnerability, and resilience.",
     hazard_score: "Likelihood and intensity of wildfire occurrence.",
@@ -28,6 +31,46 @@ const tooltip = d3.select("body")
     .append("div")
     .attr("class", "tooltip")
     .style("opacity", 0);
+
+// ✅ NEW (Commit 18)
+function buildTooltip(p) {
+
+    let html = `
+<b>Risk:</b> ${p.risk_score.toFixed(2)}<br/>
+<b>Hazard:</b> ${p.hazard_score.toFixed(2)}<br/>
+<b>Exposure:</b> ${p.exposure_score.toFixed(2)}<br/>
+<b>Vulnerability:</b> ${p.vulnerability_score.toFixed(2)}<br/>
+<b>Resilience:</b> ${p.resilience_score.toFixed(2)}<br/>
+<hr/>
+<b>Population:</b> ${Math.round(p.exposure_population)}<br/>
+<b>Building Value:</b> $${Math.round(p.building_value_est).toLocaleString()}<br/>
+<b>EAL:</b> $${Math.round(p.eal).toLocaleString()}
+`;
+
+    if (DEBUG_MODE) {
+        html += `
+<hr/>
+<b>DEBUG:</b><br/>
+hazard_wildfire: ${p.hazard_wildfire?.toFixed(2)}<br/>
+hazard_vegetation: ${p.hazard_vegetation?.toFixed(2)}<br/>
+hazard_forest_distance: ${p.hazard_forest_distance?.toFixed(2)}<br/>
+<br/>
+exposure_population: ${p.exposure_population}<br/>
+exposure_housing: ${p.exposure_housing?.toFixed(0)}<br/>
+exposure_building_value: ${p.exposure_building_value?.toFixed(0)}<br/>
+<br/>
+vuln_poverty: ${p.vuln_poverty?.toFixed(2)}<br/>
+vuln_elderly: ${p.vuln_elderly?.toFixed(2)}<br/>
+vuln_vehicle_access: ${p.vuln_vehicle_access?.toFixed(2)}<br/>
+<br/>
+res_fire_station_dist: ${p.res_fire_station_dist?.toFixed(2)}<br/>
+res_hospital_dist: ${p.res_hospital_dist?.toFixed(2)}<br/>
+res_road_access: ${p.res_road_access?.toFixed(2)}
+`;
+    }
+
+    return html;
+}
 
 d3.json("data/processed/blocks.geojson").then(data => {
     geoData = data;
@@ -52,6 +95,11 @@ d3.select("#reset").on("click", function () {
     updateDescription(DEFAULT_METRIC);
 });
 
+// ✅ NEW (Commit 18)
+d3.select("#debugToggle").on("change", function () {
+    DEBUG_MODE = this.checked;
+});
+
 function updateDescription(metric) {
     d3.select("#description").text(descriptions[metric]);
 }
@@ -73,34 +121,9 @@ function render(metric) {
             const p = d.properties;
 
             tooltip.transition().duration(200).style("opacity", .9);
-            tooltip.html(`
-<b>Risk:</b> ${p.risk_score.toFixed(2)}<br/>
-<b>Hazard:</b> ${p.hazard_score.toFixed(2)}<br/>
-<b>Exposure:</b> ${p.exposure_score.toFixed(2)}<br/>
-<b>Vulnerability:</b> ${p.vulnerability_score.toFixed(2)}<br/>
-<b>Resilience:</b> ${p.resilience_score.toFixed(2)}<br/>
-<hr/>
-<b>Population:</b> ${Math.round(p.exposure_population)}<br/>
-<b>Building Value:</b> $${Math.round(p.building_value_est).toLocaleString()}<br/>
-<b>EAL:</b> $${Math.round(p.eal).toLocaleString()}<br/>
-<hr/>
-<b>DEBUG:</b><br/>
-hazard_wildfire: ${p.hazard_wildfire?.toFixed(2)}<br/>
-hazard_vegetation: ${p.hazard_vegetation?.toFixed(2)}<br/>
-hazard_forest_distance: ${p.hazard_forest_distance?.toFixed(2)}<br/>
-<br/>
-exposure_population: ${p.exposure_population}<br/>
-exposure_housing: ${p.exposure_housing?.toFixed(0)}<br/>
-exposure_building_value: ${p.exposure_building_value?.toFixed(0)}<br/>
-<br/>
-vuln_poverty: ${p.vuln_poverty?.toFixed(2)}<br/>
-vuln_elderly: ${p.vuln_elderly?.toFixed(2)}<br/>
-vuln_vehicle_access: ${p.vuln_vehicle_access?.toFixed(2)}<br/>
-<br/>
-res_fire_station_dist: ${p.res_fire_station_dist?.toFixed(2)}<br/>
-res_hospital_dist: ${p.res_hospital_dist?.toFixed(2)}<br/>
-res_road_access: ${p.res_road_access?.toFixed(2)}
-`)
+
+            // ✅ UPDATED
+            tooltip.html(buildTooltip(p))
                 .style("left", (event.pageX + 10) + "px")
                 .style("top", (event.pageY - 20) + "px");
         })
@@ -113,7 +136,7 @@ res_road_access: ${p.res_road_access?.toFixed(2)}
             tooltip.transition().duration(200).style("opacity", 0);
         });
 
-    // Legend
+    // Legend (unchanged)
     const legendWidth = 250;
     const legendHeight = 12;
 

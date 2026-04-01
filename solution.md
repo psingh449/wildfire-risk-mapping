@@ -1,122 +1,140 @@
-# Wildfire Risk Mapping -- Implementation Plan (solution.md)
+# Wildfire Risk Mapping --- Solution Guide (Revised)
 
-## 1. Current Status (Baseline)
+## 1. Overview & Architecture
 
--   Repo: wildfire-risk-mapping
--   Live demo: GitHub Pages working
--   Data: Mock dataset (49 grid cells)
--   Features:
-    -   Risk calculation pipeline
-    -   GeoJSON export
-    -   D3 visualization (choropleth)
-    -   Dropdown for metrics (risk, hazard, exposure, etc.)
--   Architecture:
-    -   Python pipeline (no backend)
-    -   Static frontend (D3)
-    -   GitHub Pages deployment
-
-------------------------------------------------------------------------
-
-## 2. Key Design Principles
-
--   Schema-first approach
--   Modular pipeline (ingestion → features → model → export)
--   Precomputed data (no backend)
--   Parallel development enabled
--   Start with mock → replace with real data
--   Scalable naming (blocks.geojson)
+-   End-to-end system:
+    -   Python pipeline → GeoJSON → D3.js frontend → GitHub Pages
+-   No backend:
+    -   All data is **precomputed**
+    -   Frontend is **static + interactive**
+-   Pipeline stages:
+    -   Ingestion → Preprocessing → Features → Model → Export
+-   Key outputs:
+    -   `risk_score` (0--1)
+    -   `eal` (economic loss)
+-   Design principles:
+    -   Code = source of truth
+    -   Modular functions per metric
+    -   Dummy-first → replace with real data
+    -   Always keep system runnable
 
 ------------------------------------------------------------------------
 
-## 3. Development Environment
+## 2. Development Workflow
 
--   Visual Studio 2026 (Windows 11)
--   Python + D3.js
--   GitHub + GitHub Pages
-
-------------------------------------------------------------------------
-
-## 4. Roadmap
-
-1.  Stabilize pipeline
-2.  Improve visualization
-3.  Add real data
-4.  Multi-region support
-5.  Advanced analysis
-
-------------------------------------------------------------------------
-
-## 5. Commit Plan
-
-### Phase 1 --- Stabilization (1--5)
-
-1.  Cleanup repo + documentation
-2.  Centralize config
-3.  Add logging
-4.  Data validation checks
-5.  Pipeline refactor
-
-### Phase 2 --- Visualization (6--10)
-
-6.  Add legend
-7.  Improve tooltip
-8.  UI enhancements
-9.  Metric descriptions
-10. Reset/default view
-
-### Phase 3 --- Real Data (11--16)
-
-11. Load real geometry
-12. Replace mock geometry
-13. Add population data
-14. Improve exposure
-15. Improve hazard proxy
-16. Separate mock vs real pipeline
-
-### Phase 4 --- Multi-region (17--20)
-
-17. Add region parameter
-18. Multi-county support
-19. Flexible GeoJSON naming
-20. UI region selector
-
-### Phase 5 --- Advanced Modeling (21--25)
-
-21. Configurable weights
-22. Sensitivity analysis
-23. Risk distribution plots
-24. Validation module
-25. Risk concentration metrics
-
-### Phase 6 --- Polish (26--30)
-
-26. Geometry simplification
-27. Performance optimization
-28. Code cleanup
-29. Documentation updates
-30. Final demo polish
+-   Setup:
+    -   Run pipeline:
+        -   `python -m src.pipeline.run_pipeline`
+    -   Run UI:
+        -   `python -m http.server 8000`
+-   Iteration cycle:
+    -   Modify Python → regenerate GeoJSON → refresh UI
+-   Team workflow:
+    -   Each dev owns a module:
+        -   hazard / exposure / vulnerability / resilience / model
+    -   Replace dummy values independently
+-   Debug mode:
+    -   Toggle in UI
+    -   Shows full variable breakdown per block
+-   Naming:
+    -   Raw: `exposure_population`
+    -   Normalized: `*_norm`
+    -   Scores: `*_score`
 
 ------------------------------------------------------------------------
 
-## 6. Parallel Work
+## 3. Core Concepts
 
--   Data
--   Features
--   Model
--   UI
--   Validation
+-   Hazard:
+    -   Fire likelihood (vegetation, distance, etc.)
+-   Exposure:
+    -   Population + assets
+-   Vulnerability:
+    -   Socio-economic sensitivity
+-   Resilience:
+    -   Response/recovery capability
+-   Risk:
+    -   `H × E × V × (1 - R)`
+-   EAL:
+    -   `risk × building_value`
 
 ------------------------------------------------------------------------
 
-## 7. Future
+## 4. Commit History (Latest → Oldest)
 
--   PostGIS integration
--   Full USA scaling
--   Real wildfire datasets
+-   **18 --- Debug toggle + tooltip refactor**
+    -   Added UI checkbox for debug mode
+    -   Refactored tooltip into `buildTooltip()`
+    -   Clean separation of dev vs production UI
+    -   Added export structure (modular)
+-   **17 --- Feature pipeline toggle + debug support**
+    -   Introduced `USE_NEW_FEATURE_PIPELINE`
+    -   Enabled safe switching between old/new pipeline
+    -   Added debug flag (backend concept)
+-   **16 --- Modular skeleton (major milestone)**
+    -   Created feature modules:
+        -   hazard / exposure / vulnerability / resilience
+    -   Added dummy data generators
+    -   Enabled parallel development
+-   **15 --- EAL exposed in UI**
+    -   Added EAL to dropdown
+    -   Improved descriptions + legend
+    -   UI now supports economic interpretation
+-   **14 --- Economic model (EAL)**
+    -   Added building value estimation
+    -   Introduced risk formula (multiplicative)
+    -   Computed Expected Annual Loss
+-   **13 --- Real population integration**
+    -   Pulled Census data
+    -   GEOID-based merge
+    -   First real dataset in system
+-   **12 --- Real geometry integration**
+    -   Replaced mock grid with block groups
+    -   Introduced real GeoJSON pipeline
+-   **11 --- Data ingestion improvements**
+    -   Structured ingestion layer
+    -   Better logging and validation
+-   **10 --- Reset/default UI**
+    -   Added reset button
+    -   Standardized initial state
+-   **9 --- Metric descriptions**
+    -   Added explanatory text per metric
+    -   Improved usability
+-   **8 --- UI enhancements**
+    -   Improved layout and controls
+    -   Better readability
+-   **7 --- Tooltip improvements**
+    -   Added detailed hover info
+    -   Introduced structured display
+-   **6 --- Legend**
+    -   Added color scale legend
+    -   Enabled interpretation of values
+-   **5 --- Pipeline refactor**
+    -   Clean separation of steps
+    -   Improved maintainability
+-   **4 --- Validation**
+    -   Column checks
+    -   Null checks
+-   **3 --- Logging**
+    -   Added pipeline logs
+    -   Easier debugging
+-   **2 --- Config centralization**
+    -   Moved weights/config to single place
+-   **1 --- Initial setup**
+    -   Basic pipeline + UI
+    -   Mock data visualization
 
 ------------------------------------------------------------------------
 
-## 8. Summary
+## 5. Current Status & Next Steps
 
-You have a working prototype. Execute commits incrementally to reach
-final system.
+-   Current:
+    -   Fully working end-to-end system
+    -   Modular + scalable architecture
+    -   UI supports multiple metrics + debug mode
+-   Remaining:
+    -   Replace dummy variables with real APIs
+    -   Add data source tracking (REAL vs DUMMY)
+    -   Improve hazard + resilience realism
+-   Goal:
+    -   Transition from prototype → decision-support system
