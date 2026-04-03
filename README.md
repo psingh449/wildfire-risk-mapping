@@ -25,10 +25,10 @@ A modular, end-to-end system for block-group level wildfire risk mapping, combin
 - `src/features/` — Per-domain feature generators:
   - `hazard.py`, `exposure.py`, `vulnerability.py`, `resilience.py`: Compute feature columns (dummy or real) and mark source (`REAL`/`DUMMY`).
   - `build_features.py`: Normalizes, inverts, computes component scores, risk, and EAL.
-- `src/models/risk_model.py` — Alternative risk computation (potential duplication with `build_features.py`).
+- `src/models/risk_model.py` — Unified risk calculation.
 - `src/ingestion/` — Loads or generates block-group geometries and population data.
 - `src/export/` — Writes GeoJSON output.
-- `src/utils/` — Config, dummy data, source tracking, validation, logging.
+- `src/utils/` — Config, dummy data, source tracking, validation, logging, diagnostics, real data stubs.
 - Frontend: `index.html`, `main.js`, `styles.css` — D3 map reading `data/processed/blocks.geojson`.
 
 ---
@@ -37,9 +37,10 @@ A modular, end-to-end system for block-group level wildfire risk mapping, combin
 
 1. **Ingestion:** Loads a GeoDataFrame (real or mock geometry + base columns).
 2. **Preprocessing:** (Currently a no-op placeholder).
-3. **Feature Engineering:** Populates raw features (random/dummy or real fields).
+3. **Feature Engineering:** Populates raw features (real or fallback, provenance tracked).
 4. **Feature Assembly:** Normalizes, combines into scores and EAL; model step may recompute `risk_score`.
-5. **Export:** Saves to `data/processed/blocks.geojson` for frontend consumption.
+5. **Diagnostics:** Validation issues are logged and included in the exported GeoJSON per block.
+6. **Export:** Saves to `data/processed/blocks.geojson` for frontend consumption.
 
 ---
 
@@ -48,7 +49,7 @@ A modular, end-to-end system for block-group level wildfire risk mapping, combin
 - Run pipeline: `python -m src.pipeline.run_pipeline`
 - Run UI: `python -m http.server 8000` (or open `index.html` directly)
 - Iteration: Modify Python → regenerate GeoJSON → refresh UI
-- Debug mode: Toggle in UI for full variable breakdown
+- Debug mode: Toggle in UI for full variable breakdown and diagnostics
 - Naming: Raw (`exposure_population`), normalized (`*_norm`), scores (`*_score`)
 
 ---
@@ -64,48 +65,38 @@ A modular, end-to-end system for block-group level wildfire risk mapping, combin
 
 ---
 
-## 6. Commit History (Latest → Oldest)
+## 6. Testing
 
-- See `solution.md` for a detailed commit-by-commit breakdown.
+- Tests are in the `tests/` folder.
+- To run all tests:
+
+  ```bash
+  pytest tests/
+  ```
+
+- To run a specific test file:
+
+  ```bash
+  pytest tests/test_features.py
+  ```
 
 ---
 
-## 7. Current Status & Next Steps
+## 7. CI/CD
 
-- **Current:**
-  - Fully working end-to-end system
-  - Modular, scalable architecture
-  - UI supports multiple metrics and debug mode
-- **Goal:**
-  - Transition from prototype to decision-support system
+- GitHub Actions workflow is provided in `.github/workflows/ci.yml`.
+- On every push or pull request to `main`, the workflow will:
+  - Lint the codebase with `flake8`.
+  - Run all tests with `pytest`.
+- To use CI, simply push to GitHub and check the Actions tab for results.
 
 ---
 
 ## 8. TODOs & Improvements
 
-To make the codebase more robust and production-ready, consider the following improvements:
-
-- **Modularity & Maintainability:**
-  - Refactor to remove duplicate logic (e.g., unify risk calculation in `build_features.py` and `risk_model.py`).
-  - Further modularize feature engineering and model steps.
-  - Use configuration files for weights and parameters.
-- **Validation & Testing:**
-  - Add comprehensive validation for all input data (ranges, types, missing values).
-  - Implement unit tests for all feature generators and pipeline steps.
-  - Add integration tests for the full pipeline.
-- **Data Quality & Realism:**
-  - Replace dummy/random features with real data sources (see `calculations.csv` and `calculations_diagram.md`).
-  - Track data provenance (REAL vs DUMMY) for all fields.
-  - Add more realistic hazard and resilience calculations.
-- **Documentation:**
-  - Expand this README with usage examples, API docs, and data dictionary.
-  - Add architecture diagrams and calculation flowcharts.
-- **CI/CD & Deployment:**
-  - Add CI for linting, testing, and build validation.
-  - Automate GeoJSON export and deployment to GitHub Pages or other static hosting.
-- **Frontend:**
-  - Add more interactivity and richer visualizations.
-  - Improve accessibility and mobile support.
+- Continue replacing fallback logic with real data integration as APIs and data become available.
+- Expand tests for edge cases and integration.
+- Add more frontend diagnostics and interactivity as needed.
 
 ---
 
