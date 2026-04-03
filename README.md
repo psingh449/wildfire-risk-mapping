@@ -18,6 +18,18 @@ A modular, end-to-end system for block-group level wildfire risk mapping, combin
   ```bash
   python scripts/download_environmental_data.py
   ```
+- **Process NLCD zonal stats:**
+  ```bash
+  python scripts/process_nlcd_zonal_stats.py
+  ```
+- **Process HIFLD nearest facility distances:**
+  ```bash
+  python scripts/process_hifld_nearest.py
+  ```
+- **Process OSM road length per block:**
+  ```bash
+  python scripts/process_osm_road_length.py
+  ```
 - **Run tests:**
   ```bash
   pytest tests/
@@ -27,6 +39,16 @@ A modular, end-to-end system for block-group level wildfire risk mapping, combin
   python -m http.server 8000
   # then open index.html in your browser
   ```
+
+---
+
+## Geospatial Processing Requirements
+
+- Install geospatial libraries:
+  ```bash
+  pip install geopandas rasterio shapely fiona pyproj rtree osmnx
+  ```
+- Download environmental datasets and process them as above before running the pipeline for full real data integration.
 
 ---
 
