@@ -2,7 +2,6 @@ from src.utils.logger import get_logger
 from src.utils.validator import validate_columns, validate_nulls, validate_ranges
 from src.preprocessing.preprocess_blocks import preprocess
 from src.features.build_features import build_features
-from src.models.risk_model import compute_risk
 
 from src.ingestion.load_blocks import generate_mock_blocks
 from src.ingestion.load_real_blocks import load_real_blocks
@@ -41,5 +40,6 @@ def step_features(gdf):
     return gdf
 
 def step_model(gdf):
-    logger.info("Step 4: Risk Model")
-    return compute_risk(gdf)
+    logger.info("Step 4: Risk Model (NO-OP, unified in build_features)")
+    # Risk calculation is now unified in build_features/compute_risk
+    return gdf

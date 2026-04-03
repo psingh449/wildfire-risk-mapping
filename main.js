@@ -37,7 +37,6 @@ const tooltip = d3.select("body")
     .style("opacity", 0);
 
 function buildTooltip(p) {
-
     let html = `
 <b>Risk:</b> ${p.risk_score?.toFixed(2) ?? "NA"}<br/>
 <b>Hazard:</b> ${p.hazard_score?.toFixed(2) ?? "NA"}<br/>
@@ -51,6 +50,16 @@ function buildTooltip(p) {
 `;
 
     if (DEBUG_MODE) {
+        html += `
+<hr/>
+<b>Diagnostics:</b><br/>`;
+        if (p.diagnostics && Object.keys(p.diagnostics).length > 0) {
+            for (const [field, issues] of Object.entries(p.diagnostics)) {
+                html += `<b>${field}:</b> ${issues.join('; ')}<br/>`;
+            }
+        } else {
+            html += "No validation issues.<br/>";
+        }
         html += `
 <hr/>
 <b>DEBUG:</b><br/>

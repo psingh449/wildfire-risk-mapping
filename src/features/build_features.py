@@ -4,6 +4,8 @@ from src.utils.config import (
     VULNERABILITY_WEIGHTS,
     RESILIENCE_WEIGHTS
 )
+from src.models.risk_model import compute_risk
+from src.utils.diagnostics import add_diagnostics_to_gdf
 
 def minmax(series):
     return (series - series.min()) / (series.max() - series.min() + 1e-9)
@@ -12,7 +14,6 @@ def weighted_sum(df, weights):
     return sum(df[col] * w for col, w in weights.items())
 
 def build_features(gdf):
-
     # 1. Normalize into *_norm (preserve raw)
     for col in gdf.columns:
         if (
@@ -47,7 +48,6 @@ def build_features(gdf):
     gdf["resilience_score"] = weighted_sum(gdf, RESILIENCE_WEIGHTS)
 
     # Safety checks (0-1)
-    # Clip for numerical safety
     for c in ["hazard_score","exposure_score","vulnerability_score","resilience_score"]:
         gdf[c] = gdf[c].clip(0,1)
 
@@ -58,18 +58,10 @@ def build_features(gdf):
     else:
         gdf["building_value_est"] = 0
 
-    # 5. Risk score (multiplicative, bounded 0-1)
-    gdf["risk_score"] = (
-        gdf["hazard_score"] *
-        gdf["exposure_score"] *
-        gdf["vulnerability_score"] *
-        (1 - gdf["resilience_score"])
-    ).clip(0,1)
+    # 5. Risk score and EAL (single source of truth)
+    gdf = compute_risk(gdf)
 
-    # 6. Expected Annual Loss (EAL)
-    gdf["eal"] = gdf["risk_score"] * gdf["building_value_est"]
-
-    # Normalize EAL for visualization
-    gdf["eal_norm"] = minmax(gdf["eal"])
+    # 6. Add diagnostics
+    gdf = add_diagnostics_to_gdf(gdf)
 
     return gdf
