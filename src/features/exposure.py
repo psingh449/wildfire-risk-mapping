@@ -1,26 +1,19 @@
-
-from src.utils.dummy_data import generate_uniform, generate_int
+from src.utils.real_data import compute_exposure_population_real, fallback_int, fallback_uniform
 from src.utils.source_tracker import mark_real, mark_dummy
 
 def compute_exposure_population(gdf):
-
-    # If column exists AND has meaningful values → treat as REAL
-    if "exposure_population" in gdf.columns and gdf["exposure_population"].sum() > 0:
-        gdf = mark_real(gdf, "exposure_population")
-        return gdf
-
-    # Otherwise generate dummy
-    gdf["exposure_population"] = generate_int(100, 3000, len(gdf))
-    gdf = mark_dummy(gdf, "exposure_population")
-
-    return gdf
+    try:
+        return compute_exposure_population_real(gdf)
+    except Exception as e:
+        gdf["exposure_population"] = fallback_int(gdf, "exposure_population")
+        return mark_dummy(gdf, "exposure_population")
 
 def compute_exposure_housing(gdf):
-    gdf["exposure_housing"] = generate_int(50, 1000, len(gdf))
-    gdf = mark_dummy(gdf, "exposure_housing")
-    return gdf
+    # TODO: Implement real housing units calculation
+    gdf["exposure_housing"] = fallback_int(gdf, "exposure_housing")
+    return mark_dummy(gdf, "exposure_housing")
 
 def compute_exposure_building_value(gdf):
-    gdf["exposure_building_value"] = generate_uniform(1e5, 1e8, len(gdf))
-    gdf = mark_dummy(gdf, "exposure_building_value")
-    return gdf
+    # TODO: Implement real building value calculation
+    gdf["exposure_building_value"] = fallback_uniform(gdf, "exposure_building_value")
+    return mark_dummy(gdf, "exposure_building_value")
