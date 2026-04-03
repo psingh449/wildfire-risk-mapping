@@ -195,4 +195,77 @@ def compute_vuln_poverty_real(gdf):
     gdf["vuln_poverty"] = gdf["blockgroup"].map(poverty_map).fillna(0)
     return mark_real(gdf, "vuln_poverty", source=provenance)
 
-# TODO: Implement similar logic for elderly, vehicle access, building value
+# Elderly ratio (sum B01001_020E..B01001_025E / B01001_001E)
+def compute_vuln_elderly_real(gdf):
+    if "GEOID" not in gdf.columns:
+        gdf["vuln_elderly"] = fallback_uniform(gdf, "vuln_elderly", reason="No GEOID column")
+        return mark_dummy(gdf, "vuln_elderly", reason="No GEOID column")
+    bg_col = gdf["GEOID"].str[:9]
+    if USE_STORED_REAL_DATA:
+        acs = fetch_acs_bg_local("acs_elderly.csv")
+        provenance = "local_acs_elderly.csv"
+    else:
+        fields = ["B01001_001E"] + [f"B01001_{i:03d}E" for i in range(20, 26)] + ["GEOID"]
+        acs = fetch_acs_blockgroup(fields, "block group:*", "state:06 county:007")
+        provenance = "ACS API"
+        if acs is not None:
+            acs.to_csv(os.path.join(REAL_DATA_DIR, "acs_elderly.csv"), index=False)
+    if acs is None:
+        gdf["vuln_elderly"] = fallback_uniform(gdf, "vuln_elderly", reason="No real data available")
+        return mark_dummy(gdf, "vuln_elderly", reason="No real data available")
+    acs = acs.apply(pd.to_numeric, errors="coerce")
+    acs["elderly_sum"] = acs[[f"B01001_{i:03d}E" for i in range(20, 26)]].sum(axis=1)
+    acs["elderly_ratio"] = acs["elderly_sum"] / acs["B01001_001E"]
+    elderly_map = dict(zip(acs["GEOID"], acs["elderly_ratio"]))
+    gdf["blockgroup"] = bg_col
+    gdf["vuln_elderly"] = gdf["blockgroup"].map(elderly_map).fillna(0)
+    return mark_real(gdf, "vuln_elderly", source=provenance)
+
+# Vehicle access (1 - B08201_002E / B08201_001E)
+def compute_vuln_vehicle_access_real(gdf):
+    if "GEOID" not in gdf.columns:
+        gdf["vuln_vehicle_access"] = fallback_uniform(gdf, "vuln_vehicle_access", reason="No GEOID column")
+        return mark_dummy(gdf, "vuln_vehicle_access", reason="No GEOID column")
+    bg_col = gdf["GEOID"].str[:9]
+    if USE_STORED_REAL_DATA:
+        acs = fetch_acs_bg_local("acs_vehicle_access.csv")
+        provenance = "local_acs_vehicle_access.csv"
+    else:
+        fields = ["B08201_002E", "B08201_001E", "GEOID"]
+        acs = fetch_acs_blockgroup(fields, "block group:*", "state:06 county:007")
+        provenance = "ACS API"
+        if acs is not None:
+            acs.to_csv(os.path.join(REAL_DATA_DIR, "acs_vehicle_access.csv"), index=False)
+    if acs is None:
+        gdf["vuln_vehicle_access"] = fallback_uniform(gdf, "vuln_vehicle_access", reason="No real data available")
+        return mark_dummy(gdf, "vuln_vehicle_access", reason="No real data available")
+    acs = acs.apply(pd.to_numeric, errors="coerce")
+    acs["vehicle_access"] = 1 - (acs["B08201_002E"] / acs["B08201_001E"])
+    vehicle_map = dict(zip(acs["GEOID"], acs["vehicle_access"]))
+    gdf["blockgroup"] = bg_col
+    gdf["vuln_vehicle_access"] = gdf["blockgroup"].map(vehicle_map).fillna(0)
+    return mark_real(gdf, "vuln_vehicle_access", source=provenance)
+
+# Building value (B25077_001E * housing units)
+def compute_exposure_building_value_real(gdf):
+    if "GEOID" not in gdf.columns:
+        gdf["exposure_building_value"] = fallback_uniform(gdf, "exposure_building_value", reason="No GEOID column")
+        return mark_dummy(gdf, "exposure_building_value", reason="No GEOID column")
+    bg_col = gdf["GEOID"].str[:9]
+    if USE_STORED_REAL_DATA:
+        acs = fetch_acs_bg_local("acs_building_value.csv")
+        provenance = "local_acs_building_value.csv"
+    else:
+        fields = ["B25077_001E", "GEOID"]
+        acs = fetch_acs_blockgroup(fields, "block group:*", "state:06 county:007")
+        provenance = "ACS API"
+        if acs is not None:
+            acs.to_csv(os.path.join(REAL_DATA_DIR, "acs_building_value.csv"), index=False)
+    if acs is None:
+        gdf["exposure_building_value"] = fallback_uniform(gdf, "exposure_building_value", reason="No real data available")
+        return mark_dummy(gdf, "exposure_building_value", reason="No real data available")
+    acs = acs.apply(pd.to_numeric, errors="coerce")
+    value_map = dict(zip(acs["GEOID"], acs["B25077_001E"]))
+    gdf["blockgroup"] = bg_col
+    gdf["exposure_building_value"] = gdf["blockgroup"].map(value_map).fillna(0) * gdf.get("exposure_housing", 1)
+    return mark_real(gdf, "exposure_building_value", source=provenance)
