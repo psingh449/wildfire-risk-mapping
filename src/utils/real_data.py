@@ -142,27 +142,57 @@ def compute_exposure_housing_real(gdf):
     return mark_real(gdf, "exposure_housing", source=provenance)
 
 # --- ACS API integration for poverty, elderly, vehicle access, building value ---
-# TODO: Implement ACS API fetches for these features as per calculations.csv
-# For now, fallback logic is used for all
+ACS_URL = "https://api.census.gov/data/2021/acs/acs5"
 
-def compute_exposure_building_value_real(gdf):
-    # TODO: Implement ACS median value fetch and join
-    gdf["exposure_building_value"] = fallback_uniform(gdf, "exposure_building_value", reason="No real data available")
-    return mark_dummy(gdf, "exposure_building_value", reason="No real data available")
+# Helper to fetch ACS block group data (poverty, elderly, vehicle access, building value)
+def fetch_acs_blockgroup(fields, for_clause, in_clause):
+    params = {
+        "get": ",".join(fields),
+        "for": for_clause,
+        "in": in_clause
+    }
+    try:
+        resp = requests.get(ACS_URL, params=params, timeout=10)
+        resp.raise_for_status()
+        data = resp.json()
+        header = data[0]
+        rows = data[1:]
+        return pd.DataFrame(rows, columns=header)
+    except Exception as e:
+        logger.warning(f"ACS API fetch failed: {e}")
+        return None
 
+def fetch_acs_bg_local(filename):
+    path = os.path.join(REAL_DATA_DIR, filename)
+    if not os.path.exists(path):
+        logger.warning(f"Local {filename} not found at {path}")
+        return None
+    return pd.read_csv(path, dtype=str)
+
+# Poverty rate (B17001_002E/B17001_001E)
 def compute_vuln_poverty_real(gdf):
-    # TODO: Implement ACS poverty fetch and allocation
-    gdf["vuln_poverty"] = fallback_uniform(gdf, "vuln_poverty", reason="No real data available")
-    return mark_dummy(gdf, "vuln_poverty", reason="No real data available")
+    # Map block to block group
+    if "GEOID" not in gdf.columns:
+        gdf["vuln_poverty"] = fallback_uniform(gdf, "vuln_poverty", reason="No GEOID column")
+        return mark_dummy(gdf, "vuln_poverty", reason="No GEOID column")
+    bg_col = gdf["GEOID"].str[:12-3]  # block group = first 12-3=9 digits
+    if USE_STORED_REAL_DATA:
+        acs = fetch_acs_bg_local("acs_poverty.csv")
+        provenance = "local_acs_poverty.csv"
+    else:
+        acs = fetch_acs_blockgroup(["B17001_002E", "B17001_001E", "GEOID"], "block group:*", "state:06 county:007")
+        provenance = "ACS API"
+        if acs is not None:
+            acs.to_csv(os.path.join(REAL_DATA_DIR, "acs_poverty.csv"), index=False)
+    if acs is None:
+        gdf["vuln_poverty"] = fallback_uniform(gdf, "vuln_poverty", reason="No real data available")
+        return mark_dummy(gdf, "vuln_poverty", reason="No real data available")
+    acs["B17001_002E"] = pd.to_numeric(acs["B17001_002E"], errors="coerce")
+    acs["B17001_001E"] = pd.to_numeric(acs["B17001_001E"], errors="coerce")
+    acs["poverty_rate"] = acs["B17001_002E"] / acs["B17001_001E"]
+    poverty_map = dict(zip(acs["GEOID"], acs["poverty_rate"]))
+    gdf["blockgroup"] = bg_col
+    gdf["vuln_poverty"] = gdf["blockgroup"].map(poverty_map).fillna(0)
+    return mark_real(gdf, "vuln_poverty", source=provenance)
 
-def compute_vuln_elderly_real(gdf):
-    # TODO: Implement ACS elderly fetch and allocation
-    gdf["vuln_elderly"] = fallback_uniform(gdf, "vuln_elderly", reason="No real data available")
-    return mark_dummy(gdf, "vuln_elderly", reason="No real data available")
-
-def compute_vuln_vehicle_access_real(gdf):
-    # TODO: Implement ACS vehicle access fetch and allocation
-    gdf["vuln_vehicle_access"] = fallback_uniform(gdf, "vuln_vehicle_access", reason="No real data available")
-    return mark_dummy(gdf, "vuln_vehicle_access", reason="No real data available")
-
-# Add similar stubs for all features as per calculations.csv
+# TODO: Implement similar logic for elderly, vehicle access, building value
