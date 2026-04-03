@@ -9,3 +9,4 @@ data/raw/census/
 # Allow processed input file
 !data/raw/block_groups.geojson
 data/interim/*
+data/geospatial/

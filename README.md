@@ -4,107 +4,78 @@ A modular, end-to-end system for block-group level wildfire risk mapping, combin
 
 ---
 
-## 1. Overview & Architecture
+## Usage Examples
 
-- **Pipeline:** Ingestion → Preprocessing → Feature Engineering → Modeling → Export
-- **Frontend:** Static D3.js map (no backend; all data precomputed)
-- **Outputs:**
-  - `risk_score` (0–1, overall risk)
-  - `eal` (expected annual economic loss)
-- **Design:**
-  - Modular functions per metric
-  - Dummy-first (replace with real data as available)
-  - Always runnable (mock data fallback)
-
----
-
-## 2. Key Files & Responsibilities
-
-- `src/pipeline/run_pipeline.py` — Orchestrates the pipeline steps.
-- `src/pipeline/feature_pipeline.py` — Modular feature builders (calls `src/features/*`).
-- `src/features/` — Per-domain feature generators:
-  - `hazard.py`, `exposure.py`, `vulnerability.py`, `resilience.py`: Compute feature columns (dummy or real) and mark source (`REAL`/`DUMMY`).
-  - `build_features.py`: Normalizes, inverts, computes component scores, risk, and EAL.
-- `src/models/risk_model.py` — Unified risk calculation.
-- `src/ingestion/` — Loads or generates block-group geometries and population data.
-- `src/export/` — Writes GeoJSON output.
-- `src/utils/` — Config, dummy data, source tracking, validation, logging, diagnostics, real data stubs.
-- Frontend: `index.html`, `main.js`, `styles.css` — D3 map reading `data/processed/blocks.geojson`.
-
----
-
-## 3. Data Flow
-
-1. **Ingestion:** Loads a GeoDataFrame (real or mock geometry + base columns).
-2. **Preprocessing:** (Currently a no-op placeholder).
-3. **Feature Engineering:** Populates raw features (real or fallback, provenance tracked).
-4. **Feature Assembly:** Normalizes, combines into scores and EAL; model step may recompute `risk_score`.
-5. **Diagnostics:** Validation issues are logged and included in the exported GeoJSON per block.
-6. **Export:** Saves to `data/processed/blocks.geojson` for frontend consumption.
-
----
-
-## 4. Development Workflow
-
-- Run pipeline: `python -m src.pipeline.run_pipeline`
-- Run UI: `python -m http.server 8000` (or open `index.html` directly)
-- Iteration: Modify Python → regenerate GeoJSON → refresh UI
-- Debug mode: Toggle in UI for full variable breakdown and diagnostics
-- Naming: Raw (`exposure_population`), normalized (`*_norm`), scores (`*_score`)
-
----
-
-## 5. Core Concepts
-
-- **Hazard:** Fire likelihood (vegetation, distance, etc.)
-- **Exposure:** Population and assets
-- **Vulnerability:** Socio-economic sensitivity
-- **Resilience:** Response/recovery capability
-- **Risk:** `H × E × V × (1 - R)`
-- **EAL:** `risk × building_value`
-
----
-
-## 6. Testing
-
-- Tests are in the `tests/` folder.
-- To run all tests:
-
+- **Run the pipeline:**
+  ```bash
+  python -m src.pipeline.run_pipeline
+  ```
+- **Refresh real data (Census/ACS):**
+  ```bash
+  python scripts/refresh_real_data.py
+  ```
+- **Download environmental datasets (NLCD, WHP, HIFLD, OSM):**
+  ```bash
+  python scripts/download_environmental_data.py
+  ```
+- **Run tests:**
   ```bash
   pytest tests/
   ```
-
-- To run a specific test file:
-
+- **Serve frontend:**
   ```bash
-  pytest tests/test_features.py
+  python -m http.server 8000
+  # then open index.html in your browser
   ```
 
 ---
 
-## 7. CI/CD
+## API Docs
 
-- GitHub Actions workflow is provided in `.github/workflows/ci.yml`.
-- On every push or pull request to `main`, the workflow will:
-  - Lint the codebase with `flake8`.
-  - Run all tests with `pytest`.
-- To use CI, simply push to GitHub and check the Actions tab for results.
-
----
-
-## 8. TODOs & Improvements
-
-- Continue replacing fallback logic with real data integration as APIs and data become available.
-- Expand tests for edge cases and integration.
-- Add more frontend diagnostics and interactivity as needed.
+- **Census API:** https://api.census.gov/data/2020/dec/pl
+- **ACS API:** https://api.census.gov/data/2021/acs/acs5
+- **NLCD:** https://www.mrlc.gov/data
+- **WHP:** https://www.fs.usda.gov/rds/archive/products/RDS-2015-0047
+- **HIFLD:** https://hifld-geoplatform.opendata.arcgis.com/
+- **OSM:** https://download.geofabrik.de/north-america/us/california.html
 
 ---
 
-## 9. References
+## Data Dictionary
 
-- See `calculations.csv` and `calculations_diagram.md` for planned real-data calculations and formulas.
-- For a detailed solution guide and commit history, see `solution.md` (can be merged here or deleted).
+| Field | Description | Source | Type | Min | Max | Provenance |
+|-------|-------------|--------|------|-----|-----|-----------|
+| hazard_wildfire | Wildfire probability | USFS WHP | float | 0 | 1 | REAL/DUMMY |
+| hazard_vegetation | Fuel density | NLCD | float | 0 | 1 | REAL/DUMMY |
+| hazard_forest_distance | Distance to forest (inverted) | NLCD | float | 0 | 1 | REAL/DUMMY |
+| hazard_score | Combined hazard | Derived | float | 0 | 1 | Derived |
+| exposure_population | Population | Census | int | 0 | inf | REAL/DUMMY |
+| exposure_housing | Housing units | Census | int | 0 | inf | REAL/DUMMY |
+| exposure_building_value | Building value | ACS | float | 0 | inf | REAL/DUMMY |
+| exposure_score | Combined exposure | Derived | float | 0 | 1 | Derived |
+| vuln_poverty | Poverty rate | ACS | float | 0 | 1 | REAL/DUMMY |
+| vuln_elderly | Elderly ratio | ACS | float | 0 | 1 | REAL/DUMMY |
+| vuln_vehicle_access | Vehicle access (inverted) | ACS | float | 0 | 1 | REAL/DUMMY |
+| vulnerability_score | Combined vulnerability | Derived | float | 0 | 1 | Derived |
+| res_fire_station_dist | Fire station access | HIFLD | float | 0 | 1 | REAL/DUMMY |
+| res_hospital_dist | Hospital access | HIFLD | float | 0 | 1 | REAL/DUMMY |
+| res_road_access | Road connectivity | OSM | float | 0 | 1 | REAL/DUMMY |
+| resilience_score | Combined resilience | Derived | float | 0 | 1 | Derived |
+| risk_score | Risk score | Derived | float | 0 | 1 | Derived |
+| eal | Expected annual loss | Derived | float | 0 | inf | Derived |
+| eal_norm | Normalized EAL | Derived | float | 0 | 1 | Derived |
+| diagnostics | Validation issues | Internal | object | - | - | - |
+| *_source | Provenance (REAL/DUMMY) | Internal | str | - | - | - |
+| *_provenance | Data source or fallback reason | Internal | str | - | - | - |
 
 ---
 
-*This README was auto-generated by combining project documentation and solution guides for developer onboarding and future improvements.*
+## Notes
+- All environmental/geospatial data is stored in `data/geospatial/` (not tracked by git).
+- All real Census/ACS data is stored in `data/real/`.
+- To refresh or update any data, rerun the appropriate script.
+- See `calculations.csv` and `calculations_diagram.md` for formulas and data flow.
+
+---
+
+*This README was auto-generated and includes usage, API docs, and a data dictionary for all fields.*
