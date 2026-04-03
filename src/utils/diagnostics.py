@@ -2,6 +2,8 @@ import pandas as pd
 import numpy as np
 import logging
 import csv
+from src.utils.config import REAL_DATA_DIR
+import os
 
 logger = logging.getLogger("diagnostics")
 
@@ -58,12 +60,29 @@ def validate_row(row):
 def add_diagnostics_to_gdf(gdf):
     """
     For each row, validate and add a 'diagnostics' column (dict of field: [issues])
+    Also, write a summary diagnostics report to data/real/diagnostics_report.csv
     """
     diagnostics = []
+    summary = {}
     for idx, row in gdf.iterrows():
         issues = validate_row(row)
         diagnostics.append(issues)
+        for field, problems in issues.items():
+            for p in problems:
+                summary.setdefault(field, {}).setdefault(p, 0)
+                summary[field][p] += 1
         if issues:
             logger.warning(f"Diagnostics for row {idx}: {issues}")
     gdf["diagnostics"] = diagnostics
+    # Write summary report
+    try:
+        os.makedirs(REAL_DATA_DIR, exist_ok=True)
+        with open(f"{REAL_DATA_DIR}/diagnostics_report.csv", "w", newline="", encoding="utf-8") as f:
+            writer = csv.writer(f)
+            writer.writerow(["field", "issue", "count"])
+            for field, problems in summary.items():
+                for issue, count in problems.items():
+                    writer.writerow([field, issue, count])
+    except Exception as e:
+        logger.warning(f"Could not write diagnostics report: {e}")
     return gdf
