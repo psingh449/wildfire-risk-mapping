@@ -5,7 +5,7 @@ import os
 import pandas as pd
 from src.utils.dummy_data import generate_uniform, generate_int
 from src.utils.source_tracker import mark_real, mark_dummy
-from src.utils.config import USE_STORED_REAL_DATA, REAL_DATA_DIR
+from src.utils.config import REAL_DATA_DIR, USE_STORED_REAL_DATA
 
 logger = logging.getLogger("real_data")
 
@@ -27,18 +27,18 @@ def get_limits(var):
                 return min_val, max_val
     return 0, 1
 
-def fallback_uniform(gdf, var, size=None):
+def fallback_uniform(gdf, var, size=None, reason=None):
     min_val, max_val = get_limits(var)
     if size is None:
         size = len(gdf)
-    logger.warning(f"Falling back to dummy for {var} in range [{min_val},{max_val}]")
+    logger.warning(f"Falling back to dummy for {var} in range [{min_val},{max_val}] ({reason})")
     return generate_uniform(min_val, max_val, size)
 
-def fallback_int(gdf, var, size=None):
+def fallback_int(gdf, var, size=None, reason=None):
     min_val, max_val = get_limits(var)
     if size is None:
         size = len(gdf)
-    logger.warning(f"Falling back to dummy for {var} in range [{min_val},{max_val}]")
+    logger.warning(f"Falling back to dummy for {var} in range [{min_val},{max_val}] ({reason})")
     return generate_int(int(min_val), int(max_val) + 1, size)
 
 # --- Census API integration for population and housing ---
@@ -74,23 +74,24 @@ def fetch_census_population_local():
 
 def compute_exposure_population_real(gdf):
     if "GEOID" not in gdf.columns:
-        logger.warning("No GEOID column for census population fetch; using fallback.")
-        gdf["exposure_population"] = fallback_int(gdf, "exposure_population")
-        return mark_dummy(gdf, "exposure_population")
+        gdf["exposure_population"] = fallback_int(gdf, "exposure_population", reason="No GEOID column")
+        return mark_dummy(gdf, "exposure_population", reason="No GEOID column")
     if USE_STORED_REAL_DATA:
         pop_dict = fetch_census_population_local()
+        provenance = "local_census_population.csv"
     else:
         pop_dict = fetch_census_population(gdf["GEOID"].tolist())
+        provenance = "Census API"
         # Save to local CSV for refresh
         if pop_dict is not None:
             df = pd.DataFrame(list(pop_dict.items()), columns=["GEOID", "population"])
             os.makedirs(REAL_DATA_DIR, exist_ok=True)
             df.to_csv(os.path.join(REAL_DATA_DIR, "census_population.csv"), index=False)
     if pop_dict is None:
-        gdf["exposure_population"] = fallback_int(gdf, "exposure_population")
-        return mark_dummy(gdf, "exposure_population")
+        gdf["exposure_population"] = fallback_int(gdf, "exposure_population", reason="No real data available")
+        return mark_dummy(gdf, "exposure_population", reason="No real data available")
     gdf["exposure_population"] = gdf["GEOID"].map(pop_dict).fillna(0).astype(int)
-    return mark_real(gdf, "exposure_population")
+    return mark_real(gdf, "exposure_population", source=provenance)
 
 # Helper to fetch census block housing units
 def fetch_census_housing(block_geoid_list):
@@ -121,23 +122,24 @@ def fetch_census_housing_local():
 
 def compute_exposure_housing_real(gdf):
     if "GEOID" not in gdf.columns:
-        logger.warning("No GEOID column for census housing fetch; using fallback.")
-        gdf["exposure_housing"] = fallback_int(gdf, "exposure_housing")
-        return mark_dummy(gdf, "exposure_housing")
+        gdf["exposure_housing"] = fallback_int(gdf, "exposure_housing", reason="No GEOID column")
+        return mark_dummy(gdf, "exposure_housing", reason="No GEOID column")
     if USE_STORED_REAL_DATA:
         housing_dict = fetch_census_housing_local()
+        provenance = "local_census_housing.csv"
     else:
         housing_dict = fetch_census_housing(gdf["GEOID"].tolist())
+        provenance = "Census API"
         # Save to local CSV for refresh
         if housing_dict is not None:
             df = pd.DataFrame(list(housing_dict.items()), columns=["GEOID", "housing_units"])
             os.makedirs(REAL_DATA_DIR, exist_ok=True)
             df.to_csv(os.path.join(REAL_DATA_DIR, "census_housing.csv"), index=False)
     if housing_dict is None:
-        gdf["exposure_housing"] = fallback_int(gdf, "exposure_housing")
-        return mark_dummy(gdf, "exposure_housing")
+        gdf["exposure_housing"] = fallback_int(gdf, "exposure_housing", reason="No real data available")
+        return mark_dummy(gdf, "exposure_housing", reason="No real data available")
     gdf["exposure_housing"] = gdf["GEOID"].map(housing_dict).fillna(0).astype(int)
-    return mark_real(gdf, "exposure_housing")
+    return mark_real(gdf, "exposure_housing", source=provenance)
 
 # --- ACS API integration for poverty, elderly, vehicle access, building value ---
 # TODO: Implement ACS API fetches for these features as per calculations.csv
@@ -145,22 +147,22 @@ def compute_exposure_housing_real(gdf):
 
 def compute_exposure_building_value_real(gdf):
     # TODO: Implement ACS median value fetch and join
-    gdf["exposure_building_value"] = fallback_uniform(gdf, "exposure_building_value")
-    return mark_dummy(gdf, "exposure_building_value")
+    gdf["exposure_building_value"] = fallback_uniform(gdf, "exposure_building_value", reason="No real data available")
+    return mark_dummy(gdf, "exposure_building_value", reason="No real data available")
 
 def compute_vuln_poverty_real(gdf):
     # TODO: Implement ACS poverty fetch and allocation
-    gdf["vuln_poverty"] = fallback_uniform(gdf, "vuln_poverty")
-    return mark_dummy(gdf, "vuln_poverty")
+    gdf["vuln_poverty"] = fallback_uniform(gdf, "vuln_poverty", reason="No real data available")
+    return mark_dummy(gdf, "vuln_poverty", reason="No real data available")
 
 def compute_vuln_elderly_real(gdf):
     # TODO: Implement ACS elderly fetch and allocation
-    gdf["vuln_elderly"] = fallback_uniform(gdf, "vuln_elderly")
-    return mark_dummy(gdf, "vuln_elderly")
+    gdf["vuln_elderly"] = fallback_uniform(gdf, "vuln_elderly", reason="No real data available")
+    return mark_dummy(gdf, "vuln_elderly", reason="No real data available")
 
 def compute_vuln_vehicle_access_real(gdf):
     # TODO: Implement ACS vehicle access fetch and allocation
-    gdf["vuln_vehicle_access"] = fallback_uniform(gdf, "vuln_vehicle_access")
-    return mark_dummy(gdf, "vuln_vehicle_access")
+    gdf["vuln_vehicle_access"] = fallback_uniform(gdf, "vuln_vehicle_access", reason="No real data available")
+    return mark_dummy(gdf, "vuln_vehicle_access", reason="No real data available")
 
 # Add similar stubs for all features as per calculations.csv
