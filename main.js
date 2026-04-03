@@ -12,9 +12,7 @@ function sourceBadge(isReal) {
 }
 
 function isRealField(p, key) {
-    // Currently only population is real
-    if (key === "exposure_population") return true;
-    return false;
+    return p[key + "_source"] === "REAL";
 }
 
 const projection = d3.geoMercator();
