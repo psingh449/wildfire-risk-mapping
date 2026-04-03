@@ -1,8 +1,11 @@
 import numpy as np
 import logging
 import requests
+import os
+import pandas as pd
 from src.utils.dummy_data import generate_uniform, generate_int
 from src.utils.source_tracker import mark_real, mark_dummy
+from src.utils.config import USE_STORED_REAL_DATA, REAL_DATA_DIR
 
 logger = logging.getLogger("real_data")
 
@@ -41,13 +44,9 @@ def fallback_int(gdf, var, size=None):
 # --- Census API integration for population and housing ---
 CENSUS_POP_URL = "https://api.census.gov/data/2020/dec/pl"
 CENSUS_HOUSING_URL = "https://api.census.gov/data/2020/dec/pl"
-ACS_URL = "https://api.census.gov/data/2021/acs/acs5"
 
 # Helper to fetch census block population
 def fetch_census_population(block_geoid_list):
-    # block_geoid_list: list of 12-digit GEOIDs
-    # For demo, fetch for Butte County, CA (state=06, county=007)
-    # API: get=P1_001N&for=block:*&in=state:06+county:007
     params = {
         "get": "P1_001N,GEOID",
         "for": "block:*",
@@ -65,12 +64,28 @@ def fetch_census_population(block_geoid_list):
         logger.warning(f"Census API population fetch failed: {e}")
         return None
 
+def fetch_census_population_local():
+    path = os.path.join(REAL_DATA_DIR, "census_population.csv")
+    if not os.path.exists(path):
+        logger.warning(f"Local census_population.csv not found at {path}")
+        return None
+    df = pd.read_csv(path, dtype={"GEOID": str, "population": int})
+    return dict(zip(df["GEOID"], df["population"]))
+
 def compute_exposure_population_real(gdf):
     if "GEOID" not in gdf.columns:
         logger.warning("No GEOID column for census population fetch; using fallback.")
         gdf["exposure_population"] = fallback_int(gdf, "exposure_population")
         return mark_dummy(gdf, "exposure_population")
-    pop_dict = fetch_census_population(gdf["GEOID"].tolist())
+    if USE_STORED_REAL_DATA:
+        pop_dict = fetch_census_population_local()
+    else:
+        pop_dict = fetch_census_population(gdf["GEOID"].tolist())
+        # Save to local CSV for refresh
+        if pop_dict is not None:
+            df = pd.DataFrame(list(pop_dict.items()), columns=["GEOID", "population"])
+            os.makedirs(REAL_DATA_DIR, exist_ok=True)
+            df.to_csv(os.path.join(REAL_DATA_DIR, "census_population.csv"), index=False)
     if pop_dict is None:
         gdf["exposure_population"] = fallback_int(gdf, "exposure_population")
         return mark_dummy(gdf, "exposure_population")
@@ -96,12 +111,28 @@ def fetch_census_housing(block_geoid_list):
         logger.warning(f"Census API housing fetch failed: {e}")
         return None
 
+def fetch_census_housing_local():
+    path = os.path.join(REAL_DATA_DIR, "census_housing.csv")
+    if not os.path.exists(path):
+        logger.warning(f"Local census_housing.csv not found at {path}")
+        return None
+    df = pd.read_csv(path, dtype={"GEOID": str, "housing_units": int})
+    return dict(zip(df["GEOID"], df["housing_units"]))
+
 def compute_exposure_housing_real(gdf):
     if "GEOID" not in gdf.columns:
         logger.warning("No GEOID column for census housing fetch; using fallback.")
         gdf["exposure_housing"] = fallback_int(gdf, "exposure_housing")
         return mark_dummy(gdf, "exposure_housing")
-    housing_dict = fetch_census_housing(gdf["GEOID"].tolist())
+    if USE_STORED_REAL_DATA:
+        housing_dict = fetch_census_housing_local()
+    else:
+        housing_dict = fetch_census_housing(gdf["GEOID"].tolist())
+        # Save to local CSV for refresh
+        if housing_dict is not None:
+            df = pd.DataFrame(list(housing_dict.items()), columns=["GEOID", "housing_units"])
+            os.makedirs(REAL_DATA_DIR, exist_ok=True)
+            df.to_csv(os.path.join(REAL_DATA_DIR, "census_housing.csv"), index=False)
     if housing_dict is None:
         gdf["exposure_housing"] = fallback_int(gdf, "exposure_housing")
         return mark_dummy(gdf, "exposure_housing")

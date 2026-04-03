@@ -2,6 +2,10 @@
 
 # Paths
 OUTPUT_GEOJSON = "data/processed/blocks.geojson"
+REAL_DATA_DIR = "data/real"
+
+# Real data usage flag
+USE_STORED_REAL_DATA = True  # Set to False to fetch live from APIs and refresh local CSVs
 
 # Numerical stability
 EPSILON = 1e-6
