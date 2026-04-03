@@ -2,11 +2,8 @@
 from src.pipeline.steps import step_ingestion, step_preprocessing, step_features, step_model
 
 # NEW
-try:
-    from src.pipeline.feature_pipeline import run_feature_pipeline
-    USE_NEW_FEATURE_PIPELINE = False  # keep OFF by default (non-breaking)
-except:
-    USE_NEW_FEATURE_PIPELINE = False
+from src.pipeline.feature_pipeline import run_feature_pipeline
+USE_NEW_FEATURE_PIPELINE = True
 
 
 def run():
@@ -17,6 +14,7 @@ def run():
 
     if USE_NEW_FEATURE_PIPELINE:
         gdf = run_feature_pipeline(gdf)
+        gdf = step_features(gdf) # computes scores
     else:
         gdf = step_features(gdf)
 

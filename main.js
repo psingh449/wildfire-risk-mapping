@@ -54,21 +54,31 @@ function buildTooltip(p) {
         html += `
 <hr/>
 <b>DEBUG:</b><br/>
-hazard_wildfire: ${p.hazard_wildfire?.toFixed(2) ?? "NA"}<br/>
-hazard_vegetation: ${p.hazard_vegetation?.toFixed(2) ?? "NA"}<br/>
-hazard_forest_distance: ${p.hazard_forest_distance?.toFixed(2) ?? "NA"}<br/>
+
+hazard_wildfire: ${p.hazard_wildfire?.toFixed(2) ?? "NA"} ${sourceBadge(isRealField(p, "hazard_wildfire"))}<br/>
+hazard_vegetation: ${p.hazard_vegetation?.toFixed(2) ?? "NA"} ${sourceBadge(isRealField(p, "hazard_vegetation"))}<br/>
+hazard_forest_distance: ${p.hazard_forest_distance?.toFixed(2) ?? "NA"} ${sourceBadge(isRealField(p, "hazard_forest_distance"))}<br/>
+hazard_weather: ${p.hazard_weather?.toFixed(2) ?? "NA"} ${sourceBadge(isRealField(p, "hazard_weather"))}<br/>
+hazard_temperature: ${p.hazard_temperature?.toFixed(2) ?? "NA"} ${sourceBadge(isRealField(p, "hazard_temperature"))}<br/>
+hazard_wind: ${p.hazard_wind?.toFixed(2) ?? "NA"} ${sourceBadge(isRealField(p, "hazard_wind"))}<br/>
+
 <br/>
-exposure_population: ${p.exposure_population ?? "NA"}<br/>
-exposure_housing: ${p.exposure_housing?.toFixed(0) ?? "NA"}<br/>
-exposure_building_value: ${p.exposure_building_value?.toFixed(0) ?? "NA"}<br/>
+
+exposure_population: ${p.exposure_population ?? "NA"} ${sourceBadge(isRealField(p, "exposure_population"))}<br/>
+exposure_housing: ${p.exposure_housing?.toFixed(0) ?? "NA"} ${sourceBadge(isRealField(p, "exposure_housing"))}<br/>
+exposure_building_value: ${p.exposure_building_value?.toFixed(0) ?? "NA"} ${sourceBadge(isRealField(p, "exposure_building_value"))}<br/>
+
 <br/>
-vuln_poverty: ${p.vuln_poverty?.toFixed(2) ?? "NA"}<br/>
-vuln_elderly: ${p.vuln_elderly?.toFixed(2) ?? "NA"}<br/>
-vuln_vehicle_access: ${p.vuln_vehicle_access?.toFixed(2) ?? "NA"}<br/>
+
+vuln_poverty: ${p.vuln_poverty?.toFixed(2) ?? "NA"} ${sourceBadge(isRealField(p, "vuln_poverty"))}<br/>
+vuln_elderly: ${p.vuln_elderly?.toFixed(2) ?? "NA"} ${sourceBadge(isRealField(p, "vuln_elderly"))}<br/>
+vuln_vehicle_access: ${p.vuln_vehicle_access?.toFixed(2) ?? "NA"} ${sourceBadge(isRealField(p, "vuln_vehicle_access"))}<br/>
+
 <br/>
-res_fire_station_dist: ${p.res_fire_station_dist?.toFixed(2) ?? "NA"}<br/>
-res_hospital_dist: ${p.res_hospital_dist?.toFixed(2) ?? "NA"}<br/>
-res_road_access: ${p.res_road_access?.toFixed(2) ?? "NA"}
+
+res_fire_station_dist: ${p.res_fire_station_dist?.toFixed(2) ?? "NA"} ${sourceBadge(isRealField(p, "res_fire_station_dist"))}<br/>
+res_hospital_dist: ${p.res_hospital_dist?.toFixed(2) ?? "NA"} ${sourceBadge(isRealField(p, "res_hospital_dist"))}<br/>
+res_road_access: ${p.res_road_access?.toFixed(2) ?? "NA"} ${sourceBadge(isRealField(p, "res_road_access"))}
 `;
     }
 

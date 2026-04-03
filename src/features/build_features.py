@@ -15,7 +15,11 @@ def build_features(gdf):
 
     # 1. Normalize into *_norm (preserve raw)
     for col in gdf.columns:
-        if col.startswith(("hazard_", "exposure_", "vuln_", "res_")):
+        if (
+            col.startswith(("hazard_", "exposure_", "vuln_", "res_"))
+            and not col.endswith("_source")
+            and gdf[col].dtype != "object"
+        ):
             if col == "exposure_population":
                 continue
             gdf[f"{col}_norm"] = minmax(gdf[col])
