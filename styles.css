@@ -57,3 +57,23 @@ button {
     font-size: 12px;
     font-weight: bold;
 }
+
+/* Commit 19 additions */
+.badge {
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-size: 10px;
+    margin-left: 4px;
+}
+
+.badge-dummy {
+    background: #ffe5cc;
+    color: #b35400;
+    border: 1px solid #ffbb80;
+}
+
+.badge-real {
+    background: #e6ffed;
+    color: #1a7f37;
+    border: 1px solid #8ae2a3;
+}

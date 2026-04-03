@@ -4,12 +4,23 @@ const height = +svg.attr("height");
 
 const DEFAULT_METRIC = "risk_score";
 
+// Badge helpers
+function sourceBadge(isReal) {
+    const cls = isReal ? "badge badge-real" : "badge badge-dummy";
+    const txt = isReal ? "REAL" : "DUMMY";
+    return `<span class="${cls}">${txt}</span>`;
+}
+
+function isRealField(p, key) {
+    // Currently only population is real
+    if (key === "exposure_population") return true;
+    return false;
+}
+
 const projection = d3.geoMercator();
 const path = d3.geoPath().projection(projection);
 
 let geoData;
-
-// ✅ NEW (Commit 18)
 let DEBUG_MODE = true;
 
 const descriptions = {
@@ -21,81 +32,74 @@ const descriptions = {
     eal_norm: "Expected Annual Loss (economic risk proxy based on property value and risk)."
 };
 
-function getMetricLabel(metric) {
-    if (metric === "eal_norm") return "EAL (Normalized)";
-    return metric.replace("_score", "").toUpperCase();
-}
-
-// Tooltip (single instance)
+// Tooltip
 const tooltip = d3.select("body")
     .append("div")
     .attr("class", "tooltip")
     .style("opacity", 0);
 
-// ✅ NEW (Commit 18)
 function buildTooltip(p) {
 
     let html = `
-<b>Risk:</b> ${p.risk_score.toFixed(2)}<br/>
-<b>Hazard:</b> ${p.hazard_score.toFixed(2)}<br/>
-<b>Exposure:</b> ${p.exposure_score.toFixed(2)}<br/>
-<b>Vulnerability:</b> ${p.vulnerability_score.toFixed(2)}<br/>
-<b>Resilience:</b> ${p.resilience_score.toFixed(2)}<br/>
+<b>Risk:</b> ${p.risk_score?.toFixed(2) ?? "NA"}<br/>
+<b>Hazard:</b> ${p.hazard_score?.toFixed(2) ?? "NA"}<br/>
+<b>Exposure:</b> ${p.exposure_score?.toFixed(2) ?? "NA"}<br/>
+<b>Vulnerability:</b> ${p.vulnerability_score?.toFixed(2) ?? "NA"}<br/>
+<b>Resilience:</b> ${p.resilience_score?.toFixed(2) ?? "NA"}<br/>
 <hr/>
-<b>Population:</b> ${Math.round(p.exposure_population)}<br/>
-<b>Building Value:</b> $${Math.round(p.building_value_est).toLocaleString()}<br/>
-<b>EAL:</b> $${Math.round(p.eal).toLocaleString()}
+<b>Population:</b> ${p.exposure_population ?? "NA"} ${sourceBadge(isRealField(p, "exposure_population"))}<br/>
+<b>Building Value:</b> $${Math.round(p.building_value_est ?? 0).toLocaleString()} ${sourceBadge(isRealField(p, "exposure_building_value"))}<br/>
+<b>EAL:</b> $${Math.round(p.eal ?? 0).toLocaleString()} ${sourceBadge(isRealField(p, "eal"))}
 `;
 
     if (DEBUG_MODE) {
         html += `
 <hr/>
 <b>DEBUG:</b><br/>
-hazard_wildfire: ${p.hazard_wildfire?.toFixed(2)}<br/>
-hazard_vegetation: ${p.hazard_vegetation?.toFixed(2)}<br/>
-hazard_forest_distance: ${p.hazard_forest_distance?.toFixed(2)}<br/>
+hazard_wildfire: ${p.hazard_wildfire?.toFixed(2) ?? "NA"}<br/>
+hazard_vegetation: ${p.hazard_vegetation?.toFixed(2) ?? "NA"}<br/>
+hazard_forest_distance: ${p.hazard_forest_distance?.toFixed(2) ?? "NA"}<br/>
 <br/>
-exposure_population: ${p.exposure_population}<br/>
-exposure_housing: ${p.exposure_housing?.toFixed(0)}<br/>
-exposure_building_value: ${p.exposure_building_value?.toFixed(0)}<br/>
+exposure_population: ${p.exposure_population ?? "NA"}<br/>
+exposure_housing: ${p.exposure_housing?.toFixed(0) ?? "NA"}<br/>
+exposure_building_value: ${p.exposure_building_value?.toFixed(0) ?? "NA"}<br/>
 <br/>
-vuln_poverty: ${p.vuln_poverty?.toFixed(2)}<br/>
-vuln_elderly: ${p.vuln_elderly?.toFixed(2)}<br/>
-vuln_vehicle_access: ${p.vuln_vehicle_access?.toFixed(2)}<br/>
+vuln_poverty: ${p.vuln_poverty?.toFixed(2) ?? "NA"}<br/>
+vuln_elderly: ${p.vuln_elderly?.toFixed(2) ?? "NA"}<br/>
+vuln_vehicle_access: ${p.vuln_vehicle_access?.toFixed(2) ?? "NA"}<br/>
 <br/>
-res_fire_station_dist: ${p.res_fire_station_dist?.toFixed(2)}<br/>
-res_hospital_dist: ${p.res_hospital_dist?.toFixed(2)}<br/>
-res_road_access: ${p.res_road_access?.toFixed(2)}
+res_fire_station_dist: ${p.res_fire_station_dist?.toFixed(2) ?? "NA"}<br/>
+res_hospital_dist: ${p.res_hospital_dist?.toFixed(2) ?? "NA"}<br/>
+res_road_access: ${p.res_road_access?.toFixed(2) ?? "NA"}
 `;
     }
 
     return html;
 }
 
+// Load data
 d3.json("data/processed/blocks.geojson").then(data => {
     geoData = data;
-
     projection.fitSize([width, height], geoData);
-
     render(DEFAULT_METRIC);
     updateDescription(DEFAULT_METRIC);
 });
 
-// Dropdown change
+// Dropdown
 d3.select("#metric").on("change", function () {
     const metric = this.value;
     render(metric);
     updateDescription(metric);
 });
 
-// Reset button
+// Reset
 d3.select("#reset").on("click", function () {
     d3.select("#metric").property("value", DEFAULT_METRIC);
     render(DEFAULT_METRIC);
     updateDescription(DEFAULT_METRIC);
 });
 
-// ✅ NEW (Commit 18)
+// Debug toggle
 d3.select("#debugToggle").on("change", function () {
     DEBUG_MODE = this.checked;
 });
@@ -122,7 +126,6 @@ function render(metric) {
 
             tooltip.transition().duration(200).style("opacity", .9);
 
-            // ✅ UPDATED
             tooltip.html(buildTooltip(p))
                 .style("left", (event.pageX + 10) + "px")
                 .style("top", (event.pageY - 20) + "px");
@@ -136,7 +139,7 @@ function render(metric) {
             tooltip.transition().duration(200).style("opacity", 0);
         });
 
-    // Legend (unchanged)
+    // Legend
     const legendWidth = 250;
     const legendHeight = 12;
 
