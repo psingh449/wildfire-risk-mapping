@@ -60,20 +60,24 @@ def validate_row(row):
 def add_diagnostics_to_gdf(gdf):
     """
     For each row, validate and add a 'diagnostics' column (dict of field: [issues])
-    Also, write a summary diagnostics report to data/real/diagnostics_report.csv
+    Ensures diagnostics is always present and non-null.
     """
     diagnostics = []
     summary = {}
     for idx, row in gdf.iterrows():
         issues = validate_row(row)
-        diagnostics.append(issues)
+        diagnostics.append(issues if issues is not None else {})
         for field, problems in issues.items():
             for p in problems:
                 summary.setdefault(field, {}).setdefault(p, 0)
                 summary[field][p] += 1
         if issues:
             logger.warning(f"Diagnostics for row {idx}: {issues}")
-    gdf["diagnostics"] = diagnostics
+    # Fill missing diagnostics if DataFrame is empty
+    if len(gdf) == 0:
+        gdf["diagnostics"] = []
+    else:
+        gdf["diagnostics"] = diagnostics
     # Write summary report
     try:
         os.makedirs(REAL_DATA_DIR, exist_ok=True)

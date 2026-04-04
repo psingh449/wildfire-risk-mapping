@@ -4,6 +4,14 @@ A modular, end-to-end system for block-group level wildfire risk mapping, combin
 
 ---
 
+## Diagnostics & Provenance
+
+- Every field has a `_source` and `_provenance` column indicating data origin (REAL/DUMMY and details).
+- Every block has a `diagnostics` column with validation issues (if any).
+- All validations (range, null, type, provenance, diagnostics) are enforced and tested.
+
+---
+
 ## Usage Examples
 
 - **Run the pipeline:**

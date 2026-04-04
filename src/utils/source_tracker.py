@@ -9,6 +9,9 @@ def mark_real(gdf, column, source=None):
     else:
         gdf[f"{column}_provenance"] = "REAL"
         logger.info(f"{column}: REAL")
+    # Ensure column exists even if empty
+    if f"{column}_provenance" not in gdf.columns:
+        gdf[f"{column}_provenance"] = "REAL"
     return gdf
 
 def mark_dummy(gdf, column, reason=None):
@@ -19,4 +22,7 @@ def mark_dummy(gdf, column, reason=None):
     else:
         gdf[f"{column}_provenance"] = "DUMMY"
         logger.warning(f"{column}: DUMMY")
+    # Ensure column exists even if empty
+    if f"{column}_provenance" not in gdf.columns:
+        gdf[f"{column}_provenance"] = "DUMMY"
     return gdf
