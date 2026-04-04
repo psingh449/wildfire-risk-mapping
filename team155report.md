@@ -102,7 +102,13 @@ flowchart LR
 
 **Figure Placeholder 1.** County-level wildfire choropleth versus block-level hotspot map, showing how a moderate county average can hide highly exposed neighborhoods. Insert final visualization screenshot here.
 
-### 2.5 Input-Output Specification
+### 2.5 Why County Averaging Hides Wildfire Risk
+
+A central problem in coarse disaster reporting is that averaging can combine very low-risk and very high-risk neighborhoods into one moderate county value. In wildfire contexts this can happen when sparsely populated forest edges, denser residential areas, and communities with different evacuation capacity are all summarized together. The result is that blocks facing much higher danger than the county mean may not stand out in county-scale products.
+
+**Figure Placeholder 1A.** Illustration of county averaging effect, adapted from the project’s earlier proposal material. Replace with final figure showing how a county average such as `0.39` can conceal higher-risk neighborhood values.
+
+### 2.6 Input-Output Specification
 
 | Element | Definition | Spatial Unit | Output Type |
 | --- | --- | --- | --- |
@@ -116,7 +122,7 @@ flowchart LR
 | Validation outputs | county aggregates, FEMA comparison, fire overlap, AUC, Gini | County / global / attached to blocks | Metrics + diagnostics |
 | Visualization output | GeoJSON fields consumed by frontend | Block | Interactive map layer |
 
-### 2.6 Variables Used in the Implemented Model
+### 2.7 Variables Used in the Implemented Model
 
 Table 1 summarizes the core variables from `calculations.csv` used directly in the implemented pipeline.
 
@@ -137,7 +143,7 @@ Table 1 summarizes the core variables from `calculations.csv` used directly in t
 | Model | `risk_score` | Composite wildfire risk | Derived |
 | Model | `eal` | Expected annual loss estimate | Derived |
 
-### 2.7 Why This Problem Is Non-Trivial
+### 2.8 Why This Problem Is Non-Trivial
 
 This is not a simple mapping task. The system requires combining multiple heterogeneous public datasets with different geographic units, formats, and semantics. Some features are raster-based, some come from APIs, some require nearest-neighbor spatial computation, and some are only available at coarser levels such as census block groups and must therefore be allocated downward to blocks. The project also requires normalization, provenance tracking, diagnostics, fallback logic for missing data, validation metrics, and an interactive frontend that exposes the results. Together, these steps satisfy the course requirement for large public data, non-trivial computation, and interactive visualization.
 
@@ -473,7 +479,11 @@ The evaluation uses the following categories of data:
 
 Where external files are absent, the pipeline includes safe fallback logic so that execution remains possible. However, the strongest evaluation results are obtained when the FEMA NRI county table and MTBS fire perimeter data are present.
 
-### 5.3 Evaluation Questions
+### 5.3 Example Study Area
+
+Although the framework is designed to be extensible beyond a single county, **Butte County, California** is an especially useful example study area for demonstration and interpretation. It contains wildfire-prone Sierra foothill terrain, a mix of forest and residential land, and the legacy of the **2018 Camp Fire**, making it a strong candidate for illustrating within-county variation in hazard, exposure, and vulnerability. It is therefore a practical place to compare county wildfire summaries against neighborhood-scale block patterns.
+
+### 5.4 Evaluation Questions
 
 The evaluation section is organized around the following specific questions.
 
@@ -487,7 +497,7 @@ The evaluation section is organized around the following specific questions.
 
 **EQ5.** Does the interactive visualization make those within-county contrasts legible to a user?
 
-### 5.4 Evaluation Metrics Implemented in the Pipeline
+### 5.5 Evaluation Metrics Implemented in the Pipeline
 
 The implemented evaluation metrics are summarized below.
 
@@ -503,7 +513,7 @@ The implemented evaluation metrics are summarized below.
 
 These metrics are attached to the data pipeline because evaluation is treated as part of the analytical workflow rather than an afterthought.
 
-### 5.5 Experiment 1: County Risk Comparison with FEMA NRI
+### 5.6 Experiment 1: County Risk Comparison with FEMA NRI
 
 #### Purpose
 
@@ -536,7 +546,7 @@ We expect moderate positive agreement with FEMA NRI at county scale, while still
 
 **Figure Placeholder 6.** Scatterplot of aggregated `county_risk` versus FEMA NRI wildfire risk by county. Insert final chart here.
 
-### 5.6 Experiment 2: County Expected Annual Loss Aggregation
+### 5.7 Experiment 2: County Expected Annual Loss Aggregation
 
 #### Purpose
 
@@ -567,7 +577,7 @@ We expect `county_eal` to emphasize heavily developed wildfire-prone counties mo
 
 **Figure Placeholder 7.** County-level map or ranked bar chart of `county_eal`. Insert final figure here.
 
-### 5.7 Experiment 3: Historical Fire Validation
+### 5.8 Experiment 3: Historical Fire Validation
 
 #### Purpose
 
@@ -600,7 +610,7 @@ We expect the highest-risk decile of blocks to capture a disproportionately larg
 
 **Figure Placeholder 8.** Overlay map showing historical fire perimeters on top of block-level `risk_score`. Insert screenshot here.
 
-### 5.8 Experiment 4: AUC-Based Fire Prediction Test
+### 5.9 Experiment 4: AUC-Based Fire Prediction Test
 
 #### Purpose
 
@@ -630,7 +640,7 @@ We expect AUC to be meaningfully above random chance, with the exact value depen
 
 **Figure Placeholder 9.** ROC curve for historical fire prediction using block `risk_score`. Insert final figure here.
 
-### 5.9 Experiment 5: Risk Concentration and Inequality
+### 5.10 Experiment 5: Risk Concentration and Inequality
 
 #### Purpose
 
@@ -661,7 +671,7 @@ We expect a relatively high concentration of total risk in a small share of bloc
 
 **Figure Placeholder 10.** Lorenz curve of block-level `risk_score` and annotation of `gini_risk`. Insert final chart here.
 
-### 5.10 Experiment 6: Qualitative Visual Evaluation of the Interface
+### 5.11 Experiment 6: Qualitative Visual Evaluation of the Interface
 
 #### Purpose
 
@@ -684,7 +694,7 @@ We expect the interface to make within-county variation visually obvious and to 
 
 **Figure Placeholder 11.** Screenshot sequence showing one county at county scale, then zoomed block scale, then tooltip details panel. Insert final UI screenshots here.
 
-### 5.11 Summary of Evaluation Logic
+### 5.12 Summary of Evaluation Logic
 
 The evaluation framework intentionally uses several complementary perspectives.
 
@@ -696,7 +706,7 @@ The evaluation framework intentionally uses several complementary perspectives.
 
 A model could perform reasonably on one of these tests and poorly on another, so using all of them provides a more balanced assessment.
 
-### 5.12 Anticipated Observations
+### 5.13 Anticipated Observations
 
 Based on the design of the method and the implemented validation outputs, the main expected observations are:
 
@@ -708,7 +718,7 @@ Based on the design of the method and the implemented validation outputs, the ma
 
 These expected results would support the main project claim that **block-level wildfire risk provides a more informative view of neighborhood danger than county averages alone**.
 
-### 5.13 Threats to Validity
+### 5.14 Threats to Validity
 
 Several factors may affect evaluation quality.
 
@@ -720,7 +730,7 @@ Several factors may affect evaluation quality.
 
 These threats do not invalidate the framework, but they should be considered when interpreting final quantitative results.
 
-### 5.14 Reproducibility of Evaluation
+### 5.15 Reproducibility of Evaluation
 
 A strength of the project is that evaluation is reproducible through the same pipeline architecture used for model computation. Once the required external datasets are placed in the documented paths, the evaluation outputs are recomputed automatically and attached to the GeoDataFrame. This means the experiments are not one-off manual analyses; they are part of the end-to-end system.
 
@@ -784,3 +794,14 @@ Overall, this project demonstrates that a **block-level wildfire risk framework 
 ### 6.6 Team Effort Statement
 
 All team members have contributed a similar amount of effort across the design, implementation, analysis, and reporting of this project.
+
+---
+
+## References
+
+1. Moritz, M. A., et al. 2014. Learning to coexist with wildfire. *Nature*. https://www.nature.com/articles/nature13946
+2. Yarveysi, F., et al. 2023. Block-level vulnerability assessment reveals disproportionate impacts of natural hazards. *Nature Communications*. https://www.nature.com/articles/s41467-023-41888-0
+3. Abatzoglou, J. T., & Williams, A. P. 2016. Impact of climate change on wildfire across western U.S. forests. *PNAS*. https://www.pnas.org/doi/10.1073/pnas.1607171113
+4. Cutter, S. L., Boruff, B. J., & Shirley, W. L. 2003. Social vulnerability to environmental hazards. *Social Science Quarterly*. https://doi.org/10.1111/1540-6237.8402002
+5. Kreibich, H., et al. 2014. Costing natural hazards. *Nature Climate Change*. https://www.nature.com/articles/nclimate2126
+6. FEMA National Risk Index. https://hazards.fema.gov/nri/
