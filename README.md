@@ -221,27 +221,3 @@ Each step must:
 
 See [docs/data_flow_diagram.md](docs/data_flow_diagram.md) for a full data flow, including diagnostics and provenance.
 
----
-
-## Changelog
-
-All notable changes to this project will be documented in this file.
-
-### [Unreleased]
-- Add type annotations, docstrings, and structured logging to all core modules.
-- Add robust validation, diagnostics, and provenance tracking.
-- Add geospatial processing scripts and integration.
-- Add comprehensive test suite and CI workflow.
-- Add expanded documentation, how-to guides, and data flow diagrams.
-- **Migrate calculations table to `calculations.csv` (canonical, machine-readable).**
-- **Add `weight_group` and `weight` metadata to `calculations.csv` for weighted composite features.**
-- **Reorder `calculations.csv` columns into a schema-first layout while preserving header-based compatibility.**
-- **Fully implement and test hazard_forest_distance, res_fire_station_dist, res_hospital_dist, res_road_access.**
-- **Implement and test validation rows 20-27 (county aggregation, FEMA comparison, fire overlap, AUC, concentration, Gini).**
-
-### [1.0.0] - 2024-06-01
-- Initial release: End-to-end wildfire risk mapping pipeline with modular features, diagnostics, and D3.js frontend.
-
----
-
-*This README was auto-generated and includes quickstart, troubleshooting, API docs, data flow, and a data dictionary.*
