@@ -2,33 +2,33 @@ flowchart TD
 
 subgraph DS[DATA SOURCES]
     direction LR
-    A[Wildfire hazard data source] --- B[Land cover data source] --- C[Population census API] ---
-    D[Community survey API] ---
-    E[Critical facilities API] ---
-    F[Road network API] ---
-    G[Historical wildfire dataset] ---
-    H[Federal county risk dataset] 
+    A[Wildfire hazard<br/>data source] --- B[Land cover<br/>data source] --- C[Population census<br/>API] ---
+    D[Community survey<br/>API] ---
+    E[Critical facilities<br/>API] ---
+    F[Road network<br/>API] ---
+    G[Historical wildfire<br/>dataset] ---
+    H[Federal county risk<br/>dataset] 
 end
 
 subgraph ING[INGESTION]
-    I1[Load wildfire hazard data -> wildfire hazard value] ---
-    I2[Load land cover data -> vegetation hazard value] ---
-    I3[Load census population data -> population exposure] ---
-    I4[Load census housing data -> housing exposure] ---
-    I5[Load community survey data -> poverty elderly vehicle access and building value features] 
-    I6[Load critical facilities data -> fire station and hospital access features] ---
-    I7[Load road network data -> road access feature] ---
-    I8[Load historical fire boundaries -> historical fire dataset] ---
-    I9[Load federal risk benchmark -> benchmark dataset]
+    I1[Load wildfire hazard data<br/>-> wildfire hazard value] ---
+    I2[Load land cover data<br/>-> vegetation hazard value] ---
+    I3[Load census population data<br/>-> population exposure] ---
+    I4[Load census housing data<br/>-> housing exposure] ---
+    I5[Load community survey data<br/>-> poverty elderly vehicle access<br/>and building value features] 
+    I6[Load critical facilities data<br/>-> fire station and hospital<br/>access features] ---
+    I7[Load road network data<br/>-> road access feature] ---
+    I8[Load historical fire boundaries<br/>-> historical fire dataset] ---
+    I9[Load federal risk benchmark<br/>-> benchmark dataset]
 end
 
 DS --> ING
 
 subgraph PRE[PREPROCESSING]
-    J1[Standardize coordinate system] ---
-    J2[Clip data to Butte County] ---
-    J3[Create analysis blocks with IDs] ---
-    J4[Calculate block center points]
+    J1[Standardize<br/>coordinate system] ---
+    J2[Clip data to<br/>Butte County] ---
+    J3[Create analysis blocks<br/>with IDs] ---
+    J4[Calculate block<br/>center points]
 end
 
 ING --> PRE
@@ -36,31 +36,31 @@ ING --> PRE
 subgraph FE[FEATURE ENGINEERING]
 
     subgraph HZ[Hazard]
-        H1[Build wildfire hazard feature -> wildfire hazard]
-        H2[Build vegetation hazard feature -> vegetation hazard]
-        H3[Build forest distance hazard feature -> forest distance hazard]
-        H4[Build overall hazard score -> hazard score]
+        H1[Build wildfire hazard feature<br/>-> wildfire hazard]
+        H2[Build vegetation hazard feature<br/>-> vegetation hazard]
+        H3[Build forest distance hazard feature<br/>-> forest distance hazard]
+        H4[Build overall hazard score<br/>-> hazard score]
     end
 
     subgraph EX[Exposure]
-        E1[Build population exposure feature -> population exposure]
-        E2[Build housing exposure feature -> housing exposure]
-        E3[Build building value exposure feature -> building value exposure]
-        E4[Build overall exposure score -> exposure score]
+        E1[Build population exposure feature<br/>-> population exposure]
+        E2[Build housing exposure feature<br/>-> housing exposure]
+        E3[Build building value exposure feature<br/>-> building value exposure]
+        E4[Build overall exposure score<br/>-> exposure score]
     end
 
     subgraph VL[Vulnerability]
-        V1[Build poverty vulnerability feature -> poverty vulnerability]
-        V2[Build elderly vulnerability feature -> elderly vulnerability]
-        V3[Build vehicle access vulnerability feature -> vehicle access vulnerability]
-        V4[Build overall vulnerability score -> vulnerability score]
+        V1[Build poverty vulnerability feature<br/>-> poverty vulnerability]
+        V2[Build elderly vulnerability feature<br/>-> elderly vulnerability]
+        V3[Build vehicle access vulnerability feature<br/>-> vehicle access vulnerability]
+        V4[Build overall vulnerability score<br/>-> vulnerability score]
     end
 
     subgraph RS[Resilience]
-        R1[Build fire station access feature -> fire station access]
-        R2[Build hospital access feature -> hospital access]
-        R3[Build road access feature -> road access]
-        R4[Build overall resilience score -> resilience score]
+        R1[Build fire station access feature<br/>-> fire station access]
+        R2[Build hospital access feature<br/>-> hospital access]
+        R3[Build road access feature<br/>-> road access]
+        R4[Build overall resilience score<br/>-> resilience score]
     end
 
 end
@@ -68,29 +68,29 @@ end
 PRE --> FE
 
 subgraph MODEL[MODEL]
-    M1[Calculate wildfire risk score -> risk score] ---
-    M2[Calculate expected annual loss -> annual loss] ---
-    M3[Normalize annual loss for mapping -> normalized annual loss]
+    M1[Calculate wildfire risk score<br/>-> risk score] ---
+    M2[Calculate expected annual loss<br/>-> annual loss] ---
+    M3[Normalize annual loss for mapping<br/>-> normalized annual loss]
 end
 
 FE --> MODEL
 
 subgraph VAL[VALIDATION]
-    VLD1[Map blocks to counties -> block to county mapping] ---
-    VLD2[Aggregate block risk to county level -> county risk] ---
-    VLD3[Aggregate block loss to county level -> county loss] ---
-    VLD4[Compare with federal benchmark -> benchmark comparison] 
-    VLD5[Measure overlap with historical fires -> fire overlap ratio] ---
-    VLD6[Measure prediction quality -> prediction AUC score] ---
-    VLD7[Measure how concentrated risk is -> risk concentration] ---
-    VLD8[Measure inequality of risk distribution -> risk inequality index]
+    VLD1[Map blocks to counties<br/>-> block to county mapping] ---
+    VLD2[Aggregate block risk to county level<br/>-> county risk] ---
+    VLD3[Aggregate block loss to county level<br/>-> county loss] ---
+    VLD4[Compare with federal benchmark<br/>-> benchmark comparison] 
+    VLD5[Measure overlap with historical fires<br/>-> fire overlap ratio] ---
+    VLD6[Measure prediction quality<br/>-> prediction AUC score] ---
+    VLD7[Measure how concentrated risk is<br/>-> risk concentration] ---
+    VLD8[Measure inequality of risk distribution<br/>-> risk inequality index]
 end
 
 MODEL --> VAL
 
 subgraph EXP[EXPORT]
-    X1[Export map-ready GeoJSON]
-    X2[Export validation summary report]
+    X1[Export map-ready<br/>GeoJSON]
+    X2[Export validation<br/>summary report]
 end
 
 MODEL --> EXP
