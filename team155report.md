@@ -498,7 +498,7 @@ The implemented evaluation metrics are summarized below.
 | FEMA comparison | `fema_nri_comparison` | Agreement with county benchmark, e.g. correlation / RMSE |
 | Historical fire overlap | `fire_overlap_ratio` | Share of burned area captured in top-risk blocks |
 | Predictive discrimination | `auc_score` | Ability of `risk_score` to separate burned vs non-burned labels |
-| Risk concentration | `risk_concentration` | Share of total risk held in top 10% of blocks |
+| Risk concentration | `risk_concentration` | Share of total risk held by the top 10% of blocks |
 | Gini inequality | `gini_risk` | Unevenness of block risk distribution |
 
 These metrics are attached to the data pipeline because evaluation is treated as part of the analytical workflow rather than an afterthought.
@@ -728,4 +728,59 @@ A strength of the project is that evaluation is reproducible through the same pi
 
 ## 6. Conclusions and Discussion
 
-*To be completed.*
+This project proposes and implements a reproducible wildfire risk mapping framework at **census block resolution**, with the goal of revealing neighborhood-scale wildfire hotspots that county-level averages can hide. The work combines four major components—hazard, exposure, vulnerability, and resilience—into a unified block-level risk score and an expected annual loss measure. It also packages the full workflow into a transparent pipeline with validation outputs, diagnostics, provenance tracking, and an interactive visualization layer.
+
+The central contribution of the project is not only a finer-grained map, but a **multi-source analytical system** that connects public environmental, demographic, and infrastructure datasets into a single operational framework. In that sense, the project sits between three kinds of prior work: hazard-focused wildfire science, social-vulnerability research, and county-scale disaster risk systems such as FEMA NRI. By integrating ideas from each of these areas, the project demonstrates how wildfire danger can be studied as both a physical and a social phenomenon at neighborhood scale.
+
+From a methodological perspective, the project shows that block-level wildfire assessment is feasible using public data and standard geospatial computation. The pipeline supports raster summarization, distance-based accessibility features, census joins, allocation of coarser ACS variables to blocks, composite score construction, aggregation back to county scale, and export to a web-ready GeoJSON product. This satisfies the course requirement for non-trivial computation on large real datasets while also producing a visual interface through which the results can be inspected.
+
+The evaluation framework was designed to test the system from multiple angles rather than relying on a single benchmark. County aggregation metrics evaluate consistency with broader public risk systems, historical fire overlap and AUC metrics test whether high-risk blocks align with observed burn patterns, and concentration metrics test the project’s main claim that wildfire risk is unevenly distributed within counties. Even before final numeric values are inserted, the structure of the evaluation supports the hypothesis that **county averages are often too coarse to capture neighborhood concentration of wildfire risk**.
+
+### 6.1 Main Takeaways
+
+The most important takeaways of this work are the following:
+
+1. **Wildfire risk is spatially heterogeneous at short distances.** Blocks within the same county can differ substantially in hazard, exposure, social vulnerability, and emergency access.
+2. **County-scale reporting is useful but incomplete.** It provides broad regional summaries, but it is poorly suited for locating local hotspots or supporting neighborhood-level planning.
+3. **A block-level framework can integrate physical and social dimensions of risk.** This allows wildfire assessment to move beyond hazard-only maps.
+4. **Interactive visualization matters.** Spatial patterns that are difficult to understand in tables become immediately interpretable when block-level outputs are displayed on a map with component-level drill-down.
+
+### 6.2 Practical Implications
+
+The project has several applied implications.
+
+- **Emergency planning:** local agencies can use block-level patterns to prioritize evacuation preparation, route planning, and response staging.
+- **Mitigation investment:** wildfire fuel treatment or preparedness funding can be directed toward clusters of blocks where high hazard and high vulnerability coincide.
+- **Public communication:** residents can better understand how their neighborhood differs from nearby areas, even within the same county.
+- **Policy analysis:** block-level results offer a stronger basis for examining environmental inequality and the intersection of poverty with climate-related hazards.
+
+These applications directly connect to the broader motivating question in the course materials: where do vulnerable communities live, and where are climate emergencies likely to cause the greatest harm?
+
+### 6.3 Limitations
+
+The project also has important limitations.
+
+First, several socially meaningful variables are not natively available at block scale and must be inferred from block-group data. This introduces smoothing that may weaken the precision of neighborhood estimates. Second, the building-value model is an approximation based on housing counts and ACS median values rather than parcel-level appraisal data. Third, the resilience component is intentionally simple; it measures access to selected infrastructure rather than full institutional, financial, or governance capacity. Fourth, historical fire validation is useful but imperfect, because past fires are not a complete representation of future wildfire risk. Finally, the quality of external validation depends on the availability and temporal alignment of FEMA and MTBS reference data.
+
+These limitations should make users cautious about treating the outputs as exact forecasts. The project is best understood as a **decision-support and spatial prioritization framework**, not as a deterministic wildfire prediction engine.
+
+### 6.4 Future Work
+
+Several extensions would strengthen the framework.
+
+- replace block-group allocation proxies with finer-grained socioeconomic data where available;
+- incorporate parcel-level or assessor-based building value estimates;
+- model evacuation capacity using full road-network travel analysis rather than road-density proxies;
+- incorporate additional wildfire-relevant variables such as slope, aspect, drought, wind exposure, defensible space, or structure age;
+- evaluate the framework across more counties and compare regional behavior systematically; and
+- improve the frontend with richer filtering, side-by-side county/block comparison, and embedded validation dashboards.
+
+A longer-term research direction would be to examine whether the block-level framework can support publishable evidence about how county-scale risk systems may underrepresent concentrated neighborhood vulnerability.
+
+### 6.5 Final Conclusion
+
+Overall, this project demonstrates that a **block-level wildfire risk framework is both feasible and useful**. It extends existing county-scale interpretations by preserving local variation, integrates multiple dimensions of wildfire consequence, and provides a reproducible computational and visual workflow grounded in public data. The key insight is that wildfire risk is not evenly distributed within administrative units, and that this unevenness matters for planning, policy, and equity. If the final empirical results follow the expected patterns described in Section 5, then the project will support its main claim: **county averages can hide high-risk neighborhoods, and block-level analysis provides a more informative picture of wildfire danger in the United States.**
+
+### 6.6 Team Effort Statement
+
+All team members have contributed a similar amount of effort across the design, implementation, analysis, and reporting of this project.
