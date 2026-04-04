@@ -1,6 +1,40 @@
 # Wildfire Risk Mapping
 
-A modular, end-to-end system for block-group level wildfire risk mapping, combining hazard, exposure, vulnerability, and resilience into interpretable scores and an Expected Annual Loss (EAL) proxy. The project features a Python pipeline for data processing and a D3.js-based frontend for interactive visualization.
+---
+
+## Quickstart
+
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/psingh449/wildfire-risk-mapping.git
+   cd wildfire-risk-mapping
+   ```
+2. **Install dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   pip install geopandas rasterio shapely fiona pyproj rtree osmnx
+   ```
+3. **Download and process data:**
+   ```bash
+   python scripts/refresh_real_data.py
+   python scripts/download_environmental_data.py
+   python scripts/process_nlcd_zonal_stats.py
+   python scripts/process_hifld_nearest.py
+   python scripts/process_osm_road_length.py
+   ```
+4. **Run the pipeline:**
+   ```bash
+   python -m src.pipeline.run_pipeline
+   ```
+5. **Serve the frontend:**
+   ```bash
+   python -m http.server 8000
+   # Open index.html in your browser
+   ```
+6. **Run tests:**
+   ```bash
+   set PYTHONPATH=. & pytest tests/ --maxfail=10 --disable-warnings -q
+   ```
 
 ---
 
@@ -12,104 +46,68 @@ A modular, end-to-end system for block-group level wildfire risk mapping, combin
 
 ---
 
-## Usage Examples
+## Troubleshooting Tips
 
-- **Run the pipeline:**
+- **Missing dependencies:** Ensure all required Python packages are installed. Use the provided requirements and geospatial libraries.
+- **API errors:** Check your internet connection and VPN if accessing Census/ACS APIs. Retry if rate-limited.
+- **Geospatial errors:** Ensure all environmental datasets are downloaded and processed before running the pipeline.
+- **File not found:** Check that all scripts output to the correct folders (`data/real/`, `data/geospatial/`).
+- **Visualization not updating:** Refresh the browser and ensure the GeoJSON output is up to date.
+- **Diagnostics issues:** Check the `diagnostics` column in the output and the logs for validation errors.
+
+---
+
+## Example Output
+
+- Example processed GeoJSON: `data/processed/blocks.geojson`
+- Example diagnostics report: `data/real/diagnostics_report.csv`
+- Example UI screenshot: ![UI Screenshot](docs/example_ui_screenshot.png)  <!-- Replace with your screenshot -->
+
+---
+
+## API Reference
+
+- See [docs/](docs/) for auto-generated API documentation (Sphinx/MkDocs).
+- To build the docs locally:
   ```bash
-  python -m src.pipeline.run_pipeline
-  ```
-- **Refresh real data (Census/ACS):**
-  ```bash
-  python scripts/refresh_real_data.py
-  ```
-- **Download environmental datasets (NLCD, WHP, HIFLD, OSM):**
-  ```bash
-  python scripts/download_environmental_data.py
-  ```
-- **Process NLCD zonal stats:**
-  ```bash
-  python scripts/process_nlcd_zonal_stats.py
-  ```
-- **Process WHP zonal stats:**
-  - Use the same approach as NLCD, but with the WHP raster and output to `data/real/whp_zonal_stats.csv`.
-- **Process HIFLD nearest facility distances:**
-  ```bash
-  python scripts/process_hifld_nearest.py
-  ```
-- **Process OSM road length per block:**
-  ```bash
-  python scripts/process_osm_road_length.py
-  ```
-- **Run tests:**
-  ```bash
-  set PYTHONPATH=. & pytest tests/ --maxfail=10 --disable-warnings -q
-  ```
-- **Serve frontend:**
-  ```bash
-  python -m http.server 8000
-  # then open index.html in your browser
+  cd docs
+  make html
+  # Open docs/_build/html/index.html in your browser
   ```
 
 ---
 
-## Geospatial Processing Requirements
+## Data Flow Diagram
 
-- Install geospatial libraries:
-  ```bash
-  pip install geopandas rasterio shapely fiona pyproj rtree osmnx
-  ```
-- Download environmental datasets and process them as above before running the pipeline for full real data integration.
-- All geospatial and large data is stored in `data/geospatial/` (not tracked by git).
-
----
-
-## API Docs
-
-- **Census API:** https://api.census.gov/data/2020/dec/pl
-- **ACS API:** https://api.census.gov/data/2021/acs/acs5
-- **NLCD:** https://www.mrlc.gov/data
-- **WHP:** https://www.fs.usda.gov/rds/archive/products/RDS-2015-0047
-- **HIFLD:** https://hifld-geoplatform.opendata.arcgis.com/
-- **OSM:** https://download.geofabrik.de/north-america/us/california.html
+See [docs/data_flow_diagram.md](docs/data_flow_diagram.md) for a full data flow, including diagnostics and provenance.
 
 ---
 
 ## Data Dictionary
 
-| Field | Description | Source | Type | Min | Max | Provenance |
-|-------|-------------|--------|------|-----|-----|-----------|
-| hazard_wildfire | Wildfire probability | USFS WHP | float | 0 | 1 | REAL/DUMMY |
-| hazard_vegetation | Fuel density | NLCD | float | 0 | 1 | REAL/DUMMY |
-| hazard_forest_distance | Distance to forest (inverted) | NLCD | float | 0 | 1 | REAL/DUMMY |
-| hazard_score | Combined hazard | Derived | float | 0 | 1 | Derived |
-| exposure_population | Population | Census | int | 0 | inf | REAL/DUMMY |
-| exposure_housing | Housing units | Census | int | 0 | inf | REAL/DUMMY |
-| exposure_building_value | Building value | ACS | float | 0 | inf | REAL/DUMMY |
-| exposure_score | Combined exposure | Derived | float | 0 | 1 | Derived |
-| vuln_poverty | Poverty rate | ACS | float | 0 | 1 | REAL/DUMMY |
-| vuln_elderly | Elderly ratio | ACS | float | 0 | 1 | REAL/DUMMY |
-| vuln_vehicle_access | Vehicle access (inverted) | ACS | float | 0 | 1 | REAL/DUMMY |
-| vulnerability_score | Combined vulnerability | Derived | float | 0 | 1 | Derived |
-| res_fire_station_dist | Fire station access | HIFLD | float | 0 | 1 | REAL/DUMMY |
-| res_hospital_dist | Hospital access | HIFLD | float | 0 | 1 | REAL/DUMMY |
-| res_road_access | Road connectivity | OSM | float | 0 | 1 | REAL/DUMMY |
-| resilience_score | Combined resilience | Derived | float | 0 | 1 | Derived |
-| risk_score | Risk score | Derived | float | 0 | 1 | Derived |
-| eal | Expected annual loss | Derived | float | 0 | inf | Derived |
-| eal_norm | Normalized EAL | Derived | float | 0 | 1 | Derived |
-| diagnostics | Validation issues | Internal | object | - | - | - |
-| *_source | Provenance (REAL/DUMMY) | Internal | str | - | - | - |
-| *_provenance | Data source or fallback reason | Internal | str | - | - | - |
+| Field | Description | Source | Type | Units | Min | Max | Formula | Example | Provenance |
+|-------|-------------|--------|------|-------|-----|-----|---------|---------|-----------|
+| hazard_wildfire | Wildfire probability | USFS WHP | float | 0-1 | 0 | 1 | mean(WHP_pixels_in_block) | 0.23 | REAL/DUMMY |
+| hazard_vegetation | Fuel density | NLCD | float | 0-1 | 0 | 1 | forest_pixels/total_pixels | 0.45 | REAL/DUMMY |
+| hazard_forest_distance | Distance to forest (inverted) | NLCD | float | 0-1 | 0 | 1 | 1/(1+distance_km) | 0.67 | REAL/DUMMY |
+| ... | ... | ... | ... | ... | ... | ... | ... | ... | ... |
+
+See `calculations.csv` for the full expanded data dictionary.
 
 ---
 
-## Notes
-- All environmental/geospatial data is stored in `data/geospatial/` (not tracked by git).
-- All real Census/ACS data is stored in `data/real/`.
-- To refresh or update any data, rerun the appropriate script.
-- See `calculations.csv` and `calculations_diagram.md` for formulas and data flow.
-- See `CALCULATION_STATUS.md` for a table of all calculations and their real data status.
+## How-To Guides
+
+- [How to add a new feature](docs/howto/add_feature.md)
+- [How to refresh data](docs/howto/refresh_data.md)
+- [How to debug diagnostics](docs/howto/debug_diagnostics.md)
 
 ---
 
-*This README was auto-generated and includes usage, API docs, and a data dictionary for all fields.*
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for a list of major changes and releases.
+
+---
+
+*This README was auto-generated and includes quickstart, troubleshooting, API docs, data flow, and a data dictionary.*

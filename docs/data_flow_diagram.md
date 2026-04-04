@@ -1,0 +1,41 @@
+# Data Flow Diagram
+
+```mermaid
+flowchart TD
+    subgraph Ingestion
+        A[Load block geometries]
+        B[Load population/housing]
+        C[Load environmental rasters]
+        D[Load HIFLD/OSM]
+    end
+    subgraph FeatureEngineering
+        E[Compute hazard features]
+        F[Compute exposure features]
+        G[Compute vulnerability features]
+        H[Compute resilience features]
+    end
+    subgraph Assembly
+        I[Normalize & combine features]
+        J[Compute risk & EAL]
+        K[Add diagnostics & provenance]
+    end
+    subgraph Export
+        L[Export GeoJSON]
+        M[Export diagnostics report]
+    end
+    A --> E
+    B --> F
+    C --> E
+    D --> H
+    E --> I
+    F --> I
+    G --> I
+    H --> I
+    I --> J
+    J --> K
+    K --> L
+    K --> M
+```
+
+- Diagnostics and provenance are tracked at every step and included in the final outputs.
+- See `calculations_diagram.md` for more details on feature dependencies.
