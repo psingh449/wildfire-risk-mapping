@@ -40,6 +40,11 @@
    $env:PYTHONPATH='.'; pytest tests/ --maxfail=10 --disable-warnings -q
    ```
 
+   If you want full verbose output instead:
+   ```bash
+   $env:PYTHONPATH='.'; pytest tests/ -v
+   ```
+
 ---
 
 ## Diagnostics & Provenance
