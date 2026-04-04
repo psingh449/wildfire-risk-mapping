@@ -460,3 +460,206 @@ def compute_hazard_forest_distance_real(gdf: pd.DataFrame) -> pd.DataFrame:
     else:
         gdf["hazard_forest_distance"] = fallback_uniform(gdf, "hazard_forest_distance", reason="No NLCD forest distance CSV found")
         return mark_dummy(gdf, "hazard_forest_distance", reason="No NLCD forest distance CSV found")
+
+# --- HIFLD Fire Station, Hospital, and Road Access ---
+HIFLD_URL_BASE = "https://services1.arcgis.com/"
+HIFLD_FIRE_STATION_LAYER = "B4TjvmT8Fm8ZuJtY/FeatureServer/0"
+HIFLD_HOSPITAL_LAYER = "B4TjvmT8Fm8ZuJtY/FeatureServer/1"
+OSM_ROAD_LENGTH_LAYER = "B4TjvmT8Fm8ZuJtY/FeatureServer/2"
+
+# Helper to fetch HIFLD fire station data
+def fetch_hifld_fire_station() -> Optional[pd.DataFrame]:
+    """
+    Fetch fire station data from HIFLD Fire Station Layer.
+    Returns:
+        DataFrame with fire station data, or None on error
+    """
+    url = f"{HIFLD_URL_BASE}{HIFLD_FIRE_STATION_LAYER}/query"
+    params = {
+        "where": "1=1",
+        "outFields": "OBJECTID,NAME,STREET,POSTCODE,CITY,County,STATE,PHONE,Cross_Street,Latitude,Longitude",
+        "f": "pjson"
+    }
+    try:
+        resp = requests.get(url, params=params, timeout=10)
+        resp.raise_for_status()
+        data = resp.json()
+        features = data.get("features", [])
+        if not features:
+            logger.warning("No fire station data found")
+            return None
+        # Convert to DataFrame
+        df = pd.json_normalize(features)
+        # Simplify columns
+        df = df.rename(columns={
+            "attributes.OBJECTID": "object_id",
+            "attributes.NAME": "name",
+            "attributes.STREET": "street",
+            "attributes.POSTCODE": "postcode",
+            "attributes.CITY": "city",
+            "attributes.County": "county",
+            "attributes.STATE": "state",
+            "attributes.PHONE": "phone",
+            "attributes.Cross_Street": "cross_street",
+            "geometry.coordinates": "coordinates"
+        })
+        df["layer"] = "fire_station"
+        return df
+    except Exception as e:
+        logger.error(f"Error fetching fire station data: {e}")
+        return None
+
+# Helper to fetch HIFLD hospital data
+def fetch_hifld_hospital() -> Optional[pd.DataFrame]:
+    """
+    Fetch hospital data from HIFLD Hospital Layer.
+    Returns:
+        DataFrame with hospital data, or None on error
+    """
+    url = f"{HIFLD_URL_BASE}{HIFLD_HOSPITAL_LAYER}/query"
+    params = {
+        "where": "1=1",
+        "outFields": "OBJECTID,NAME,STREET,POSTCODE,CITY,COUNTY,STATE,PHONE,Cross_Street,Latitude,Longitude",
+        "f": "pjson"
+    }
+    try:
+        resp = requests.get(url, params=params, timeout=10)
+        resp.raise_for_status()
+        data = resp.json()
+        features = data.get("features", [])
+        if not features:
+            logger.warning("No hospital data found")
+            return None
+        # Convert to DataFrame
+        df = pd.json_normalize(features)
+        # Simplify columns
+        df = df.rename(columns={
+            "attributes.OBJECTID": "object_id",
+            "attributes.NAME": "name",
+            "attributes.STREET": "street",
+            "attributes.POSTCODE": "postcode",
+            "attributes.CITY": "city",
+            "attributes.COUNTY": "county",
+            "attributes.STATE": "state",
+            "attributes.PHONE": "phone",
+            "attributes.Cross_Street": "cross_street",
+            "geometry.coordinates": "coordinates"
+        })
+        df["layer"] = "hospital"
+        return df
+    except Exception as e:
+        logger.error(f"Error fetching hospital data: {e}")
+        return None
+
+# Helper to fetch OSM road length data
+def fetch_osm_road_length() -> Optional[pd.DataFrame]:
+    """
+    Fetch road length data from OSM Road Length Layer.
+    Returns:
+        DataFrame with road length data, or None on error
+    """
+    url = f"{HIFLD_URL_BASE}{OSM_ROAD_LENGTH_LAYER}/query"
+    params = {
+        "where": "1=1",
+        "outFields": "OBJECTID,block_id,road_length",
+        "f": "pjson"
+    }
+    try:
+        resp = requests.get(url, params=params, timeout=10)
+        resp.raise_for_status()
+        data = resp.json()
+        features = data.get("features", [])
+        if not features:
+            logger.warning("No road length data found")
+            return None
+        # Convert to DataFrame
+        df = pd.json_normalize(features)
+        # Simplify columns
+        df = df.rename(columns={
+            "attributes.OBJECTID": "object_id",
+            "attributes.block_id": "block_id",
+            "attributes.road_length": "road_length",
+            "geometry.coordinates": "coordinates"
+        })
+        df["layer"] = "road_length"
+        return df
+    except Exception as e:
+        logger.error(f"Error fetching road length data: {e}")
+        return None
+
+def compute_res_fire_station_dist_real(gdf: pd.DataFrame) -> pd.DataFrame:
+    """
+    Compute res_fire_station_dist using HIFLD fire station CSV or fallback.
+    Args:
+        gdf: DataFrame with block_id column
+    Returns:
+        DataFrame with res_fire_station_dist column
+    """
+    import os
+    import pandas as pd
+    from src.utils.source_tracker import mark_real, mark_dummy
+    csv_path = os.path.join(REAL_DATA_DIR, "fire_station_dist.csv")
+    if os.path.exists(csv_path):
+        df = pd.read_csv(csv_path, dtype={"block_id": str, "fire_station_dist": float})
+        gdf = gdf.merge(df, on="block_id", how="left")
+        # Invert and scale: 1/(1+distance_km)
+        gdf["res_fire_station_dist"] = 1 / (1 + gdf["fire_station_dist"].fillna(0))
+        return mark_real(gdf, "res_fire_station_dist", source="local_fire_station_dist.csv")
+    else:
+        gdf["res_fire_station_dist"] = fallback_uniform(gdf, "res_fire_station_dist", reason="No fire station dist CSV found")
+        return mark_dummy(gdf, "res_fire_station_dist", reason="No fire station dist CSV found")
+
+def compute_res_hospital_dist_real(gdf: pd.DataFrame) -> pd.DataFrame:
+    """
+    Compute res_hospital_dist using HIFLD hospital CSV or fallback.
+    Args:
+        gdf: DataFrame with block_id column
+    Returns:
+        DataFrame with res_hospital_dist column
+    """
+    import os
+    import pandas as pd
+    from src.utils.source_tracker import mark_real, mark_dummy
+    csv_path = os.path.join(REAL_DATA_DIR, "hospital_dist.csv")
+    if os.path.exists(csv_path):
+        df = pd.read_csv(csv_path, dtype={"block_id": str, "hospital_dist": float})
+        gdf = gdf.merge(df, on="block_id", how="left")
+        # Invert and scale: 1/(1+distance_km)
+        gdf["res_hospital_dist"] = 1 / (1 + gdf["hospital_dist"].fillna(0))
+        return mark_real(gdf, "res_hospital_dist", source="local_hospital_dist.csv")
+    else:
+        gdf["res_hospital_dist"] = fallback_uniform(gdf, "res_hospital_dist", reason="No hospital dist CSV found")
+        return mark_dummy(gdf, "res_hospital_dist", reason="No hospital dist CSV found")
+
+def compute_res_road_access_real(gdf: pd.DataFrame) -> pd.DataFrame:
+    """
+    Compute res_road_access using OSM road length CSV or fallback.
+    Args:
+        gdf: DataFrame with block_id and geometry columns
+    Returns:
+        DataFrame with res_road_access column
+    """
+    import os
+    import pandas as pd
+    from src.utils.source_tracker import mark_real, mark_dummy
+    csv_path = os.path.join(REAL_DATA_DIR, "road_length.csv")
+    if os.path.exists(csv_path):
+        df = pd.read_csv(csv_path, dtype={"block_id": str, "road_length": float})
+        gdf = gdf.merge(df, on="block_id", how="left")
+        # Compute road access = road_length / area, then min-max normalize
+        if "geometry" in gdf.columns:
+            gdf["block_area"] = gdf["geometry"].area
+        else:
+            gdf["block_area"] = 1.0
+        gdf["road_access_raw"] = gdf["road_length"].fillna(0) / gdf["block_area"].replace(0, 1)
+        # Min-max normalization
+        min_val = gdf["road_access_raw"].min()
+        max_val = gdf["road_access_raw"].max()
+        if max_val > min_val:
+            gdf["res_road_access"] = (gdf["road_access_raw"] - min_val) / (max_val - min_val)
+        else:
+            gdf["res_road_access"] = 0.0
+        return mark_real(gdf, "res_road_access", source="local_road_length.csv")
+    else:
+        gdf["res_road_access"] = fallback_uniform(gdf, "res_road_access", reason="No road length CSV found")
+        return mark_dummy(gdf, "res_road_access", reason="No road length CSV found")
