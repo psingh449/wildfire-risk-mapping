@@ -32,14 +32,18 @@ def fallback_uniform(gdf, var, size=None, reason=None):
     if size is None:
         size = len(gdf)
     logger.warning(f"Falling back to dummy for {var} in range [{min_val},{max_val}] ({reason})")
-    return generate_uniform(min_val, max_val, size)
+    # Fix: handle infinite max_val
+    safe_max = max_val if np.isfinite(max_val) else min_val + 1e6  # reasonable upper bound
+    return generate_uniform(min_val, safe_max, size)
 
 def fallback_int(gdf, var, size=None, reason=None):
     min_val, max_val = get_limits(var)
     if size is None:
         size = len(gdf)
     logger.warning(f"Falling back to dummy for {var} in range [{min_val},{max_val}] ({reason})")
-    return generate_int(int(min_val), int(max_val) + 1, size)
+    # Fix: handle infinite max_val
+    safe_max = int(max_val) if np.isfinite(max_val) else int(min_val) + 10000  # reasonable upper bound
+    return generate_int(int(min_val), safe_max + 1, size)
 
 # --- Census API integration for population and housing ---
 CENSUS_POP_URL = "https://api.census.gov/data/2020/dec/pl"

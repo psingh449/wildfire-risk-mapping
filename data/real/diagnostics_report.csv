@@ -1,0 +1,21 @@
+field,issue,count
+hazard_vegetation,Missing value,3
+hazard_forest_distance,Missing value,3
+hazard_score,Missing value,3
+exposure_housing,Missing value,3
+exposure_building_value,Missing value,3
+exposure_score,Missing value,3
+vuln_elderly,Missing value,3
+vuln_vehicle_access,Missing value,3
+vulnerability_score,Missing value,3
+res_fire_station_dist,Missing value,3
+res_hospital_dist,Missing value,3
+res_road_access,Missing value,3
+resilience_score,Missing value,3
+risk_score,Missing value,3
+eal,Missing value,3
+eal_norm,Missing value,3
+hazard_wildfire,Value -0.1 < min 0.0,1
+hazard_wildfire,Value 1.2 > max 1.0,1
+exposure_population,Missing value,1
+vuln_poverty,Value 1.1 > max 1.0,1
