@@ -6,6 +6,7 @@ from src.utils.config import (
 )
 from src.models.risk_model import compute_risk
 from src.utils.diagnostics import add_diagnostics_to_gdf
+from src.validation.metrics import apply_validation_metrics
 
 def minmax(series):
     return (series - series.min()) / (series.max() - series.min() + 1e-9)
@@ -60,6 +61,9 @@ def build_features(gdf):
 
     # 5. Risk score and EAL (single source of truth)
     gdf = compute_risk(gdf)
+
+    # 5b. Validation metrics (rows 20-27 in calculations.csv)
+    gdf = apply_validation_metrics(gdf)
 
     # 6. Add diagnostics
     gdf = add_diagnostics_to_gdf(gdf)

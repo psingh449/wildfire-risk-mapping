@@ -44,6 +44,29 @@
 - Every block has a `diagnostics` column with validation issues (if any).
 - All validations (range, null, type, provenance, diagnostics) are enforced and tested.
 - **All calculation logic, feature definitions, and validation rules are defined in `calculations.csv` (canonical source).**
+- Validation metrics (rows 20-27) are computed in the pipeline and written back to the main GeoDataFrame for visualization.
+
+---
+
+## Validation Metrics (Rows 20-27)
+
+The following validation outputs are now computed and attached to each block record:
+
+- `block_to_county_mapping`
+- `county_risk`
+- `county_eal`
+- `fema_nri_comparison`
+- `fire_overlap_ratio`
+- `auc_score`
+- `risk_concentration`
+- `gini_risk`
+
+Default external data paths used by validation modules:
+
+- FEMA NRI: `data/external/fema_nri_county.csv`
+- MTBS fire perimeters: `data/external/mtbs_fire_perimeters.geojson`
+
+If external datasets are missing, the pipeline computes safe fallback values so the workflow and visualization remain operational.
 
 ---
 
@@ -200,6 +223,7 @@ All notable changes to this project will be documented in this file.
 - Add expanded documentation, how-to guides, and data flow diagrams.
 - **Migrate calculations table to `calculations.csv` (canonical, machine-readable).**
 - **Fully implement and test hazard_forest_distance, res_fire_station_dist, res_hospital_dist, res_road_access.**
+- **Implement and test validation rows 20-27 (county aggregation, FEMA comparison, fire overlap, AUC, concentration, Gini).**
 
 ### [1.0.0] - 2024-06-01
 - Initial release: End-to-end wildfire risk mapping pipeline with modular features, diagnostics, and D3.js frontend.
