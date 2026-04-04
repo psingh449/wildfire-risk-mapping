@@ -1,6 +1,8 @@
 import pandas as pd
 import numpy as np
 from src.features import hazard, exposure, vulnerability, resilience
+from src.features.build_features import _get_component_weights
+
 
 def test_hazard_features():
     gdf = pd.DataFrame({"block_id": [1, 2, 3]})
@@ -16,6 +18,7 @@ def test_hazard_features():
     assert "hazard_forest_distance_source" in gdf
     assert "hazard_forest_distance_provenance" in gdf
 
+
 def test_exposure_features():
     gdf = pd.DataFrame({"block_id": [1, 2, 3]})
     gdf = exposure.compute_exposure_population(gdf)
@@ -28,6 +31,7 @@ def test_exposure_features():
     assert "exposure_building_value" in gdf
     assert (gdf["exposure_building_value"] >= 0).all()
 
+
 def test_vulnerability_features():
     gdf = pd.DataFrame({"block_id": [1, 2, 3]})
     gdf = vulnerability.compute_vuln_poverty(gdf)
@@ -39,6 +43,7 @@ def test_vulnerability_features():
     assert gdf["vuln_elderly"].between(0, 1).all()
     assert "vuln_vehicle_access" in gdf
     assert gdf["vuln_vehicle_access"].between(0, 1).all()
+
 
 def test_resilience_features():
     gdf = pd.DataFrame({"block_id": ["1", "2", "3"], "geometry": [None, None, None]})
@@ -57,3 +62,15 @@ def test_resilience_features():
     assert gdf["res_road_access"].between(0, 1).all()
     assert "res_road_access_source" in gdf
     assert "res_road_access_provenance" in gdf
+
+
+def test_component_weights_loaded_from_calculations_csv():
+    weights = _get_component_weights()
+    assert set(weights.keys()) == {"hazard_score", "exposure_score", "vulnerability_score", "resilience_score"}
+    assert np.isclose(sum(weights["hazard_score"].values()), 1.0)
+    assert np.isclose(sum(weights["exposure_score"].values()), 1.0)
+    assert np.isclose(sum(weights["vulnerability_score"].values()), 1.0)
+    assert np.isclose(sum(weights["resilience_score"].values()), 1.0)
+    assert "hazard_wildfire_norm" in weights["hazard_score"]
+    assert "vuln_poverty_norm" in weights["vulnerability_score"]
+    assert "res_fire_station_dist_norm" in weights["resilience_score"]
