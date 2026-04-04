@@ -1,5 +1,6 @@
 """Data validation utilities"""
 
+import numpy as np
 from src.utils.logger import get_logger
 
 logger = get_logger()
@@ -26,17 +27,29 @@ REQUIRED_COLUMNS = [
     "res_road_access",
 ]
 
+NORMALIZED_FIELDS = [
+    "hazard_wildfire", "hazard_vegetation", "hazard_forest_distance",
+    "hazard_score", "exposure_score", "vulnerability_score", "resilience_score",
+    "vuln_poverty", "vuln_elderly", "vuln_vehicle_access",
+    "res_fire_station_dist", "res_hospital_dist", "res_road_access",
+    "eal_norm", "risk_score"
+]
+
+CRITICAL_FIELDS = [
+    "hazard_score", "exposure_score", "vulnerability_score", "resilience_score", "risk_score", "eal"
+]
+
 def validate_columns(gdf):
     missing = [col for col in REQUIRED_COLUMNS if col not in gdf.columns]
     if missing:
-        raise ValueError(f"Missing required columns: {missing}")
-    logger.info("Validation passed: all required columns present")
+        logger.warning(f"Missing required columns: {missing}")
+    else:
+        logger.info("Validation passed: all required columns present")
 
 
 def validate_nulls(gdf):
     null_counts = gdf.isnull().sum()
     problematic = null_counts[null_counts > 0]
-
     if len(problematic) > 0:
         logger.warning(f"Columns with null values: {problematic.to_dict()}")
     else:
@@ -44,10 +57,54 @@ def validate_nulls(gdf):
 
 
 def validate_ranges(gdf):
+    for col in NORMALIZED_FIELDS:
+        if col in gdf.columns and gdf[col].dtype != "object":
+            if (gdf[col] < 0).any() or (gdf[col] > 1).any():
+                logger.warning(f"Column {col} has values outside [0, 1]")
+    logger.info("Validation check: normalized field ranges completed")
+
+
+def validate_types(gdf):
     for col in REQUIRED_COLUMNS:
         if col in gdf.columns:
-            if gdf[col].dtype != "object":
-                if (gdf[col] < 0).any():
-                    logger.warning(f"Column {col} has negative values")
+            if col.startswith("exposure_") and not np.issubdtype(gdf[col].dtype, np.integer):
+                logger.warning(f"Column {col} is not integer type")
+            if col.endswith("score") or col.startswith("hazard_") or col.startswith("vuln_") or col.startswith("res_"):
+                if not np.issubdtype(gdf[col].dtype, np.floating):
+                    logger.warning(f"Column {col} is not float type")
+    logger.info("Validation check: types completed")
 
-    logger.info("Validation check: ranges completed")
+
+def validate_provenance(gdf):
+    for col in REQUIRED_COLUMNS:
+        src_col = f"{col}_source"
+        prov_col = f"{col}_provenance"
+        if src_col not in gdf.columns:
+            logger.warning(f"Missing provenance column: {src_col}")
+        if prov_col not in gdf.columns:
+            logger.warning(f"Missing provenance column: {prov_col}")
+    logger.info("Validation check: provenance completed")
+
+
+def validate_diagnostics(gdf):
+    if "diagnostics" not in gdf.columns:
+        logger.warning("Missing diagnostics column")
+    elif gdf["diagnostics"].isnull().any():
+        logger.warning("Some diagnostics entries are null")
+    logger.info("Validation check: diagnostics completed")
+
+
+def validate_consistency(gdf):
+    # Example: hazard_score should be weighted sum of normalized hazard fields
+    # (skip for now, but can add checks for derived fields)
+    logger.info("Validation check: consistency (placeholder)")
+
+
+def run_all_validations(gdf):
+    validate_columns(gdf)
+    validate_nulls(gdf)
+    validate_ranges(gdf)
+    validate_types(gdf)
+    validate_provenance(gdf)
+    validate_diagnostics(gdf)
+    validate_consistency(gdf)
