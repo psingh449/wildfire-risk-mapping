@@ -2,16 +2,16 @@ import pandas as pd
 import numpy as np
 import logging
 import csv
+from typing import Dict, Any
 from src.utils.config import REAL_DATA_DIR
-import os
 
 logger = logging.getLogger("diagnostics")
 
 # Parse calculations.csv for validation rules and min/max
-VALIDATION_RULES = {}
-FIELD_LIMITS = {}
-FIELD_NULLABLE = {}
-FIELD_DESCRIPTIONS = {}
+VALIDATION_RULES: Dict[str, Any] = {}
+FIELD_LIMITS: Dict[str, Any] = {}
+FIELD_NULLABLE: Dict[str, Any] = {}
+FIELD_DESCRIPTIONS: Dict[str, Any] = {}
 
 with open("calculations.csv", newline="", encoding="utf-8") as csvfile:
     reader = csv.DictReader(csvfile)
@@ -19,7 +19,6 @@ with open("calculations.csv", newline="", encoding="utf-8") as csvfile:
         var = row["geojson_property"]
         if not var:
             continue
-        # Min/max
         try:
             min_val = float(row["min"])
         except Exception:
@@ -29,16 +28,17 @@ with open("calculations.csv", newline="", encoding="utf-8") as csvfile:
         except Exception:
             max_val = None
         FIELD_LIMITS[var] = (min_val, max_val)
-        # Nullable
         FIELD_NULLABLE[var] = (row["nullable"].strip().lower() == "yes")
-        # Description
         FIELD_DESCRIPTIONS[var] = row["description"]
-        # Validation rule (string)
         VALIDATION_RULES[var] = row["validation_rules"]
 
-def validate_row(row):
+def validate_row(row: pd.Series) -> Dict[str, Any]:
     """
-    Validate a single row (Series) and return a dict of field: [issues]
+    Validate a single row (Series) and return a dict of field: [issues].
+    Args:
+        row: Pandas Series representing a row
+    Returns:
+        Dict mapping field to list of issues
     """
     issues = {}
     for field, (min_val, max_val) in FIELD_LIMITS.items():
@@ -52,15 +52,18 @@ def validate_row(row):
                 field_issues.append(f"Value {val} < min {min_val}")
             if max_val is not None and val > max_val:
                 field_issues.append(f"Value {val} > max {max_val}")
-        # Add more rule-based checks here if needed
         if field_issues:
             issues[field] = field_issues
     return issues
 
-def add_diagnostics_to_gdf(gdf):
+def add_diagnostics_to_gdf(gdf: pd.DataFrame) -> pd.DataFrame:
     """
-    For each row, validate and add a 'diagnostics' column (dict of field: [issues])
+    For each row, validate and add a 'diagnostics' column (dict of field: [issues]).
     Ensures diagnostics is always present and non-null.
+    Args:
+        gdf: DataFrame to validate
+    Returns:
+        DataFrame with diagnostics column
     """
     diagnostics = []
     summary = {}
@@ -73,13 +76,12 @@ def add_diagnostics_to_gdf(gdf):
                 summary[field][p] += 1
         if issues:
             logger.warning(f"Diagnostics for row {idx}: {issues}")
-    # Fill missing diagnostics if DataFrame is empty
     if len(gdf) == 0:
         gdf["diagnostics"] = []
     else:
         gdf["diagnostics"] = diagnostics
-    # Write summary report
     try:
+        import os
         os.makedirs(REAL_DATA_DIR, exist_ok=True)
         with open(f"{REAL_DATA_DIR}/diagnostics_report.csv", "w", newline="", encoding="utf-8") as f:
             writer = csv.writer(f)

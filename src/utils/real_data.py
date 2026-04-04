@@ -3,58 +3,95 @@ import logging
 import requests
 import os
 import pandas as pd
+from typing import Tuple, Optional, Dict, Any
 from src.utils.dummy_data import generate_uniform, generate_int
 from src.utils.source_tracker import mark_real, mark_dummy
 from src.utils.config import REAL_DATA_DIR, USE_STORED_REAL_DATA
 
 logger = logging.getLogger("real_data")
 
-# Helper to get min/max from calculations.csv for fallback
-def get_limits(var):
+def get_limits(var: str) -> Tuple[float, float]:
+    """
+    Get min and max values for a variable from calculations.csv.
+    Args:
+        var: Variable name (geojson_property)
+    Returns:
+        (min_val, max_val): Tuple of min and max values (float)
+    """
     import csv
-    with open("calculations.csv", newline="", encoding="utf-8") as csvfile:
-        reader = csv.DictReader(csvfile)
-        for row in reader:
-            if row["geojson_property"] == var:
-                try:
-                    min_val = float(row["min"])
-                except Exception:
-                    min_val = 0
-                try:
-                    max_val = float(row["max"])
-                except Exception:
-                    max_val = 1
-                return min_val, max_val
+    try:
+        with open("calculations.csv", newline="", encoding="utf-8") as csvfile:
+            reader = csv.DictReader(csvfile)
+            for row in reader:
+                if row["geojson_property"] == var:
+                    try:
+                        min_val = float(row["min"])
+                    except Exception:
+                        min_val = 0
+                    try:
+                        max_val = float(row["max"])
+                    except Exception:
+                        max_val = 1
+                    return min_val, max_val
+    except Exception as e:
+        logger.error(f"Error reading calculations.csv for {var}: {e}")
     return 0, 1
 
-def fallback_uniform(gdf, var, size=None, reason=None):
+def fallback_uniform(gdf: pd.DataFrame, var: str, size: Optional[int] = None, reason: Optional[str] = None) -> np.ndarray:
+    """
+    Generate fallback uniform random values for a variable, handling infinite max.
+    Args:
+        gdf: DataFrame
+        var: Variable name
+        size: Number of values
+        reason: Reason for fallback
+    Returns:
+        np.ndarray of random values
+    """
     min_val, max_val = get_limits(var)
     if size is None:
         size = len(gdf)
     logger.warning(f"Falling back to dummy for {var} in range [{min_val},{max_val}] ({reason})")
-    # Fix: handle infinite max_val
-    safe_max = max_val if np.isfinite(max_val) else min_val + 1e6  # reasonable upper bound
+    safe_max = max_val if np.isfinite(max_val) else min_val + 1e6
     return generate_uniform(min_val, safe_max, size)
 
-def fallback_int(gdf, var, size=None, reason=None):
+def fallback_int(gdf: pd.DataFrame, var: str, size: Optional[int] = None, reason: Optional[str] = None) -> np.ndarray:
+    """
+    Generate fallback integer random values for a variable, handling infinite max.
+    Args:
+        gdf: DataFrame
+        var: Variable name
+        size: Number of values
+        reason: Reason for fallback
+    Returns:
+        np.ndarray of random integer values
+    """
     min_val, max_val = get_limits(var)
     if size is None:
         size = len(gdf)
     logger.warning(f"Falling back to dummy for {var} in range [{min_val},{max_val}] ({reason})")
-    # Fix: handle infinite max_val
-    safe_max = int(max_val) if np.isfinite(max_val) else int(min_val) + 10000  # reasonable upper bound
+    safe_max = int(max_val) if np.isfinite(max_val) else int(min_val) + 10000
     return generate_int(int(min_val), safe_max + 1, size)
 
 # --- Census API integration for population and housing ---
 CENSUS_POP_URL = "https://api.census.gov/data/2020/dec/pl"
 CENSUS_HOUSING_URL = "https://api.census.gov/data/2020/dec/pl"
+STATE_CODE = os.environ.get("WILDFIRE_STATE_CODE", "06")
+COUNTY_CODE = os.environ.get("WILDFIRE_COUNTY_CODE", "007")
 
 # Helper to fetch census block population
-def fetch_census_population(block_geoid_list):
+def fetch_census_population(block_geoid_list: list) -> Optional[Dict[str, int]]:
+    """
+    Fetch population for all blocks in Butte County from Census API.
+    Args:
+        block_geoid_list: List of block GEOIDs (unused, fetches all for county)
+    Returns:
+        Dictionary mapping GEOID to population
+    """
     params = {
         "get": "P1_001N,GEOID",
         "for": "block:*",
-        "in": "state:06 county:007"
+        "in": f"state:{STATE_CODE} county:{COUNTY_CODE}"
     }
     try:
         resp = requests.get(CENSUS_POP_URL, params=params, timeout=10)
@@ -65,18 +102,34 @@ def fetch_census_population(block_geoid_list):
         pop_dict = {row[1]: int(row[0]) for row in rows}
         return pop_dict
     except Exception as e:
-        logger.warning(f"Census API population fetch failed: {e}")
+        logger.error(f"Census API population fetch failed: {e}")
         return None
 
-def fetch_census_population_local():
+def fetch_census_population_local() -> Optional[Dict[str, int]]:
+    """
+    Load local census population CSV.
+    Returns:
+        Dictionary mapping GEOID to population
+    """
     path = os.path.join(REAL_DATA_DIR, "census_population.csv")
-    if not os.path.exists(path):
-        logger.warning(f"Local census_population.csv not found at {path}")
+    try:
+        if not os.path.exists(path):
+            logger.warning(f"Local census_population.csv not found at {path}")
+            return None
+        df = pd.read_csv(path, dtype={"GEOID": str, "population": int})
+        return dict(zip(df["GEOID"], df["population"]))
+    except Exception as e:
+        logger.error(f"Error reading {path}: {e}")
         return None
-    df = pd.read_csv(path, dtype={"GEOID": str, "population": int})
-    return dict(zip(df["GEOID"], df["population"]))
 
-def compute_exposure_population_real(gdf):
+def compute_exposure_population_real(gdf: pd.DataFrame) -> pd.DataFrame:
+    """
+    Compute exposure_population using real Census data or fallback.
+    Args:
+        gdf: DataFrame with GEOID column
+    Returns:
+        DataFrame with exposure_population column
+    """
     if "GEOID" not in gdf.columns:
         gdf["exposure_population"] = fallback_int(gdf, "exposure_population", reason="No GEOID column")
         return mark_dummy(gdf, "exposure_population", reason="No GEOID column")
@@ -98,11 +151,18 @@ def compute_exposure_population_real(gdf):
     return mark_real(gdf, "exposure_population", source=provenance)
 
 # Helper to fetch census block housing units
-def fetch_census_housing(block_geoid_list):
+def fetch_census_housing(block_geoid_list: list) -> Optional[Dict[str, int]]:
+    """
+    Fetch housing units for all blocks in Butte County from Census API.
+    Args:
+        block_geoid_list: List of block GEOIDs (unused, fetches all for county)
+    Returns:
+        Dictionary mapping GEOID to number of housing units
+    """
     params = {
         "get": "H1_001N,GEOID",
         "for": "block:*",
-        "in": "state:06 county:007"
+        "in": f"state:{STATE_CODE} county:{COUNTY_CODE}"
     }
     try:
         resp = requests.get(CENSUS_HOUSING_URL, params=params, timeout=10)
@@ -113,18 +173,34 @@ def fetch_census_housing(block_geoid_list):
         housing_dict = {row[1]: int(row[0]) for row in rows}
         return housing_dict
     except Exception as e:
-        logger.warning(f"Census API housing fetch failed: {e}")
+        logger.error(f"Census API housing fetch failed: {e}")
         return None
 
-def fetch_census_housing_local():
+def fetch_census_housing_local() -> Optional[Dict[str, int]]:
+    """
+    Load local census housing CSV.
+    Returns:
+        Dictionary mapping GEOID to number of housing units
+    """
     path = os.path.join(REAL_DATA_DIR, "census_housing.csv")
-    if not os.path.exists(path):
-        logger.warning(f"Local census_housing.csv not found at {path}")
+    try:
+        if not os.path.exists(path):
+            logger.warning(f"Local census_housing.csv not found at {path}")
+            return None
+        df = pd.read_csv(path, dtype={"GEOID": str, "housing_units": int})
+        return dict(zip(df["GEOID"], df["housing_units"]))
+    except Exception as e:
+        logger.error(f"Error reading {path}: {e}")
         return None
-    df = pd.read_csv(path, dtype={"GEOID": str, "housing_units": int})
-    return dict(zip(df["GEOID"], df["housing_units"]))
 
-def compute_exposure_housing_real(gdf):
+def compute_exposure_housing_real(gdf: pd.DataFrame) -> pd.DataFrame:
+    """
+    Compute exposure_housing using real Census data or fallback.
+    Args:
+        gdf: DataFrame with GEOID column
+    Returns:
+        DataFrame with exposure_housing column
+    """
     if "GEOID" not in gdf.columns:
         gdf["exposure_housing"] = fallback_int(gdf, "exposure_housing", reason="No GEOID column")
         return mark_dummy(gdf, "exposure_housing", reason="No GEOID column")
@@ -149,7 +225,16 @@ def compute_exposure_housing_real(gdf):
 ACS_URL = "https://api.census.gov/data/2021/acs/acs5"
 
 # Helper to fetch ACS block group data (poverty, elderly, vehicle access, building value)
-def fetch_acs_blockgroup(fields, for_clause, in_clause):
+def fetch_acs_blockgroup(fields: list, for_clause: str, in_clause: str) -> Optional[pd.DataFrame]:
+    """
+    Fetch ACS block group data for specified fields and geography.
+    Args:
+        fields: List of field names to fetch
+        for_clause: 'for' clause of API request (e.g., "block group:*")
+        in_clause: 'in' clause of API request (e.g., "state:06 county:007")
+    Returns:
+        DataFrame with ACS data, or None on error
+    """
     params = {
         "get": ",".join(fields),
         "for": for_clause,
@@ -163,18 +248,36 @@ def fetch_acs_blockgroup(fields, for_clause, in_clause):
         rows = data[1:]
         return pd.DataFrame(rows, columns=header)
     except Exception as e:
-        logger.warning(f"ACS API fetch failed: {e}")
+        logger.error(f"ACS API fetch failed: {e}")
         return None
 
-def fetch_acs_bg_local(filename):
+def fetch_acs_bg_local(filename: str) -> Optional[pd.DataFrame]:
+    """
+    Load local ACS block group CSV.
+    Args:
+        filename: Name of the CSV file (e.g., "acs_poverty.csv")
+    Returns:
+        DataFrame with ACS block group data, or None if not found
+    """
     path = os.path.join(REAL_DATA_DIR, filename)
-    if not os.path.exists(path):
-        logger.warning(f"Local {filename} not found at {path}")
+    try:
+        if not os.path.exists(path):
+            logger.warning(f"Local {filename} not found at {path}")
+            return None
+        return pd.read_csv(path, dtype=str)
+    except Exception as e:
+        logger.error(f"Error reading {path}: {e}")
         return None
-    return pd.read_csv(path, dtype=str)
 
 # Poverty rate (B17001_002E/B17001_001E)
-def compute_vuln_poverty_real(gdf):
+def compute_vuln_poverty_real(gdf: pd.DataFrame) -> pd.DataFrame:
+    """
+    Compute vulnerability to poverty using real ACS data or fallback.
+    Args:
+        gdf: DataFrame with GEOID column
+    Returns:
+        DataFrame with vuln_poverty and blockgroup columns
+    """
     # Map block to block group
     if "GEOID" not in gdf.columns:
         gdf["vuln_poverty"] = fallback_uniform(gdf, "vuln_poverty", reason="No GEOID column")
@@ -200,7 +303,14 @@ def compute_vuln_poverty_real(gdf):
     return mark_real(gdf, "vuln_poverty", source=provenance)
 
 # Elderly ratio (sum B01001_020E..B01001_025E / B01001_001E)
-def compute_vuln_elderly_real(gdf):
+def compute_vuln_elderly_real(gdf: pd.DataFrame) -> pd.DataFrame:
+    """
+    Compute vulnerability to elderly population using real ACS data or fallback.
+    Args:
+        gdf: DataFrame with GEOID column
+    Returns:
+        DataFrame with vuln_elderly and blockgroup columns
+    """
     if "GEOID" not in gdf.columns:
         gdf["vuln_elderly"] = fallback_uniform(gdf, "vuln_elderly", reason="No GEOID column")
         return mark_dummy(gdf, "vuln_elderly", reason="No GEOID column")
@@ -226,7 +336,14 @@ def compute_vuln_elderly_real(gdf):
     return mark_real(gdf, "vuln_elderly", source=provenance)
 
 # Vehicle access (1 - B08201_002E / B08201_001E)
-def compute_vuln_vehicle_access_real(gdf):
+def compute_vuln_vehicle_access_real(gdf: pd.DataFrame) -> pd.DataFrame:
+    """
+    Compute vulnerability based on vehicle access using real ACS data or fallback.
+    Args:
+        gdf: DataFrame with GEOID column
+    Returns:
+        DataFrame with vuln_vehicle_access and blockgroup columns
+    """
     if "GEOID" not in gdf.columns:
         gdf["vuln_vehicle_access"] = fallback_uniform(gdf, "vuln_vehicle_access", reason="No GEOID column")
         return mark_dummy(gdf, "vuln_vehicle_access", reason="No GEOID column")
@@ -251,7 +368,14 @@ def compute_vuln_vehicle_access_real(gdf):
     return mark_real(gdf, "vuln_vehicle_access", source=provenance)
 
 # Building value (B25077_001E * housing units)
-def compute_exposure_building_value_real(gdf):
+def compute_exposure_building_value_real(gdf: pd.DataFrame) -> pd.DataFrame:
+    """
+    Compute exposure_building_value using real ACS data or fallback.
+    Args:
+        gdf: DataFrame with GEOID column
+    Returns:
+        DataFrame with exposure_building_value and blockgroup columns
+    """
     if "GEOID" not in gdf.columns:
         gdf["exposure_building_value"] = fallback_uniform(gdf, "exposure_building_value", reason="No GEOID column")
         return mark_dummy(gdf, "exposure_building_value", reason="No GEOID column")
@@ -274,7 +398,14 @@ def compute_exposure_building_value_real(gdf):
     gdf["exposure_building_value"] = gdf["blockgroup"].map(value_map).fillna(0) * gdf.get("exposure_housing", 1)
     return mark_real(gdf, "exposure_building_value", source=provenance)
 
-def compute_hazard_wildfire_real(gdf):
+def compute_hazard_wildfire_real(gdf: pd.DataFrame) -> pd.DataFrame:
+    """
+    Compute hazard_wildfire using local WHP zonal stats CSV or fallback.
+    Args:
+        gdf: DataFrame with block_id column
+    Returns:
+        DataFrame with hazard_wildfire column
+    """
     import os
     import pandas as pd
     from src.utils.source_tracker import mark_real, mark_dummy

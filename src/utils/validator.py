@@ -1,6 +1,8 @@
 """Data validation utilities"""
 
 import numpy as np
+import pandas as pd
+from typing import Any
 from src.utils.logger import get_logger
 
 logger = get_logger()
@@ -10,17 +12,14 @@ REQUIRED_COLUMNS = [
     "hazard_wildfire",
     "hazard_vegetation",
     "hazard_forest_distance",
-
     # Exposure
     "exposure_population",
     "exposure_housing",
     "exposure_building_value",
-
     # Vulnerability
     "vuln_poverty",
     "vuln_elderly",
     "vuln_vehicle_access",
-
     # Resilience
     "res_fire_station_dist",
     "res_hospital_dist",
@@ -39,15 +38,22 @@ CRITICAL_FIELDS = [
     "hazard_score", "exposure_score", "vulnerability_score", "resilience_score", "risk_score", "eal"
 ]
 
-def validate_columns(gdf):
+def validate_columns(gdf: pd.DataFrame) -> None:
+    """
+    Check for missing required columns in the DataFrame.
+    Logs a warning if any are missing.
+    """
     missing = [col for col in REQUIRED_COLUMNS if col not in gdf.columns]
     if missing:
         logger.warning(f"Missing required columns: {missing}")
     else:
         logger.info("Validation passed: all required columns present")
 
-
-def validate_nulls(gdf):
+def validate_nulls(gdf: pd.DataFrame) -> None:
+    """
+    Check for null values in the DataFrame.
+    Logs a warning if any columns have nulls.
+    """
     null_counts = gdf.isnull().sum()
     problematic = null_counts[null_counts > 0]
     if len(problematic) > 0:
@@ -55,16 +61,22 @@ def validate_nulls(gdf):
     else:
         logger.info("Validation passed: no null values")
 
-
-def validate_ranges(gdf):
+def validate_ranges(gdf: pd.DataFrame) -> None:
+    """
+    Check that all normalized fields are within [0, 1].
+    Logs a warning if any are out of range.
+    """
     for col in NORMALIZED_FIELDS:
         if col in gdf.columns and gdf[col].dtype != "object":
             if (gdf[col] < 0).any() or (gdf[col] > 1).any():
                 logger.warning(f"Column {col} has values outside [0, 1]")
     logger.info("Validation check: normalized field ranges completed")
 
-
-def validate_types(gdf):
+def validate_types(gdf: pd.DataFrame) -> None:
+    """
+    Check that columns have expected types (int for counts, float for scores).
+    Logs a warning if types are incorrect.
+    """
     for col in REQUIRED_COLUMNS:
         if col in gdf.columns:
             if col.startswith("exposure_") and not np.issubdtype(gdf[col].dtype, np.integer):
@@ -74,8 +86,11 @@ def validate_types(gdf):
                     logger.warning(f"Column {col} is not float type")
     logger.info("Validation check: types completed")
 
-
-def validate_provenance(gdf):
+def validate_provenance(gdf: pd.DataFrame) -> None:
+    """
+    Check that provenance columns (_source, _provenance) exist for all required fields.
+    Logs a warning if any are missing.
+    """
     for col in REQUIRED_COLUMNS:
         src_col = f"{col}_source"
         prov_col = f"{col}_provenance"
@@ -85,22 +100,27 @@ def validate_provenance(gdf):
             logger.warning(f"Missing provenance column: {prov_col}")
     logger.info("Validation check: provenance completed")
 
-
-def validate_diagnostics(gdf):
+def validate_diagnostics(gdf: pd.DataFrame) -> None:
+    """
+    Check that diagnostics column exists and is non-null for all rows.
+    Logs a warning if missing or null.
+    """
     if "diagnostics" not in gdf.columns:
         logger.warning("Missing diagnostics column")
     elif gdf["diagnostics"].isnull().any():
         logger.warning("Some diagnostics entries are null")
     logger.info("Validation check: diagnostics completed")
 
-
-def validate_consistency(gdf):
-    # Example: hazard_score should be weighted sum of normalized hazard fields
-    # (skip for now, but can add checks for derived fields)
+def validate_consistency(gdf: pd.DataFrame) -> None:
+    """
+    Placeholder for consistency checks (e.g., derived fields match components).
+    """
     logger.info("Validation check: consistency (placeholder)")
 
-
-def run_all_validations(gdf):
+def run_all_validations(gdf: pd.DataFrame) -> None:
+    """
+    Run all validation checks on the DataFrame.
+    """
     validate_columns(gdf)
     validate_nulls(gdf)
     validate_ranges(gdf)

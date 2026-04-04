@@ -1,7 +1,18 @@
 import logging
+import pandas as pd
+from typing import Optional
 logger = logging.getLogger("provenance")
 
-def mark_real(gdf, column, source=None):
+def mark_real(gdf: pd.DataFrame, column: str, source: Optional[str] = None) -> pd.DataFrame:
+    """
+    Mark a column as REAL and set provenance.
+    Args:
+        gdf: DataFrame
+        column: Column name
+        source: Provenance/source string
+    Returns:
+        DataFrame with provenance columns set
+    """
     gdf[f"{column}_source"] = "REAL"
     if source:
         gdf[f"{column}_provenance"] = source
@@ -9,12 +20,20 @@ def mark_real(gdf, column, source=None):
     else:
         gdf[f"{column}_provenance"] = "REAL"
         logger.info(f"{column}: REAL")
-    # Ensure column exists even if empty
     if f"{column}_provenance" not in gdf.columns:
         gdf[f"{column}_provenance"] = "REAL"
     return gdf
 
-def mark_dummy(gdf, column, reason=None):
+def mark_dummy(gdf: pd.DataFrame, column: str, reason: Optional[str] = None) -> pd.DataFrame:
+    """
+    Mark a column as DUMMY and set provenance.
+    Args:
+        gdf: DataFrame
+        column: Column name
+        reason: Reason for fallback
+    Returns:
+        DataFrame with provenance columns set
+    """
     gdf[f"{column}_source"] = "DUMMY"
     if reason:
         gdf[f"{column}_provenance"] = f"DUMMY: {reason}"
@@ -22,7 +41,6 @@ def mark_dummy(gdf, column, reason=None):
     else:
         gdf[f"{column}_provenance"] = "DUMMY"
         logger.warning(f"{column}: DUMMY")
-    # Ensure column exists even if empty
     if f"{column}_provenance" not in gdf.columns:
         gdf[f"{column}_provenance"] = "DUMMY"
     return gdf
