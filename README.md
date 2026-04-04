@@ -33,7 +33,11 @@
    ```
 6. **Run tests:**
    ```bash
+   # CMD
    set PYTHONPATH=. & pytest tests/ --maxfail=10 --disable-warnings -q
+
+   # PowerShell
+   $env:PYTHONPATH='.'; pytest tests/ --maxfail=10 --disable-warnings -q
    ```
 
 ---

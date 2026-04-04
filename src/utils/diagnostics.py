@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import logging
 import csv
+from pathlib import Path
 from typing import Dict, Any
 from src.utils.config import REAL_DATA_DIR
 
@@ -13,24 +14,45 @@ FIELD_LIMITS: Dict[str, Any] = {}
 FIELD_NULLABLE: Dict[str, Any] = {}
 FIELD_DESCRIPTIONS: Dict[str, Any] = {}
 
-with open("calculations.csv", newline="", encoding="utf-8") as csvfile:
-    reader = csv.DictReader(csvfile)
-    for row in reader:
-        var = row["geojson_property"]
-        if not var:
-            continue
-        try:
-            min_val = float(row["min"])
-        except Exception:
-            min_val = None
-        try:
-            max_val = float(row["max"])
-        except Exception:
-            max_val = None
-        FIELD_LIMITS[var] = (min_val, max_val)
-        FIELD_NULLABLE[var] = (row["nullable"].strip().lower() == "yes")
-        FIELD_DESCRIPTIONS[var] = row["description"]
-        VALIDATION_RULES[var] = row["validation_rules"]
+
+def _resolve_calculations_csv() -> Path:
+    candidates = [
+        Path.cwd() / "calculations.csv",
+        Path(__file__).resolve().parents[2] / "calculations.csv",
+    ]
+    for path in candidates:
+        if path.exists():
+            return path
+    raise FileNotFoundError("Could not locate calculations.csv")
+
+
+def _load_calculation_rules() -> None:
+    try:
+        csv_path = _resolve_calculations_csv()
+        with open(csv_path, newline="", encoding="utf-8") as csvfile:
+            reader = csv.DictReader(csvfile)
+            for row in reader:
+                var = row.get("geojson_property", "")
+                if not var:
+                    continue
+                try:
+                    min_val = float(row.get("min", ""))
+                except Exception:
+                    min_val = None
+                try:
+                    max_val = float(row.get("max", ""))
+                except Exception:
+                    max_val = None
+                FIELD_LIMITS[var] = (min_val, max_val)
+                FIELD_NULLABLE[var] = (str(row.get("nullable", "")).strip().lower() == "yes")
+                FIELD_DESCRIPTIONS[var] = row.get("description", "")
+                VALIDATION_RULES[var] = row.get("validation_rules", "")
+    except Exception as e:
+        logger.warning(f"Unable to load calculations.csv for diagnostics: {e}")
+
+
+_load_calculation_rules()
+
 
 def validate_row(row: pd.Series) -> Dict[str, Any]:
     """
@@ -55,6 +77,7 @@ def validate_row(row: pd.Series) -> Dict[str, Any]:
         if field_issues:
             issues[field] = field_issues
     return issues
+
 
 def add_diagnostics_to_gdf(gdf: pd.DataFrame) -> pd.DataFrame:
     """

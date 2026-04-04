@@ -3,12 +3,25 @@ import logging
 import requests
 import os
 import pandas as pd
+from pathlib import Path
 from typing import Tuple, Optional, Dict, Any
 from src.utils.dummy_data import generate_uniform, generate_int
 from src.utils.source_tracker import mark_real, mark_dummy
 from src.utils.config import REAL_DATA_DIR, USE_STORED_REAL_DATA
 
 logger = logging.getLogger("real_data")
+
+
+def _resolve_calculations_csv() -> Path:
+    candidates = [
+        Path.cwd() / "calculations.csv",
+        Path(__file__).resolve().parents[2] / "calculations.csv",
+    ]
+    for path in candidates:
+        if path.exists():
+            return path
+    raise FileNotFoundError("Could not locate calculations.csv")
+
 
 def get_limits(var: str) -> Tuple[float, float]:
     """
@@ -20,22 +33,24 @@ def get_limits(var: str) -> Tuple[float, float]:
     """
     import csv
     try:
-        with open("calculations.csv", newline="", encoding="utf-8") as csvfile:
+        csv_path = _resolve_calculations_csv()
+        with open(csv_path, newline="", encoding="utf-8") as csvfile:
             reader = csv.DictReader(csvfile)
             for row in reader:
-                if row["geojson_property"] == var:
+                if row.get("geojson_property") == var:
                     try:
-                        min_val = float(row["min"])
+                        min_val = float(row.get("min", ""))
                     except Exception:
                         min_val = 0
                     try:
-                        max_val = float(row["max"])
+                        max_val = float(row.get("max", ""))
                     except Exception:
                         max_val = 1
                     return min_val, max_val
     except Exception as e:
         logger.error(f"Error reading calculations.csv for {var}: {e}")
     return 0, 1
+
 
 def fallback_uniform(gdf: pd.DataFrame, var: str, size: Optional[int] = None, reason: Optional[str] = None) -> np.ndarray:
     """
@@ -54,6 +69,7 @@ def fallback_uniform(gdf: pd.DataFrame, var: str, size: Optional[int] = None, re
     logger.warning(f"Falling back to dummy for {var} in range [{min_val},{max_val}] ({reason})")
     safe_max = max_val if np.isfinite(max_val) else min_val + 1e6
     return generate_uniform(min_val, safe_max, size)
+
 
 def fallback_int(gdf: pd.DataFrame, var: str, size: Optional[int] = None, reason: Optional[str] = None) -> np.ndarray:
     """
