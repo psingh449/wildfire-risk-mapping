@@ -161,8 +161,6 @@ Cutter, Boruff, and Shirley (2003) provide one of the foundational social-vulner
 
 Yarveysi et al. (2023) are especially relevant because they show that block-level analysis can reveal disproportionate natural-hazard burdens hidden by coarser spatial aggregation. Their work provides strong evidence that social vulnerability can vary sharply within counties and that fine spatial resolution matters for equity-sensitive risk assessment. This is directly aligned with the central argument of our project: county-level reporting can mask neighborhood-scale differences. The limitation, from our perspective, is that the study focuses primarily on vulnerability rather than a full wildfire risk model integrating hazard, exposure, and resilience.
 
-Together, these studies support the project’s premise that wildfire consequences are socially uneven and that fine-scale geography matters. They also suggest that any credible wildfire risk map should include variables that capture differential evacuation difficulty and recovery capacity, not just fire likelihood.
-
 ### 3.3 Risk Frameworks and Economic Loss
 
 The FEMA National Risk Index is the most directly relevant national risk framework for this project because it combines hazard, exposure, vulnerability, and community resilience into a unified public risk product. It demonstrates that multi-factor hazard risk systems are feasible at national scale and provides an external benchmark for validation. This project is intentionally compatible with that general structure, but differs in a major way: public NRI outputs are primarily communicated at county or tract scale, whereas our framework pushes the computation and visualization down to census blocks. The NRI is therefore useful both as a methodological reference and as a validation target. Its key limitation for our research question is its spatial coarseness for neighborhood hotspot detection.
@@ -226,7 +224,229 @@ The strongest conclusion from the literature is that **the ingredients for a nei
 
 ## 4. Proposed Method
 
-*To be completed.*
+### 4.1 Intuition
+
+The intuition behind the proposed method is simple: a place should be considered high wildfire risk only when several conditions occur together. A block should score high if wildfire hazard is high, if many people or valuable structures are exposed, if social conditions make response and recovery harder, and if local resilience is weak. A hazard-only model misses human consequence; a vulnerability-only model misses the actual fire environment; and a county-average model smooths away meaningful local differences. By computing all of these components at block scale, the method should reveal clusters of concentrated wildfire danger that are invisible in county summaries.
+
+This structure is also expected to outperform coarse risk interpretations in a practical sense. Two blocks may lie in the same county and share the same county wildfire label, yet differ sharply in forest proximity, housing density, poverty, vehicle ownership, and emergency access. Our approach preserves those local contrasts. The expected benefit is therefore not that the model invents new wildfire physics, but that it combines known environmental and social signals at a more decision-relevant spatial scale.
+
+### 4.2 Overall Pipeline Architecture
+
+The implemented method is a modular pipeline that ingests public datasets, derives standardized block-level features, computes composite scores, validates the results, and exports them for visualization. The pipeline uses `calculations.csv` as the canonical feature contract, meaning each implemented metric is associated with a data source, transformation rule, validation range, and output field.
+
+```mermaid
+flowchart LR
+    A[Raw Public Data] --> B[Ingestion]
+    B --> C[Preprocessing]
+    C --> D[Feature Engineering]
+    D --> E[Composite Scores]
+    E --> F[Risk and EAL]
+    F --> G[Validation Metrics]
+    G --> H[GeoJSON Export]
+    H --> I[Interactive Frontend]
+```
+
+**Figure Placeholder 3.** End-to-end pipeline diagram using actual file names and modules from the implementation. Insert a refined exported diagram here.
+
+### 4.3 Data Sources and Spatial Integration
+
+The pipeline combines several public datasets with different spatial formats:
+
+| Data Source | Example Variables Used | Native Format | Role in Method |
+| --- | --- | --- | --- |
+| USFS Wildfire Hazard Potential | `hazard_wildfire` | Raster | Hazard likelihood proxy |
+| NLCD | `hazard_vegetation`, forest-distance inputs | Raster / derived polygons | Fuel and forest proximity |
+| Census PL / H1 | population, housing | API / tabular | Exposure |
+| ACS 5-year | property value, poverty, age, vehicle access | API / tabular | Exposure + vulnerability |
+| HIFLD | fire stations, hospitals | Point layers | Resilience |
+| OpenStreetMap / Overpass | road network | Vector line data | Resilience |
+| FEMA NRI | county-scale reference metrics | Tabular | Validation |
+| MTBS fire perimeters | burned-area history | Polygon layer | Validation |
+
+Because these datasets are not aligned to the same geography, the method performs several joins and transformations:
+
+1. raster-to-block zonal statistics for wildfire and vegetation features;
+2. nearest-neighbor distance calculations from block centroids to infrastructure or forest features;
+3. joins from block-group ACS data down to blocks using geographic keys and population-based allocation;
+4. area- or density-based transformations for road access and land-cover proxies; and
+5. final export of all derived block-level outputs to a single GeoJSON layer.
+
+### 4.4 Feature Engineering by Component
+
+#### 4.4.1 Hazard
+
+The hazard component captures the underlying wildfire threat from vegetation and landscape conditions.
+
+- **Wildfire Hazard Potential (`hazard_wildfire`)** is computed as the mean WHP value of raster pixels intersecting each block.
+- **Vegetation/Fuel Proxy (`hazard_vegetation`)** is derived from NLCD by classifying relevant fuel-supporting land-cover classes such as forest or shrub and measuring their share within the block.
+- **Forest Proximity (`hazard_forest_distance`)** is computed as an inverted nearest distance from block centroid to forest features, using the form `1 / (1 + distance_km)`.
+
+These features are normalized to `[0,1]` and combined using configurable weights:
+
+**HazardScore = w1·hazard_wildfire + w2·hazard_vegetation + w3·hazard_forest_distance**
+
+This construction is intended to capture both direct wildfire likelihood and a wildland-urban interface effect.
+
+#### 4.4.2 Exposure
+
+The exposure component measures how much population, housing, and economic value are located in each block.
+
+- **Population (`exposure_population`)** comes from Census PL block counts.
+- **Housing Units (`exposure_housing`)** come from Census H1.
+- **Building Value (`exposure_building_value`)** is approximated as housing units multiplied by ACS block-group median property value, joined to blocks.
+
+The exposure component is then formed as a normalized combination:
+
+**ExposureScore = norm(population) + norm(housing) + norm(building_value)**
+
+or, in implementation terms, a weighted normalized sum with bounded output. This allows the model to capture both human and economic consequence.
+
+#### 4.4.3 Vulnerability
+
+The vulnerability component captures social conditions that may worsen wildfire consequence even when physical exposure is similar.
+
+- **Poverty (`vuln_poverty`)** is derived from ACS poverty counts/rates at block-group scale and allocated to blocks using population-based weighting.
+- **Elderly Population (`vuln_elderly`)** is derived similarly from ACS age tables.
+- **Vehicle Access (`vuln_vehicle_access`)** uses ACS vehicle-ownership statistics as a mobility and evacuation proxy.
+
+The implementation combines normalized vulnerability features through a weighted sum:
+
+**VulnerabilityScore = w1·vuln_poverty + w2·vuln_elderly + w3·vuln_vehicle_access**
+
+This structure is motivated by the literature showing that age, poverty, and transportation constraints strongly affect disaster response and recovery.
+
+#### 4.4.4 Resilience
+
+The resilience component measures community access to emergency services and evacuation-supporting infrastructure.
+
+- **Fire Station Access (`res_fire_station_dist`)** is computed from nearest distance to HIFLD fire stations and transformed by inversion.
+- **Hospital Access (`res_hospital_dist`)** is computed analogously for HIFLD hospitals.
+- **Road Access (`res_road_access`)** is computed from OSM road network length relative to block area or a related road-connectivity proxy.
+
+These features are combined by weighted normalized sum:
+
+**ResilienceScore = w1·res_fire_station_dist + w2·res_hospital_dist + w3·res_road_access**
+
+Higher resilience values lower final risk in the implemented model.
+
+### 4.5 Unified Risk and Economic Model
+
+Once the four component scores are computed, the pipeline calculates the main outputs.
+
+#### 4.5.1 Risk Score
+
+The core implemented equation is:
+
+**risk_score = hazard_score × exposure_score × vulnerability_score × (1 − resilience_score)**
+
+This formulation preserves four desirable properties:
+
+1. risk remains bounded in `[0,1]`;
+2. risk increases when any of hazard, exposure, or vulnerability increases;
+3. risk decreases when resilience increases; and
+4. a block with very low value in one essential component cannot dominate the system unfairly through addition alone.
+
+The multiplicative form therefore acts as a conservative interaction model: high risk emerges when several risk-driving conditions are simultaneously elevated.
+
+#### 4.5.2 Expected Annual Loss
+
+To make the result more interpretable for planning, the model computes expected annual loss:
+
+**eal = risk_score × exposure_building_value**
+
+and then a normalized version for mapping:
+
+**eal_norm = (eal − min(eal)) / (max(eal) − min(eal))**
+
+This gives the system both a bounded comparative risk score and a dollar-denominated consequence estimate.
+
+### 4.6 Provenance, Diagnostics, and Fallback Logic
+
+A practical challenge in public-data pipelines is incomplete or missing input layers. The implementation addresses this through provenance and diagnostics columns documented in `README.md`.
+
+- Each field may be accompanied by `_source` and `_provenance` metadata.
+- Each record includes a `diagnostics` field summarizing validation issues.
+- When certain optional external datasets are missing, the pipeline computes safe fallback values rather than failing completely.
+- Validation rules from `calculations.csv` enforce bounds, nullability, and type expectations.
+
+This design makes the method more robust for course demonstration and future extension. It also improves interpretability by distinguishing between real-data and fallback-data outputs.
+
+### 4.7 Validation-Oriented Outputs
+
+Although full evaluation is described in Section 5, the proposed method explicitly produces validation-ready outputs as part of the pipeline.
+
+| Validation Output | Purpose |
+| --- | --- |
+| `block_to_county_mapping` | Aggregation from blocks to counties |
+| `county_risk` | Compare aggregated block risk with county references |
+| `county_eal` | Aggregate loss for county-scale comparison |
+| `fema_nri_comparison` | External benchmark against FEMA NRI |
+| `fire_overlap_ratio` | Historical burned-area overlap test |
+| `auc_score` | Predictive discrimination of high-risk blocks |
+| `risk_concentration` | Share of risk in top blocks |
+| `gini_risk` | Spatial inequality of risk distribution |
+
+This is important because the method is not only a score generator; it is built to support structured assessment of whether block-level outputs are plausible and useful.
+
+### 4.8 Interactive Visualization Design
+
+The frontend is a required part of the project method, not just a presentation layer. The output GeoJSON is visualized in an interactive map interface so users can inspect patterns that static county averages would hide.
+
+The intended interface supports:
+
+- map-based exploration of block-level `risk_score`, `eal_norm`, and component scores;
+- field-driven coloring by hazard, exposure, vulnerability, resilience, risk, or loss;
+- hover or click details for each block, including diagnostics and provenance;
+- comparison of neighboring blocks within the same county; and
+- interpretation of validation-related fields when available.
+
+```mermaid
+flowchart TD
+    A[GeoJSON with Block Features] --> B[Frontend Loader]
+    B --> C[Choropleth Rendering]
+    B --> D[Tooltip / Details Panel]
+    B --> E[Layer Selector]
+    B --> F[Diagnostics View]
+```
+
+**Figure Placeholder 4.** Main interactive map interface showing wildfire risk by block with tooltip details. Insert screenshot from final visualization here.
+
+**Figure Placeholder 5.** Alternate layer view, e.g. vulnerability or resilience, demonstrating how the interface supports component-level inspection. Insert screenshot here.
+
+### 4.9 Why the Method Should Be Better Than the State of the Art for This Use Case
+
+The method is expected to improve on county-level wildfire interpretation for three reasons.
+
+1. **Higher spatial resolution.** Block-level outputs preserve local variation in fuels, population, vulnerability, and emergency access.
+2. **Integrated structure.** The model captures both wildfire likelihood and human consequence, rather than reducing the problem to hazard alone.
+3. **Operational reproducibility.** Every major variable is defined in `calculations.csv`, implemented in code, validated, and exported to a user-facing interface.
+
+In other words, the novelty is not one single algorithmic trick. It is the combination of fine spatial resolution, multi-source feature integration, resilience-aware risk modeling, and direct visual comparison of neighborhood hotspots against coarse administrative summaries.
+
+### 4.10 Implementation Summary Table
+
+| Stage | Main Operation | Example Functions / Outputs |
+| --- | --- | --- |
+| Ingestion | Load raw tabular and geospatial inputs | Census, ACS, NLCD, HIFLD, OSM, FEMA, MTBS |
+| Preprocessing | Clean schemas, harmonize keys, prepare geometry | block IDs, county joins, centroids |
+| Feature engineering | Compute direct and derived variables | `compute_hazard_*`, `compute_exposure_*`, `compute_vuln_*`, `compute_res_*` |
+| Modeling | Build component scores and final outputs | `hazard_score`, `exposure_score`, `vulnerability_score`, `resilience_score`, `risk_score`, `eal` |
+| Validation | Aggregate and compare with external references | county metrics, FEMA comparison, overlap, AUC, Gini |
+| Export | Write processed block GeoJSON | `data/processed/blocks.geojson` |
+| Visualization | Render interactive map and panels | frontend fields from GeoJSON |
+
+### 4.11 Method Limitations by Design
+
+The method also makes several practical approximations.
+
+- Some socioeconomic variables are only available at block-group scale and must be allocated to blocks.
+- Building value is estimated from housing counts and median property value rather than parcel-level appraisal data.
+- Road access is measured through a simple network-density proxy rather than full evacuation simulation.
+- Resilience is represented through infrastructure access, not a full institutional-capacity model.
+
+These are limitations, but they are deliberate tradeoffs that preserve national reproducibility using public data.
+
+---
 
 ## 5. Evaluation
 
