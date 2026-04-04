@@ -418,3 +418,45 @@ def compute_hazard_wildfire_real(gdf: pd.DataFrame) -> pd.DataFrame:
     else:
         gdf["hazard_wildfire"] = fallback_uniform(gdf, "hazard_wildfire", reason="No WHP zonal stats CSV found")
         return mark_dummy(gdf, "hazard_wildfire", reason="No WHP zonal stats CSV found")
+
+def compute_hazard_vegetation_real(gdf: pd.DataFrame) -> pd.DataFrame:
+    """
+    Compute hazard_vegetation using NLCD forest/shrub ratio CSV or fallback.
+    Args:
+        gdf: DataFrame with block_id column
+    Returns:
+        DataFrame with hazard_vegetation column
+    """
+    import os
+    import pandas as pd
+    from src.utils.source_tracker import mark_real, mark_dummy
+    csv_path = os.path.join(REAL_DATA_DIR, "nlcd_vegetation.csv")
+    if os.path.exists(csv_path):
+        df = pd.read_csv(csv_path, dtype={"block_id": str, "nlcd_vegetation": float})
+        gdf = gdf.merge(df, on="block_id", how="left")
+        gdf["hazard_vegetation"] = gdf["nlcd_vegetation"].fillna(0)
+        return mark_real(gdf, "hazard_vegetation", source="local_nlcd_vegetation.csv")
+    else:
+        gdf["hazard_vegetation"] = fallback_uniform(gdf, "hazard_vegetation", reason="No NLCD vegetation CSV found")
+        return mark_dummy(gdf, "hazard_vegetation", reason="No NLCD vegetation CSV found")
+
+def compute_hazard_forest_distance_real(gdf: pd.DataFrame) -> pd.DataFrame:
+    """
+    Compute hazard_forest_distance using NLCD forest distance CSV or fallback.
+    Args:
+        gdf: DataFrame with block_id column
+    Returns:
+        DataFrame with hazard_forest_distance column
+    """
+    import os
+    import pandas as pd
+    from src.utils.source_tracker import mark_real, mark_dummy
+    csv_path = os.path.join(REAL_DATA_DIR, "nlcd_forest_distance.csv")
+    if os.path.exists(csv_path):
+        df = pd.read_csv(csv_path, dtype={"block_id": str, "nlcd_forest_distance": float})
+        gdf = gdf.merge(df, on="block_id", how="left")
+        gdf["hazard_forest_distance"] = gdf["nlcd_forest_distance"].fillna(0)
+        return mark_real(gdf, "hazard_forest_distance", source="local_nlcd_forest_distance.csv")
+    else:
+        gdf["hazard_forest_distance"] = fallback_uniform(gdf, "hazard_forest_distance", reason="No NLCD forest distance CSV found")
+        return mark_dummy(gdf, "hazard_forest_distance", reason="No NLCD forest distance CSV found")
