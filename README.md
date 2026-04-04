@@ -43,6 +43,7 @@
 - Every field has a `_source` and `_provenance` column indicating data origin (REAL/DUMMY and details).
 - Every block has a `diagnostics` column with validation issues (if any).
 - All validations (range, null, type, provenance, diagnostics) are enforced and tested.
+- **All calculation logic, feature definitions, and validation rules are defined in `calculations.csv` (canonical source).**
 
 ---
 
@@ -94,6 +95,7 @@ Each step must:
 ### Rules
 - No step should depend on internal logic of another
 - Only depend on schema
+- **All feature and validation definitions are maintained in `calculations.csv`.**
 
 ---
 
@@ -119,33 +121,7 @@ Each step must:
 
 ## Data Dictionary
 
-### Hazard
-- hazard_wildfire: wildfire probability (0–1)
-- hazard_vegetation: vegetation density
-- hazard_forest_distance: distance to forest (km, inverted)
-
-### Exposure
-- exposure_population: population count
-- exposure_housing: number of houses
-- exposure_building_value: estimated value
-
-### Vulnerability
-- vuln_poverty: poverty rate
-- vuln_elderly: elderly population ratio
-- vuln_vehicle_access: vehicle access (inverted)
-
-### Resilience
-- res_fire_station_dist: distance to fire station (inverted)
-- res_hospital_dist: distance to hospital (inverted)
-- res_road_access: road connectivity
-
-### Outputs
-- hazard_score
-- exposure_score
-- vulnerability_score
-- resilience_score
-- risk_score
-- eal
+- See `calculations.csv` for the full data dictionary, feature definitions, and validation rules. This file is the canonical source for all pipeline features and validation logic.
 
 ---
 
@@ -158,7 +134,7 @@ Each step must:
 4. Update the feature pipeline in `src/pipeline/feature_pipeline.py` to include your new feature.
 5. Add validation rules if needed in `src/utils/validator.py`.
 6. Add tests in `tests/` for your new feature.
-7. Update the data dictionary in the README if appropriate.
+7. Update the data dictionary in `calculations.csv` if appropriate.
 8. Run the pipeline and tests to verify your feature is integrated and robust.
 
 ### How to Refresh Data
@@ -222,6 +198,8 @@ All notable changes to this project will be documented in this file.
 - Add geospatial processing scripts and integration.
 - Add comprehensive test suite and CI workflow.
 - Add expanded documentation, how-to guides, and data flow diagrams.
+- **Migrate calculations table to `calculations.csv` (canonical, machine-readable).**
+- **Fully implement and test hazard_forest_distance, res_fire_station_dist, res_hospital_dist, res_road_access.**
 
 ### [1.0.0] - 2024-06-01
 - Initial release: End-to-end wildfire risk mapping pipeline with modular features, diagnostics, and D3.js frontend.
