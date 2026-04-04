@@ -450,7 +450,281 @@ These are limitations, but they are deliberate tradeoffs that preserve national 
 
 ## 5. Evaluation
 
-*To be completed.*
+### 5.1 Evaluation Goals
+
+The evaluation is designed to answer two broad questions. First, does the block-level wildfire framework produce internally consistent and externally plausible results? Second, does the block-level approach reveal spatial patterns that would be hidden by county-scale summaries alone?
+
+To address these questions, the evaluation uses the validation outputs already implemented in the pipeline and described in `calculations.csv`. Rather than relying on a single benchmark, the project uses multiple complementary tests: county aggregation checks, comparison with FEMA NRI, historical fire overlap, discrimination-based metrics, and concentration/inequality metrics. Together, these tests assess agreement with known reference systems, usefulness for identifying historically burned areas, and the degree to which wildfire risk is concentrated within counties.
+
+### 5.2 Testbed
+
+The computational testbed consists of the full wildfire risk pipeline described in Section 4, running on block-level geometries with joined environmental, demographic, and infrastructure features. The main output artifact is a processed GeoJSON containing block-level scores and diagnostics.
+
+The evaluation uses the following categories of data:
+
+| Category | Example Files / Sources | Purpose in Evaluation |
+| --- | --- | --- |
+| Block-level model outputs | `risk_score`, `eal`, `eal_norm`, component scores | Primary prediction outputs |
+| County mapping | block-to-county aggregation | Convert block results to county metrics |
+| External county benchmark | FEMA National Risk Index | Compare aggregated model behavior |
+| Historical fire reference | MTBS fire perimeters | Test whether high-risk blocks overlap known fire activity |
+| Derived labels | burned / not-burned or top-risk threshold labels | AUC and overlap experiments |
+| UI exports | GeoJSON fields displayed in the frontend | Qualitative interpretation of spatial patterns |
+
+Where external files are absent, the pipeline includes safe fallback logic so that execution remains possible. However, the strongest evaluation results are obtained when the FEMA NRI county table and MTBS fire perimeter data are present.
+
+### 5.3 Evaluation Questions
+
+The evaluation section is organized around the following specific questions.
+
+**EQ1.** Do aggregated block-level risk estimates behave similarly to established county-scale wildfire risk benchmarks?
+
+**EQ2.** Do aggregated block-level economic loss estimates produce interpretable county-scale loss patterns?
+
+**EQ3.** Are historically burned areas more likely to fall in blocks that our model ranks as high risk?
+
+**EQ4.** Is wildfire risk concentrated in a relatively small share of blocks inside each county, supporting the claim that county averages hide hotspots?
+
+**EQ5.** Does the interactive visualization make those within-county contrasts legible to a user?
+
+### 5.4 Evaluation Metrics Implemented in the Pipeline
+
+The implemented evaluation metrics are summarized below.
+
+| Metric | Implemented Output | Interpretation |
+| --- | --- | --- |
+| County mean risk | `county_risk` | County-scale aggregate of block risk |
+| County total EAL | `county_eal` | County-scale aggregate of economic consequence |
+| FEMA comparison | `fema_nri_comparison` | Agreement with county benchmark, e.g. correlation / RMSE |
+| Historical fire overlap | `fire_overlap_ratio` | Share of burned area captured in top-risk blocks |
+| Predictive discrimination | `auc_score` | Ability of `risk_score` to separate burned vs non-burned labels |
+| Risk concentration | `risk_concentration` | Share of total risk held in top 10% of blocks |
+| Gini inequality | `gini_risk` | Unevenness of block risk distribution |
+
+These metrics are attached to the data pipeline because evaluation is treated as part of the analytical workflow rather than an afterthought.
+
+### 5.5 Experiment 1: County Risk Comparison with FEMA NRI
+
+#### Purpose
+
+This experiment tests whether aggregated block-level results are broadly compatible with an established county-scale wildfire risk reference.
+
+#### Method
+
+1. Compute `risk_score` for all blocks.
+2. Map each block to its county using the block-to-county mapping.
+3. Aggregate block risk by county using the implemented county mean function.
+4. Join the resulting county table to FEMA NRI wildfire risk values by county FIPS.
+5. Compute summary comparison metrics such as correlation and RMSE.
+
+#### Rationale
+
+The purpose is not to reproduce FEMA exactly. Our model uses different spatial granularity and feature engineering choices. Instead, the goal is to check whether counties that score high in FEMA also tend to receive high aggregate scores in our framework.
+
+#### Expected Observation
+
+We expect moderate positive agreement with FEMA NRI at county scale, while still preserving substantially more local variation inside counties.
+
+**Result Placeholder Table 3. County-Level Comparison with FEMA NRI**
+
+| County FIPS / Summary | FEMA NRI Wildfire Risk | Aggregated `county_risk` | Absolute Error | Notes |
+| --- | --- | --- | --- | --- |
+| Placeholder County 1 | TBD | TBD | TBD | Replace with actual values |
+| Placeholder County 2 | TBD | TBD | TBD | Replace with actual values |
+| Overall Correlation | TBD | — | — | Insert Pearson/Spearman if computed |
+| Overall RMSE | TBD | — | — | Insert RMSE if computed |
+
+**Figure Placeholder 6.** Scatterplot of aggregated `county_risk` versus FEMA NRI wildfire risk by county. Insert final chart here.
+
+### 5.6 Experiment 2: County Expected Annual Loss Aggregation
+
+#### Purpose
+
+This experiment evaluates whether block-level economic risk estimates aggregate into plausible county-scale loss patterns.
+
+#### Method
+
+1. Compute block-level `eal = risk_score × exposure_building_value`.
+2. Sum `eal` within counties to produce `county_eal`.
+3. Compare county totals across the study area.
+4. When possible, qualitatively compare high-EAL counties with known wildfire-prone counties or external summaries.
+
+#### Rationale
+
+A county may have moderate mean risk but very high total expected annual loss if it contains many exposed structures. This experiment distinguishes concentrated physical danger from total economic consequence.
+
+#### Expected Observation
+
+We expect `county_eal` to emphasize heavily developed wildfire-prone counties more strongly than mean risk alone.
+
+**Result Placeholder Table 4. County EAL Ranking**
+
+| County | `county_eal` | `county_risk` | Interpretation |
+| --- | --- | --- | --- |
+| Placeholder County A | TBD | TBD | Replace with actual result |
+| Placeholder County B | TBD | TBD | Replace with actual result |
+| Placeholder County C | TBD | TBD | Replace with actual result |
+
+**Figure Placeholder 7.** County-level map or ranked bar chart of `county_eal`. Insert final figure here.
+
+### 5.7 Experiment 3: Historical Fire Validation
+
+#### Purpose
+
+This experiment tests whether blocks ranked as high risk overlap with real historical wildfire footprints.
+
+#### Method
+
+1. Load historical fire perimeters from MTBS.
+2. Overlay fire perimeters with block geometries.
+3. Label blocks as burned or not burned, or compute burned area share where appropriate.
+4. Compare top-risk blocks against historical burn overlap.
+5. Compute `fire_overlap_ratio`, defined in the pipeline as the share of burned area captured within high-risk blocks.
+
+#### Rationale
+
+A useful wildfire risk map should place historically burned areas disproportionately in the upper end of the risk distribution, even though it is not intended to predict exact ignition locations.
+
+#### Expected Observation
+
+We expect the highest-risk decile of blocks to capture a disproportionately large share of historically burned area relative to random or uniform selection.
+
+**Result Placeholder Table 5. Historical Fire Overlap**
+
+| Metric | Value | Interpretation |
+| --- | --- | --- |
+| Top-risk threshold used | TBD | e.g. top 10% of blocks |
+| `fire_overlap_ratio` | TBD | Higher is better |
+| Burned area in top-risk blocks | TBD | Insert computed share |
+| Burned area outside top-risk blocks | TBD | Insert computed share |
+
+**Figure Placeholder 8.** Overlay map showing historical fire perimeters on top of block-level `risk_score`. Insert screenshot here.
+
+### 5.8 Experiment 4: AUC-Based Fire Prediction Test
+
+#### Purpose
+
+This experiment evaluates the ranking power of `risk_score` as a classifier-like signal for historical burn labels.
+
+#### Method
+
+1. Use historical fire overlap to derive binary block labels, such as burned vs not burned.
+2. Use `risk_score` as the ranking variable.
+3. Compute ROC AUC using the implemented `auc_score` function.
+
+#### Rationale
+
+This does not turn the project into a pure prediction model, but it provides a standard discrimination metric: if a randomly chosen burned block tends to have higher risk than a randomly chosen non-burned block, the AUC will exceed 0.5.
+
+#### Expected Observation
+
+We expect AUC to be meaningfully above random chance, with the exact value depending on coverage, region, and label quality.
+
+**Result Placeholder Table 6. Predictive Discrimination**
+
+| Metric | Value | Interpretation |
+| --- | --- | --- |
+| `auc_score` | TBD | > 0.5 indicates better-than-random ranking |
+| Positive label definition | TBD | e.g. burned overlap > 0 |
+| Sample size | TBD | Number of labeled blocks |
+
+**Figure Placeholder 9.** ROC curve for historical fire prediction using block `risk_score`. Insert final figure here.
+
+### 5.9 Experiment 5: Risk Concentration and Inequality
+
+#### Purpose
+
+This experiment directly tests the report’s core claim that county averages hide neighborhood hotspots.
+
+#### Method
+
+1. Sort blocks within a county or the whole study area by `risk_score`.
+2. Compute `risk_concentration`, e.g. the share of total risk held by the top 10% of blocks.
+3. Compute `gini_risk` using the Lorenz-curve implementation.
+4. Compare the distribution to what would be expected under a more uniform spatial pattern.
+
+#### Rationale
+
+If risk is strongly concentrated, then county averages are intrinsically poor summaries of neighborhood danger because they mix high-risk and low-risk blocks into a single value.
+
+#### Expected Observation
+
+We expect a relatively high concentration of total risk in a small share of blocks, especially in counties that contain both developed settlement and nearby wildland or forest zones.
+
+**Result Placeholder Table 7. Risk Concentration**
+
+| Metric | Value | Interpretation |
+| --- | --- | --- |
+| `risk_concentration` | TBD | Share of total risk in top-decile blocks |
+| `gini_risk` | TBD | Higher means more uneven distribution |
+| County / study area | TBD | Specify evaluation scope |
+
+**Figure Placeholder 10.** Lorenz curve of block-level `risk_score` and annotation of `gini_risk`. Insert final chart here.
+
+### 5.10 Experiment 6: Qualitative Visual Evaluation of the Interface
+
+#### Purpose
+
+This experiment evaluates whether the interactive frontend makes block-level contrasts understandable to a user.
+
+#### Method
+
+1. Load the processed GeoJSON in the browser-based visualization.
+2. Inspect counties with moderate aggregate risk but visibly heterogeneous block values.
+3. Switch layers among hazard, exposure, vulnerability, resilience, `risk_score`, and `eal_norm`.
+4. Use tooltips or details panels to inspect individual blocks and confirm that diagnostics, provenance, and derived fields are accessible.
+
+#### Rationale
+
+Because the course project requires an interactive visual interface, evaluation should also confirm that the system supports user interpretation rather than only numeric output generation.
+
+#### Expected Observation
+
+We expect the interface to make within-county variation visually obvious and to provide drill-down support for diagnosing why one block scores differently from another.
+
+**Figure Placeholder 11.** Screenshot sequence showing one county at county scale, then zoomed block scale, then tooltip details panel. Insert final UI screenshots here.
+
+### 5.11 Summary of Evaluation Logic
+
+The evaluation framework intentionally uses several complementary perspectives.
+
+- **Agreement tests** ask whether the model is plausible relative to known county benchmarks.
+- **Historical overlap tests** ask whether high-risk areas align with real fire experience.
+- **Ranking tests** ask whether the model distinguishes burned from non-burned blocks better than chance.
+- **Concentration tests** ask whether risk is spatially clustered enough to justify block-level analysis.
+- **Qualitative visualization tests** ask whether the interface makes the results interpretable.
+
+A model could perform reasonably on one of these tests and poorly on another, so using all of them provides a more balanced assessment.
+
+### 5.12 Anticipated Observations
+
+Based on the design of the method and the implemented validation outputs, the main expected observations are:
+
+1. aggregated block results should show positive but imperfect agreement with FEMA NRI;
+2. high-risk blocks should overlap historical fire areas more than low-risk blocks do;
+3. AUC should exceed random chance for historical burn labels;
+4. a relatively small share of blocks should contain a large share of total risk; and
+5. the frontend should visually confirm that county averages suppress meaningful local contrasts.
+
+These expected results would support the main project claim that **block-level wildfire risk provides a more informative view of neighborhood danger than county averages alone**.
+
+### 5.13 Threats to Validity
+
+Several factors may affect evaluation quality.
+
+- Historical fires are not perfect ground truth for future wildfire risk.
+- FEMA NRI is a related but not identical target, so disagreement does not automatically imply model failure.
+- Some variables are allocated from coarser geographies, which may blur fine-scale social patterns.
+- External validation files may be incomplete, missing, or temporally mismatched with the study period.
+- Safe fallback values keep the pipeline operational, but they reduce the strength of empirical validation when used.
+
+These threats do not invalidate the framework, but they should be considered when interpreting final quantitative results.
+
+### 5.14 Reproducibility of Evaluation
+
+A strength of the project is that evaluation is reproducible through the same pipeline architecture used for model computation. Once the required external datasets are placed in the documented paths, the evaluation outputs are recomputed automatically and attached to the GeoDataFrame. This means the experiments are not one-off manual analyses; they are part of the end-to-end system.
+
+---
 
 ## 6. Conclusions and Discussion
 
