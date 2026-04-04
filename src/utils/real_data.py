@@ -269,3 +269,17 @@ def compute_exposure_building_value_real(gdf):
     gdf["blockgroup"] = bg_col
     gdf["exposure_building_value"] = gdf["blockgroup"].map(value_map).fillna(0) * gdf.get("exposure_housing", 1)
     return mark_real(gdf, "exposure_building_value", source=provenance)
+
+def compute_hazard_wildfire_real(gdf):
+    import os
+    import pandas as pd
+    from src.utils.source_tracker import mark_real, mark_dummy
+    csv_path = os.path.join(REAL_DATA_DIR, "whp_zonal_stats.csv")
+    if os.path.exists(csv_path):
+        df = pd.read_csv(csv_path, dtype={"block_id": str, "whp_mean": float})
+        gdf = gdf.merge(df, on="block_id", how="left")
+        gdf["hazard_wildfire"] = gdf["whp_mean"].fillna(0)
+        return mark_real(gdf, "hazard_wildfire", source="local_whp_zonal_stats.csv")
+    else:
+        gdf["hazard_wildfire"] = fallback_uniform(gdf, "hazard_wildfire", reason="No WHP zonal stats CSV found")
+        return mark_dummy(gdf, "hazard_wildfire", reason="No WHP zonal stats CSV found")

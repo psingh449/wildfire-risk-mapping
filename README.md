@@ -22,6 +22,8 @@ A modular, end-to-end system for block-group level wildfire risk mapping, combin
   ```bash
   python scripts/process_nlcd_zonal_stats.py
   ```
+- **Process WHP zonal stats:**
+  - Use the same approach as NLCD, but with the WHP raster and output to `data/real/whp_zonal_stats.csv`.
 - **Process HIFLD nearest facility distances:**
   ```bash
   python scripts/process_hifld_nearest.py
@@ -32,7 +34,7 @@ A modular, end-to-end system for block-group level wildfire risk mapping, combin
   ```
 - **Run tests:**
   ```bash
-  pytest tests/
+  set PYTHONPATH=. & pytest tests/ --maxfail=10 --disable-warnings -q
   ```
 - **Serve frontend:**
   ```bash
@@ -49,6 +51,7 @@ A modular, end-to-end system for block-group level wildfire risk mapping, combin
   pip install geopandas rasterio shapely fiona pyproj rtree osmnx
   ```
 - Download environmental datasets and process them as above before running the pipeline for full real data integration.
+- All geospatial and large data is stored in `data/geospatial/` (not tracked by git).
 
 ---
 
@@ -97,6 +100,7 @@ A modular, end-to-end system for block-group level wildfire risk mapping, combin
 - All real Census/ACS data is stored in `data/real/`.
 - To refresh or update any data, rerun the appropriate script.
 - See `calculations.csv` and `calculations_diagram.md` for formulas and data flow.
+- See `CALCULATION_STATUS.md` for a table of all calculations and their real data status.
 
 ---
 
