@@ -48,6 +48,8 @@
 - Every block has a `diagnostics` column with validation issues (if any).
 - All validations (range, null, type, provenance, diagnostics) are enforced and tested.
 - **All calculation logic, feature definitions, and validation rules are defined in `calculations.csv` (canonical source).**
+- `calculations.csv` now includes optional `weight_group` and `weight` columns for weighted composite features.
+- The current codebase reads `calculations.csv` by header name, so column order may be reorganized without affecting repo behavior as long as header names remain unchanged.
 - Validation metrics (rows 20-27) are computed in the pipeline and written back to the main GeoDataFrame for visualization.
 
 ---
@@ -148,7 +150,7 @@ Each step must:
 
 ## Data Dictionary
 
-- See `calculations.csv` for the full data dictionary, feature definitions, and validation rules. This file is the canonical source for all pipeline features and validation logic.
+- See `calculations.csv` for the full data dictionary, feature definitions, validation rules, and optional weight metadata for composite features. This file is the canonical source for all pipeline features and validation logic.
 
 ---
 
@@ -156,13 +158,14 @@ Each step must:
 
 ### How to Add a New Feature
 1. Define the feature in `calculations.csv` with min, max, units, formula, and data source.
-2. Implement the feature function in `src/features/` (e.g., `hazard.py`, `exposure.py`).
-3. Add provenance tracking using `mark_real` or `mark_dummy`.
-4. Update the feature pipeline in `src/pipeline/feature_pipeline.py` to include your new feature.
-5. Add validation rules if needed in `src/utils/validator.py`.
-6. Add tests in `tests/` for your new feature.
-7. Update the data dictionary in `calculations.csv` if appropriate.
-8. Run the pipeline and tests to verify your feature is integrated and robust.
+2. If the feature is an input to a weighted composite metric, set its `weight_group` and `weight` values in `calculations.csv`.
+3. Implement the feature function in `src/features/` (e.g., `hazard.py`, `exposure.py`).
+4. Add provenance tracking using `mark_real` or `mark_dummy`.
+5. Update the feature pipeline in `src/pipeline/feature_pipeline.py` to include your new feature.
+6. Add validation rules if needed in `src/utils/validator.py`.
+7. Add tests in `tests/` for your new feature.
+8. Update the data dictionary in `calculations.csv` if appropriate.
+9. Run the pipeline and tests to verify your feature is integrated and robust.
 
 ### How to Refresh Data
 1. Refresh Census/ACS data:
@@ -226,6 +229,8 @@ All notable changes to this project will be documented in this file.
 - Add comprehensive test suite and CI workflow.
 - Add expanded documentation, how-to guides, and data flow diagrams.
 - **Migrate calculations table to `calculations.csv` (canonical, machine-readable).**
+- **Add `weight_group` and `weight` metadata to `calculations.csv` for weighted composite features.**
+- **Reorder `calculations.csv` columns into a schema-first layout while preserving header-based compatibility.**
 - **Fully implement and test hazard_forest_distance, res_fire_station_dist, res_hospital_dist, res_road_access.**
 - **Implement and test validation rows 20-27 (county aggregation, FEMA comparison, fire overlap, AUC, concentration, Gini).**
 
