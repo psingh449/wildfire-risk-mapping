@@ -100,6 +100,41 @@ If external datasets are missing, the pipeline computes safe fallback values so 
 
 ---
 
+## Visualization Color Palette
+
+The frontend should use a distinct, semantically meaningful color for each major layer so users can easily distinguish between wildfire threat, human consequence, and recovery capacity.
+
+| Layer | Color Name | Hex | Preview | Rationale |
+| --- | --- | --- | --- | --- |
+| Risk | Crimson red | `#D73027` | <span style="display:inline-block;width:48px;height:16px;background:#D73027;border:1px solid #999;"></span> | Primary danger signal |
+| Hazard | Burnt orange | `#F46D43` | <span style="display:inline-block;width:48px;height:16px;background:#F46D43;border:1px solid #999;"></span> | Fire, heat, ignition intuition |
+| Exposure | Golden orange | `#FDAE61` | <span style="display:inline-block;width:48px;height:16px;background:#FDAE61;border:1px solid #999;"></span> | Population and asset presence |
+| Vulnerability | Purple | `#8073AC` | <span style="display:inline-block;width:48px;height:16px;background:#8073AC;border:1px solid #999;"></span> | Social fragility and sensitivity |
+| Resilience | Teal green | `#1A9850` | <span style="display:inline-block;width:48px;height:16px;background:#1A9850;border:1px solid #999;"></span> | Response and recovery capacity |
+| Expected Annual Loss (`EAL`) | Deep blue | `#4575B4` | <span style="display:inline-block;width:48px;height:16px;background:#4575B4;border:1px solid #999;"></span> | Economic/financial interpretation |
+| Diagnostics / Missing | Neutral gray | `#9E9E9E` | <span style="display:inline-block;width:48px;height:16px;background:#9E9E9E;border:1px solid #999;"></span> | Non-data or warning state |
+
+### Suggested Choropleth Ramps
+
+| Layer | Low | Mid | High |
+| --- | --- | --- | --- |
+| Risk | `#FEE0D2` | `#FC9272` | `#D73027` |
+| Hazard | `#FEE8C8` | `#FDBB84` | `#F46D43` |
+| Exposure | `#FFF7BC` | `#FEC44F` | `#FDAE61` |
+| Vulnerability | `#EFEDF5` | `#BCBDDC` | `#8073AC` |
+| Resilience | `#E5F5E0` | `#74C476` | `#1A9850` |
+| EAL | `#DEEBF7` | `#9ECAE1` | `#4575B4` |
+
+### Palette Guidance
+
+- Keep `risk` visually strongest using red.
+- Keep `hazard` orange rather than red so it is distinguishable from `risk`.
+- Keep `resilience` green because higher resilience is a positive factor that reduces overall risk.
+- Use the same base hue for legends, layer buttons, tooltips, and map ramps.
+- Use gray for diagnostics, nulls, and fallback-data states so they do not compete with substantive layers.
+
+---
+
 ## Economic Model
 
 - `building_value_est = exposure_housing * avg_home_value`
@@ -220,4 +255,30 @@ Each step must:
 ## Data Flow Diagram
 
 See [docs/data_flow_diagram.md](docs/data_flow_diagram.md) for a full data flow, including diagnostics and provenance.
+
+---
+
+## Changelog
+
+All notable changes to this project will be documented in this file.
+
+### [Unreleased]
+- Add type annotations, docstrings, and structured logging to all core modules.
+- Add robust validation, diagnostics, and provenance tracking.
+- Add geospatial processing scripts and integration.
+- Add comprehensive test suite and CI workflow.
+- Add expanded documentation, how-to guides, and data flow diagrams.
+- **Migrate calculations table to `calculations.csv` (canonical, machine-readable).**
+- **Add `weight_group` and `weight` metadata to `calculations.csv` for weighted composite features.**
+- **Reorder `calculations.csv` columns into a schema-first layout while preserving header-based compatibility.**
+- **Document a visualization color palette for all major frontend layers.**
+- **Fully implement and test hazard_forest_distance, res_fire_station_dist, res_hospital_dist, res_road_access.**
+- **Implement and test validation rows 20-27 (county aggregation, FEMA comparison, fire overlap, AUC, concentration, Gini).**
+
+### [1.0.0] - 2024-06-01
+- Initial release: End-to-end wildfire risk mapping pipeline with modular features, diagnostics, and D3.js frontend.
+
+---
+
+*This README was auto-generated and includes quickstart, troubleshooting, API docs, data flow, and a data dictionary.*
 

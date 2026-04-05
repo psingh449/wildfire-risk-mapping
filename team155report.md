@@ -419,6 +419,20 @@ flowchart TD
 
 **Figure Placeholder 5.** Alternate layer view, e.g. vulnerability or resilience, demonstrating how the interface supports component-level inspection. Insert screenshot here.
 
+Table 3 documents the recommended visualization palette for distinct layer identification.
+
+| Layer | Color Name | Hex | Intended Meaning |
+| --- | --- | --- | --- |
+| Risk | Crimson red | `#D73027` | Primary danger layer |
+| Hazard | Burnt orange | `#F46D43` | Fire and ignition potential |
+| Exposure | Golden orange | `#FDAE61` | Population and asset presence |
+| Vulnerability | Purple | `#8073AC` | Social sensitivity and fragility |
+| Resilience | Teal green | `#1A9850` | Response and recovery capacity |
+| Expected Annual Loss (`EAL`) | Deep blue | `#4575B4` | Economic consequence |
+| Diagnostics / Missing | Neutral gray | `#9E9E9E` | Missing, fallback, or warning state |
+
+This palette keeps `risk` visually strongest, separates `hazard` from `risk`, and assigns `resilience` a positive green hue because stronger resilience lowers final risk.
+
 ### 4.9 Why the Method Should Be Better Than the State of the Art for This Use Case
 
 The method is expected to improve on county-level wildfire interpretation for three reasons.
