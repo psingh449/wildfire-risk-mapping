@@ -472,7 +472,21 @@ The program retrieves information from **9 external sources**. Let's explore eac
 
 ## Understanding calculations.csv
 
-This is the **single source of truth** for the entire project. Every row defines one variable, and the columns tell the code exactly how to retrieve, transform, and validate that variable.
+This is the **single source of truth** for the entire project. Every row defines one variable, and the columns tell the data scientist exactly how that variable should be retrieved, transformed, and validated.
+
+⚠️ **IMPORTANT ARCHITECTURAL NOTE:**
+`calculations.csv` is primarily a **SPECIFICATION DOCUMENT**, not a configuration file that drives behavior. Only **2 columns are actually read dynamically** by the Python code at runtime:
+- `weight` and `weight_group` — Used to compute composite scores dynamically
+- `min` and `max` — Used to generate fallback dummy data bounds when APIs fail
+
+**All other columns** (data_source, source_url, api_endpoint, api_params, join_keys, transform_steps, calculation_formula, dependencies) are **static documentation** that describe the implementation in code. These are NOT read by the program—they are hardcoded in Python functions.
+
+**Think of it this way:**
+- calculations.csv = **"What should the system do? How should each feature be computed?"** (specification)
+- Python code = **"How are we actually doing it?"** (implementation)
+- For most columns, they must stay in sync manually
+
+This is different from a fully "schema-driven" system where all parameters are read from a config file.
 
 ### All 8 Column Categories Explained
 
@@ -579,303 +593,71 @@ risk_score * exposure_building_value
 
 ### How the Code Uses calculations.csv
 
-**Step 1:** Program reads the CSV file
+**IMPORTANT ARCHITECTURAL INSIGHT:**
+Only **2 out of 28 columns** are actually **read dynamically at runtime**:
+- `weight` + `weight_group` — Used to compute composite scores
+- `min` + `max` — Used to generate fallback dummy data bounds
+
+**Everything else is static documentation** hardcoded in Python code. See `CALCULATIONS_CSV_ARCHITECTURE.md` for detailed explanation of this design pattern.
+
+**Step 1:** Program reads weights at feature engineering time
 ```python
-# In build_features.py line 30-40
-with open("calculations.csv") as csvfile:
-    reader = csv.DictReader(csvfile)
-    for row in reader:
-        variable_name = row["variable"]
-        data_source = row["data_source"]
-        api_params = row["api_params"]
-        # ... loads weight_group, weight, calculation_formula, etc.
+# In build_features.py
+weights = _load_component_weights_from_calculations()
+# Returns: {"hazard_score": {"hazard_wildfire_norm": 0.333, ...}, ...}
 ```
 
-**Step 2:** For each row, program determines what to do based on `data_source`
-- If `data_source` contains "API" → Call appropriate API fetch function
-- If `data_source` contains "raster" → Read raster file, process with zonal stats
-- If `data_source` is "Derived" → Calculate from other features
-
-**Step 3:** Program uses `api_params` to construct actual API requests
+**Step 2:** Program reads min/max when generating fallback data
 ```python
-# Example: For Census Population
+# In real_data.py
+min_val, max_val = get_limits("exposure_population")
+# Returns: bounds for generating dummy integers if API fails
+```
+
+**Step 3:** Program uses hardcoded API URLs (NOT read from CSV)
+```python
+# NOT from CSV - hardcoded
+CENSUS_POP_URL = "https://api.census.gov/data/2020/dec/pl"
 params = {
-    "get": "P1_001N,GEOID",  # From api_params
-    "for": "block:*",        # From api_params
-    "in": f"state:{STATE_CODE} county:{COUNTY_CODE}"  # From api_params
+    "get": "P1_001N,GEOID",  # Hardcoded, not from api_params column
+    "for": "block:*",
+    "in": f"state:{STATE_CODE} county:{COUNTY_CODE}"
 }
-response = requests.get(CENSUS_POP_URL, params=params)
 ```
 
-**Step 4:** Program uses `calculation_formula` to transform raw data
+**Step 4:** Program uses hardcoded computation formulas (NOT read from CSV)
 ```python
-# Example: Calculate poverty rate
-poverty_rate = persons_in_poverty / total_persons
-
-# Example: Apply inverse distance
-res_score = 1 / (1 + distance_km)
-
-# Example: Compute composite score with weights
-hazard_score = 0.333*hazard_wildfire + 0.333*hazard_vegetation + 0.333*hazard_forest_distance
+# NOT from CSV - hardcoded as Python logic
+poverty_rate = persons_in_poverty / total_persons  # calculation_formula is documented but hardcoded
+res_score = 1 / (1 + distance_km)  # calculation_formula documented but hardcoded
 ```
 
-**Step 5:** Program validates using `min`, `max`, `nullable` columns
+**Step 5:** Program validates using hardcoded rules (NOT read from CSV)
 ```python
-# Check that normalized fields stay in [0, 1]
+# NOT from CSV - validation rules hardcoded
 if hazard_score < 0 or hazard_score > 1:
-    logger.warning(f"Field {var} out of range: {value}")
+    logger.warning(f"Field out of range")
 ```
 
----
-
-## Validation: Checking That Everything Makes Sense
-
-After all calculations complete, the system runs **8 validation checks**. These don't prevent bad data from being saved — they just report whether the results are reasonable.
-
-### Validation Files & Their Roles
-
-**File 1: `src/utils/validator.py`**
-
-| Validation Function | What It Checks | Why It Matters |
-|---------------------|----------------|----------------|
-| `validate_columns()` | Do all 17 required features exist? | If a feature computation failed, we want to know |
-| `validate_nulls()` | Are there any missing values (NaN)? | Null values break calculations downstream |
-| `validate_ranges()` | Are normalized fields between 0-1? | Normalized fields must be bounded; values outside this range indicate bugs or extreme data |
-| `validate_types()` | Are integers really integers, floats really floats? | Type mismatches cause data serialization errors |
-
-**File 2: `src/validation/metrics.py`**
-
-| Validation Function | What It Checks | Why It Matters |
-|---------------------|----------------|----------------|
-| `aggregate_block_to_county()` | Can blocks be aggregated to county level? | Ensures geographic relationships are valid |
-| `compute_county_risk_from_blocks()` | Does county risk average make sense? | County risk = mean of all block risks; should be reasonable |
-| `compute_county_eal_from_blocks()` | Does total county EAL make sense? | County EAL = sum of block EALs; used to compare with FEMA |
-| `compare_with_fema_nri()` | How does our county risk compare to FEMA's? | Correlation > 0.7 suggests our model is reasonable |
-| `compute_historical_fire_overlap()` | Do predicted high-risk blocks match historical burns? | Model validation: did we predict where fires actually occurred? |
-| `compute_auc_fire_prediction()` | What's the AUC (Area Under Curve) score? | Machine learning metric: 0.5=random, 1.0=perfect prediction |
-| `compute_risk_concentration()` | Is risk concentrated in top 10% of blocks? | Understanding distribution: are high risks clustered or spread? |
-| `compute_lorenz_curve()` | What's the Gini coefficient of risk? | Inequality measure: 0=equal distribution, 1=all risk in one block |
-
-### Example: How Validation Works
-
-Let's say the program computed `hazard_wildfire` values for all 200 blocks. The validation system:
-
-1. **Check Column Exists:** "Is `hazard_wildfire` column in the GeoDataFrame?" → Yes ✓
-2. **Check No Nulls:** "Are there any NaN values?" → 3 blocks have NaN → Log warning ⚠️
-3. **Check Range:** "Are all values between 0-1?" → 2 values are 1.2 and -0.1 → Log warning ⚠️
-4. **Check Type:** "Is it float type?" → Yes ✓
-
-**Result:** System logs warnings but **still exports the data**. This allows the team to:
-- Investigate which blocks have issues
-- Decide whether to fix the data or accept it
-- Track data quality over time
-
----
-
-## What Happens When Data Can't Be Retrieved
-
-Not every API call succeeds. The internet might be down, an API might be offline, or credentials might fail. The system has **fallback mechanisms** to handle failures gracefully.
-
-### Fallback Strategy Overview
-
-**Principle:** If real data can't be retrieved, generate plausible dummy data instead of crashing.
-
-### How Each Data Source Falls Back
-
-#### **Census Population Data**
-
-**Normal flow:**
-```
-Try to fetch from Census API
-    ↓
-If fails, try to load from local CSV
-    ↓
-If no local CSV, generate random dummy data
-```
-
-**Python code location:** `src/utils/real_data.py` lines 149-182
-
-```python
-def compute_exposure_population_real(gdf):
-    # Try local file first
-    if USE_STORED_REAL_DATA:
-        pop_dict = fetch_census_population_local()
-    else:
-        # Try API
-        pop_dict = fetch_census_population(gdf["GEOID"].tolist())
-    
-    # If both failed, generate dummy data
-    if pop_dict is None:
-        gdf["exposure_population"] = fallback_int(
-            gdf, 
-            "exposure_population", 
-            reason="No real data available"
-        )
-        return mark_dummy(gdf, "exposure_population", reason="...")
-```
-
-**Fallback parameters from calculations.csv:**
-- `min` column → Minimum possible value (0)
-- `max` column → Maximum possible value (infinity handled as reasonable estimate)
-- Random integers generated in this range
-
-**How you know it's fake data:** Column `_source_exposure_population` = "DUMMY"
-
----
-
-#### **NLCD Raster Data**
-
-**Normal flow:**
-```
-Try to download WHP/NLCD raster
-    ↓
-If fails, try to load from local directory
-    ↓
-If not available, generate random raster values
-```
-
-**Python code location:** `src/features/hazard.py` lines 45-78
-
-**Fallback:** If raster can't be read, sample random values from 0-1 range (since normalized fields).
-
-**How you know it's fake:** Hazard features marked with `_source_hazard_wildfire = "DUMMY"`
-
----
-
-#### **ACS Data (Poverty, Elderly, Vehicle Access)**
-
-**Normal flow:**
-```
-Try to fetch from ACS API
-    ↓
-If fails, try to load from local CSV
-    ↓
-If no local file, generate random poverty/elderly/vehicle percentages
-```
-
-**Python code location:** `src/utils/real_data.py` lines 300-340
-
-**Fallback parameters:**
-- Poverty rate: Random 0-100%, normalized to 0-1
-- Elderly ratio: Random 0-50% (realistic upper bound)
-- Vehicle access: Random 0-100%
-
----
-
-#### **HIFLD Data (Fire Stations, Hospitals)**
-
-**Normal flow:**
-```
-Try to download fire station/hospital locations
-    ↓
-If fails, load from local CSV
-    ↓
-If not available, randomly distribute facilities across the county
-```
-
-**Python code location:** `src/utils/real_data.py` lines 420-460
-
-**Fallback:** Generate random point locations for facilities (obviously not realistic, but allows pipeline to complete).
-
----
-
-#### **OSM Roads**
-
-**Normal flow:**
-```
-Try to query Overpass API for roads
-    ↓
-If fails, load from local GeoJSON
-    ↓
-If not available, estimate road density randomly
-```
-
-**Python code location:** `src/utils/real_data.py` lines 480-515
-
-**Fallback:** Generate random road density values (0-1).
-
----
-
-### How to Tell If You're Using Fake Data
-
-**Method 1: Check the diagnostics**
-```
-The pipeline prints warnings like:
-"Falling back to dummy for exposure_population (No real data available)"
-"Falling back to dummy for hazard_wildfire (API timeout)"
-```
-
-**Method 2: Look at source columns**
-```python
-# In the GeoDataFrame:
-gdf._source_exposure_population  # "Census API" or "DUMMY"
-gdf._source_hazard_wildfire      # "WHP" or "DUMMY"
-```
-
-**Method 3: Run with `USE_STORED_REAL_DATA = False`**
-```python
-# In src/utils/config.py
-USE_STORED_REAL_DATA = False  # Force API calls, no local cache
-```
-
-### Real Data Caching Strategy
-
-To speed up repeated pipeline runs, the system **caches** all downloaded data:
-
-```
-First run:
-    Fetch from API → Save to data/real/census_population.csv
-    
-Second run:
-    Load from data/real/census_population.csv (faster!)
-    
-If you want fresh data:
-    Delete data/real/*.csv files → Re-run pipeline
-```
-
-This is controlled by `USE_STORED_REAL_DATA` in `src/utils/config.py`.
-
----
-
-## Summary: The Complete Data Pipeline
-
-### Quick Reference
-
-| Stage | Input | Process | Output | Files |
-|-------|-------|---------|--------|-------|
-| **1. Ingestion** | Butte County block shapefile | Load geometry | 200 blocks with GEOID, geometry | `load_real_blocks.py` |
-| **2. Preprocessing** | Raw blocks | Standardize CRS, compute centroids | Cleaned blocks ready for feature calc | `preprocess_blocks.py` |
-| **3. Feature Eng.** | Cleaned blocks + 9 data sources | Fetch external data, compute 17 features | Blocks with hazard/exposure/vuln/resilience scores | `build_features.py`, `real_data.py` |
-| **4. Risk Model** | 4 component scores | Apply formula: H×E×V×(1-R) | Risk score (0-1) and EAL ($) | `risk_model.py` |
-| **5. Validation** | Final results | Check ranges, aggregations, comparisons | Diagnostic metrics and validation report | `metrics.py`, `validator.py` |
-| **Export** | Final GeoDataFrame | Convert to GeoJSON | `blocks.geojson` with all features | Export functions |
-
-### Where Each calculations.csv Column Is Used
-
-| Column | Used By | When | Purpose |
-|--------|---------|------|---------|
-| `data_source` | Feature pipeline | Feature dispatch | Determines which fetch function to call |
-| `source_url` | Documentation + humans | Lookup | Where to manually download if needed |
-| `api_endpoint` | `real_data.py` fetch functions | API construction | Builds full URL like `api.census.gov/data/2020/dec/pl` |
-| `api_params` | `real_data.py` fetch functions | API construction | Specifies which variables and geography to request |
-| `dependencies` | Feature pipeline | Scheduling | Ensures component features computed before composite scores |
-| `join_keys` | `real_data.py` feature functions | Data joining | Determines how to spatially join external data to blocks |
-| `transform_steps` | Code comments + humans | Reference | Explains the algorithm to humans (not executed by code) |
-| `calculation_formula` | `build_features.py` | Computation | Specifies mathematical formula or code logic |
-| `min`, `max` | `validator.py` + `real_data.py` | Validation + fallback | Range checking and fallback generation bounds |
-
----
-
-## Conclusion
-
-You now understand how the wildfire risk mapping system works from start to finish:
-
-1. **Entry Point:** `src/pipeline/run_pipeline.py` orchestrates everything
-2. **Data Sources:** 9 external sources (Census, ACS, USFS, NLCD, HIFLD, OSM, MTBS, FEMA) each handled by specific functions in `real_data.py`
-3. **Feature Engineering:** 17 features calculated by `build_features.py` using weights and formulas from `calculations.csv`
-4. **Risk Model:** 4 component scores (Hazard, Exposure, Vulnerability, Resilience) combined into risk score
-5. **Validation:** 8 validation functions check data quality
-6. **Fallback:** If any data source fails, the system generates realistic dummy data instead of crashing
-7. **Output:** `data/processed/blocks.geojson` ready for web visualization
-
-The `calculations.csv` file is the master blueprint — it tells the code exactly how to retrieve, transform, validate, and combine all data sources into meaningful risk predictions.
+### Mapping: Which columns are used where?
+
+| Column | Used Dynamically? | Where | Files |
+|--------|---|---|---|
+| `weight_group` | ✅ YES | Composite score computation | build_features.py:44 |
+| `weight` | ✅ YES | Composite score computation | build_features.py:45 |
+| `min` | ✅ YES | Fallback data generation | real_data.py:42 |
+| `max` | ✅ YES | Fallback data generation | real_data.py:46 |
+| `data_source` | ❌ NO | Static documentation | (reference only) |
+| `source_url` | ❌ NO | Hardcoded in code | real_data.py (URLS hardcoded) |
+| `api_endpoint` | ❌ NO | Hardcoded in code | real_data.py (endpoints hardcoded) |
+| `api_params` | ❌ NO | Hardcoded in code | real_data.py (params hardcoded) |
+| `dependencies` | ❌ NO | Hardcoded in pipeline order | feature_pipeline.py (order hardcoded) |
+| `join_keys` | ❌ NO | Hardcoded in functions | features/*.py (joins hardcoded) |
+| `transform_steps` | ❌ NO | Static documentation | (reference only) |
+| `calculation_formula` | ❌ NO | Hardcoded as logic | Various (formulas hardcoded) |
+
+### Why This Design?
+
+This is a **Specification-Driven Architecture** (not Configuration-Driven). See `CALCULATIONS_CSV_ARCHITECTURE.md` for detailed pros/cons and recommendations.
+
+````````
