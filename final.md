@@ -23,6 +23,15 @@ The final output is a **Risk Score** (0-1 range) and **Expected Annual Loss (EAL
 - Fallback/dummy data generation when APIs fail
 - Full provenance tracking (all data marked REAL or DUMMY)
 
+**System Components:**
+
+| Component | Purpose | Features | Examples |
+|-----------|---------|----------|----------|
+| **Hazard** | Fire likelihood & intensity | Wildfire probability, vegetation density, distance to forests | Forest cover, fuel moisture, historical burn patterns |
+| **Exposure** | People and assets at risk | Population count, housing units, building value | Census data, property assessments, infrastructure |
+| **Vulnerability** | Social fragility & sensitivity | Poverty rate, elderly percentage, vehicle access | ACS socioeconomic data, demographic characteristics |
+| **Resilience** | Response and recovery capacity | Fire station proximity, hospital access, road connectivity | Emergency services locations, network access |
+
 ### 1.2 Quick Start (6 Steps)
 
 1. **Clone the repository:**
@@ -69,18 +78,7 @@ The final output is a **Risk Score** (0-1 range) and **Expected Annual Loss (EAL
    $env:PYTHONPATH='.'; pytest tests/ -v
    ```
 
-### 1.3 Project Components Overview
-
-The system has four major risk components combined into a unified risk model:
-
-| Component | Purpose | Features | Examples |
-|-----------|---------|----------|----------|
-| **Hazard** | Fire likelihood & intensity | Wildfire probability, vegetation density, distance to forests | Forest cover, fuel moisture, historical burn patterns |
-| **Exposure** | People and assets at risk | Population count, housing units, building value | Census data, property assessments, infrastructure |
-| **Vulnerability** | Social fragility & sensitivity | Poverty rate, elderly percentage, vehicle access | ACS socioeconomic data, demographic characteristics |
-| **Resilience** | Response and recovery capacity | Fire station proximity, hospital access, road connectivity | Emergency services locations, network access |
-
-### 1.4 Running the Pipeline
+### 1.3 Running the Pipeline
 
 **The pipeline executes in 5 stages:**
 
@@ -95,7 +93,7 @@ The system has four major risk components combined into a unified risk model:
 - `data/real/diagnostics_report.csv` — Validation issues summary
 - Logs with warnings and errors for debugging
 
-### 1.5 Serving the Frontend
+### 1.4 Serving the Frontend
 
 The frontend visualizes results on an interactive map with:
 - Choropleth layers for each metric (Risk, Hazard, Exposure, Vulnerability, Resilience, EAL)
@@ -109,7 +107,7 @@ python -m http.server 8000
 ```
 Open your browser to `http://localhost:8000` and view `index.html`.
 
-### 1.6 Running Tests
+### 1.5 Running Tests
 
 The test suite validates all calculations, data sources, and features:
 
@@ -642,7 +640,7 @@ The program retrieves information from **9 external sources**. Each source is fe
 
 **Data Storage:**
 - **External reference:** `data/external/mtbs_fire_perimeters.geojson`
-- **Used by:** Validation metrics (fire overlap ratio)
+- **Used by:** Validation metrics (fire_overlap_ratio)
 - **Not a direct feature:** Used only for validation comparison
 
 **How calculations.csv Directs This:**
@@ -769,84 +767,7 @@ interpretation: Higher values indicate greater wildfire threat
 data_type: float
 ```
 
-### 4.2 Dynamic vs. Static Columns (Specification vs. Implementation)
-
-**CRITICAL INSIGHT:** Only 2 of 28 columns are **dynamically read** at runtime. The rest are **static documentation**.
-
-#### ✅ DYNAMICALLY READ (2 columns only)
-
-**1. weight_group + weight**
-```
-Read by: src/features/build_features.py, lines 37-72
-Function: _load_component_weights_from_calculations()
-
-Example:
-    row.weight_group = "hazard_score"
-    row.weight = 0.333333
-    
-Used for: Computing composite scores
-    hazard_score = 0.333*wildfire + 0.333*vegetation + 0.333*forest_distance
-
-Verification: Change weight 0.333→0.5 in CSV, run pipeline → score changes ✓
-```
-
-**2. min + max**
-```
-Read by: src/utils/real_data.py, lines 26-52
-Function: get_limits(var)
-
-Example:
-    row.min = 0
-    row.max = 100000
-    
-Used for: Fallback dummy data generation
-    If API fails: generate random integers between min and max
-
-Verification: Delete API cache, run pipeline → dummy data stays within min/max ✓
-```
-
-#### ❌ STATIC DOCUMENTATION (26 columns)
-
-**Hardcoded in Python Code:**
-- data_source, source_url, api_endpoint, api_params
-- join_keys, dependencies
-- calculation_formula, transform_steps
-- units, interpretation, validation_rule
-- All other columns
-
-**Example: Hardcoded URLs**
-```python
-# src/utils/real_data.py, lines 103-104 (NOT read from CSV)
-CENSUS_POP_URL = "https://api.census.gov/data/2020/dec/pl"
-# Even though calculations.csv row 5 specifies source_url, 
-# Python hardcodes this constant
-# Changing CSV doesn't change behavior ❌
-```
-
-**Example: Hardcoded API Parameters**
-```python
-# src/utils/real_data.py, lines 108-113 (NOT read from CSV)
-params = {
-    "get": "P1_001N,GEOID",         # Hardcoded, not read from api_params
-    "for": "block:*",               # Hardcoded, not read
-    "in": f"state:{STATE_CODE} county:{COUNTY_CODE}"  # Hardcoded
-}
-# Changing CSV api_params doesn't affect code ❌
-```
-
-**Example: Hardcoded Formulas**
-```python
-# src/features/hazard.py (NOT read from CSV)
-hazard_wildfire = gdf["WHP_zonal_mean"]
-# calculation_formula in CSV says "mean(WHP_pixels)" 
-# but formula is hardcoded in Python as accessing specific column ❌
-
-# src/utils/real_data.py (NOT read from CSV)
-res_fire_station_dist = 1 / (1 + distance_km)
-# CSV says formula "1/(1+distance_km)" but code hardcodes this logic ❌
-```
-
-### 4.3 Composite Score Weighting System
+### 4.2 Composite Score Weighting System
 
 **How Composite Scores Are Calculated:**
 
@@ -885,28 +806,7 @@ component_score = Σ (feature_normalized × weight) / Σ weights
    - Vulnerability Score (poverty, elderly, vehicle access)
    - Resilience Score (fire stations, hospitals, road access)
 
-**Current Weights (from calculations.csv):**
-
-| Feature | Weight | Total |
-|---------|--------|-------|
-| **Hazard** | | 1.0 |
-| hazard_wildfire | 0.333333 | |
-| hazard_vegetation | 0.333333 | |
-| hazard_forest_distance | 0.333334 | |
-| **Exposure** | | 1.0 |
-| exposure_population | 0.333333 | |
-| exposure_housing | 0.333333 | |
-| exposure_building_value | 0.333334 | |
-| **Vulnerability** | | 1.0 |
-| vuln_poverty | 0.333333 | |
-| vuln_elderly | 0.333333 | |
-| vuln_vehicle_access | 0.333334 | |
-| **Resilience** | | 1.0 |
-| res_fire_station_dist | 0.333333 | |
-| res_hospital_dist | 0.333333 | |
-| res_road_access | 0.333334 | |
-
-### 4.4 Fallback and Dummy Data Generation
+### 4.3 Fallback and Dummy Data Generation
 
 **When Fallback is Needed:**
 
@@ -958,10 +858,10 @@ Output: exposure_population = random value in [0, 100000]
 Marked: exposure_population_source = "DUMMY"
 ```
 
-### 4.5 Column-by-Column Usage Mapping
+### 4.4 Column-by-Column Usage Mapping
 
 | Row | Feature | Group | Dynamic Columns | Static Columns | Purpose |
-|-----|---------|-------|---|---|---------|
+|-----|---------|-------|-----------------|----------------|---------|
 | 1 | hazard_wildfire | Hazard | weight: 0.333 | source_url, formula | Direct feature |
 | 2 | hazard_vegetation | Hazard | weight: 0.333 | source_url, formula | Direct feature |
 | 3 | hazard_forest_distance | Hazard | weight: 0.333 | source_url, formula | Direct feature |
@@ -1063,38 +963,6 @@ eal_max = gdf["eal"].max()
 gdf["eal_normalized"] = (gdf["eal"] - eal_min) / (eal_max - eal_min)
 gdf["eal_normalized"] = gdf["eal_normalized"].clip(0, 1)
 ```
-
-### 4.8 Architecture Insight: Why Only Weights Are Dynamic
-
-**The Trade-off:**
-
-| Aspect | If Everything Were Dynamic | Current (Weights Only) |
-|--------|---|---|
-| **Flexibility** | High (change CSV, change behavior) | Lower (code changes needed) |
-| **Simplicity** | Complex (CSV interpreter needed) | Simple (Python code straightforward) |
-| **Performance** | Slower (CSV parsing per run) | Faster (no parsing overhead) |
-| **Maintainability** | Hard (sync between CSV and code) | Medium (weights auto-sync) |
-| **Type Safety** | Weak (everything strings) | Strong (Python types enforced) |
-| **Debuggability** | Hard (trace through interpreter) | Easy (IDE debugging) |
-
-**Why Weights Make Sense to Be Dynamic:**
-1. Frequently adjusted (parameter tuning)
-2. Different stakeholders want different weights
-3. No code changes needed for new combinations
-4. Easy to express in CSV format (single number)
-
-**Why Everything Else Remains Hardcoded:**
-1. URLs are stable (don't change)
-2. API parameters are complex (specific to each source)
-3. Formulas are implementation logic (harder to express in CSV)
-4. Python code is more maintainable than configuration interpreter
-5. Type safety and performance matter
-
-**Recommendation:**
-- ✅ Keep weights dynamic (in CSV)
-- ✅ Keep formulas in code (clearer and faster)
-- ⚠️ Document both CSV and code when schemas change
-- ⚠️ Add tests to catch sync mismatches
 
 ---
 
@@ -1381,8 +1249,8 @@ Detailed explanation:
 ### 5.4 Troubleshooting Issues
 
 #### Issue: Negative EAL Values in Output
-**Symptom:** EAL column contains negative values for some blocks
-**Root Cause:** Integer overflow in building_value_est calculation
+**Symptom:** EAL column contains negative values
+**Root Cause:** Integer overflow in `building_value_est` calculation
 ```python
 # WRONG (int32):
 building_value_est = exposure_housing * 300000
@@ -1413,7 +1281,7 @@ building_value_est = exposure_housing.astype("float64") * 300000
 **Solution:**
 1. Check network connection
 2. Verify API credentials
-3. Check data/real/ for cached files
+3. Check `data/real/` for cached files
 4. Delete cache and retry: `rm data/real/*.csv`
 
 #### Issue: Diagnostics Report Showing Many DUMMY Values
@@ -1463,34 +1331,21 @@ print(f"Gini Coefficient: {gini:.3f}")
 
 ## 6. Visualization, Frontend, and Reference
 
-### 6.1 Color Palette (7-Layer Semantic Colors)
+### 6.1 Color Palette and Choropleth Ramps
 
 The frontend should use a distinct, semantically meaningful color for each major layer so users can easily distinguish between wildfire threat, human consequence, and recovery capacity.
 
-| Layer | Color Name | Hex | Rationale |
-|-------|-----------|-----|-----------|
-| Risk | Crimson Red | `#D73027` | Primary danger signal; highest visual weight |
-| Hazard | Burnt Orange | `#F46D43` | Fire, heat, ignition intuition |
-| Exposure | Golden Orange | `#FDAE61` | Population and asset presence; warmth |
-| Vulnerability | Purple | `#8073AC` | Social fragility; distinct from hazard/exposure |
-| Resilience | Teal Green | `#1A9850` | Response and recovery capacity; positive (green) |
-| Expected Annual Loss (EAL) | Deep Blue | `#4575B4` | Economic/financial interpretation |
-| Diagnostics / Missing | Neutral Gray | `#9E9E9E` | Non-data or warning state; neutral |
+| Layer | Color Name | Primary Hex | Low (0) | Mid (0.5) | High (1.0) | Rationale |
+|-------|-----------|---|---|---|---|-----------|
+| **Risk** | Crimson Red | <span style="background-color:#D73027;color:#D73027;">█</span> `#D73027` | <span style="background-color:#FEE0D2;color:#FEE0D2;">█</span> `#FEE0D2` | <span style="background-color:#FC9272;color:#FC9272;">█</span> `#FC9272` | <span style="background-color:#D73027;color:#D73027;">█</span> `#D73027` | Primary danger signal; highest visual weight |
+| **Hazard** | Burnt Orange | <span style="background-color:#F46D43;color:#F46D43;">█</span> `#F46D43` | <span style="background-color:#FEE8C8;color:#FEE8C8;">█</span> `#FEE8C8` | <span style="background-color:#FDBB84;color:#FDBB84;">█</span> `#FDBB84` | <span style="background-color:#F46D43;color:#F46D43;">█</span> `#F46D43` | Fire, heat, ignition intuition |
+| **Exposure** | Golden Orange | <span style="background-color:#FDAE61;color:#FDAE61;">█</span> `#FDAE61` | <span style="background-color:#FFF7BC;color:#FFF7BC;">█</span> `#FFF7BC` | <span style="background-color:#FEC44F;color:#FEC44F;">█</span> `#FEC44F` | <span style="background-color:#FDAE61;color:#FDAE61;">█</span> `#FDAE61` | Population and asset presence; warmth |
+| **Vulnerability** | Purple | <span style="background-color:#8073AC;color:#8073AC;">█</span> `#8073AC` | <span style="background-color:#EFEDF5;color:#EFEDF5;">█</span> `#EFEDF5` | <span style="background-color:#BCBDDC;color:#BCBDDC;">█</span> `#BCBDDC` | <span style="background-color:#8073AC;color:#8073AC;">█</span> `#8073AC` | Social fragility; distinct from hazard/exposure |
+| **Resilience** | Teal Green | <span style="background-color:#1A9850;color:#1A9850;">█</span> `#1A9850` | <span style="background-color:#E5F5E0;color:#E5F5E0;">█</span> `#E5F5E0` | <span style="background-color:#74C476;color:#74C476;">█</span> `#74C476` | <span style="background-color:#1A9850;color:#1A9850;">█</span> `#1A9850` | Response and recovery capacity; positive (green) |
+| **Expected Annual Loss (EAL)** | Deep Blue | <span style="background-color:#4575B4;color:#4575B4;">█</span> `#4575B4` | <span style="background-color:#DEEBF7;color:#DEEBF7;">█</span> `#DEEBF7` | <span style="background-color:#9ECAE1;color:#9ECAE1;">█</span> `#9ECAE1` | <span style="background-color:#4575B4;color:#4575B4;">█</span> `#4575B4` | Economic/financial interpretation |
+| **Diagnostics / Missing** | Neutral Gray | <span style="background-color:#9E9E9E;color:#9E9E9E;">█</span> `#9E9E9E` | — | — | — | Non-data or warning state; neutral |
 
-### 6.2 Suggested Choropleth Ramps
-
-Use these three-color ramps for visualizing metrics from low to high:
-
-| Layer | Low (0) | Mid (0.5) | High (1.0) |
-|-------|---------|-----------|-----------|
-| Risk | `#FEE0D2` | `#FC9272` | `#D73027` |
-| Hazard | `#FEE8C8` | `#FDBB84` | `#F46D43` |
-| Exposure | `#FFF7BC` | `#FEC44F` | `#FDAE61` |
-| Vulnerability | `#EFEDF5` | `#BCBDDC` | `#8073AC` |
-| Resilience | `#E5F5E0` | `#74C476` | `#1A9850` |
-| EAL | `#DEEBF7` | `#9ECAE1` | `#4575B4` |
-
-### 6.3 Visualization Guidelines
+### 6.2 Visualization Guidelines
 
 **Color Usage:**
 - Keep `risk` visually strongest using red (primary layer)
@@ -1505,7 +1360,7 @@ Use these three-color ramps for visualizing metrics from low to high:
 - **Zoom levels:** Aggregate to county at low zoom, show blocks at high zoom
 - **Export:** Download filtered blocks as GeoJSON or CSV
 
-### 6.4 Data Dictionary and Economic Model
+### 6.3 Data Dictionary and Economic Model
 
 **Economic Model:**
 
@@ -1539,7 +1394,7 @@ To view all fields:
 cat calculations.csv | column -t -s, | less
 ```
 
-### 6.5 How-To Guides
+### 6.4 How-To Guides
 
 #### How to Add a New Feature
 
