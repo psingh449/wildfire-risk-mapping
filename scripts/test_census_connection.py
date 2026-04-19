@@ -2,10 +2,11 @@
 import sys
 import urllib.request
 
+# Butte County, CA FIPS: state 06 + county 007 (three-digit county code)
 URL = (
     "https://api.census.gov/data/2020/dec/pl"
     "?get=P1_001N,NAME,state,county,tract,block%20group"
-    "&for=block%20group:*&in=state:06%20county:07"
+    "&for=block%20group:*&in=state:06%20county:007"
 )
 
 

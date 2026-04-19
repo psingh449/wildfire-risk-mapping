@@ -38,7 +38,8 @@ def refresh_census_population():
         print("ERROR: Census population fetch failed.")
         return
     df = pd.DataFrame(list(pop_dict.items()), columns=["GEOID", "population"])
-    _zfill_geoid(df, "GEOID", block_level=True)
+    # Block-group GEOIDs (12 digits), same as block_groups.geojson / PL fetch
+    _zfill_geoid(df, "GEOID", block_level=False)
     ensure_dir(REAL_DATA_DIR)
     out = os.path.join(REAL_DATA_DIR, "census_population.csv")
     df.to_csv(out, index=False)
@@ -52,7 +53,7 @@ def refresh_census_housing():
         print("ERROR: Census housing fetch failed.")
         return
     df = pd.DataFrame(list(housing_dict.items()), columns=["GEOID", "housing_units"])
-    _zfill_geoid(df, "GEOID", block_level=True)
+    _zfill_geoid(df, "GEOID", block_level=False)
     ensure_dir(REAL_DATA_DIR)
     out = os.path.join(REAL_DATA_DIR, "census_housing.csv")
     df.to_csv(out, index=False)
