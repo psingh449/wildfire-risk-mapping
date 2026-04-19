@@ -11,6 +11,12 @@ from src.utils.config import REAL_DATA_DIR, USE_STORED_REAL_DATA
 
 logger = logging.getLogger("real_data")
 
+# Census/API endpoints may return empty or HTML errors without a proper User-Agent.
+HTTP_HEADERS = {
+    "User-Agent": "wildfire-risk-mapping/1.0 (research; +https://github.com)",
+    "Accept": "application/json",
+}
+
 
 def _resolve_calculations_csv() -> Path:
     candidates = [
@@ -95,27 +101,45 @@ CENSUS_HOUSING_URL = "https://api.census.gov/data/2020/dec/pl"
 STATE_CODE = os.environ.get("WILDFIRE_STATE_CODE", "06")
 COUNTY_CODE = os.environ.get("WILDFIRE_COUNTY_CODE", "007")
 
-# Helper to fetch census block population
+def _bg_geoid_from_pl_row(header: list, row: list) -> str:
+    """Build 12-digit block-group GEOID from 2020 PL geographic components."""
+    idx = {name: i for i, name in enumerate(header)}
+    st = str(row[idx["state"]]).zfill(2)
+    co = str(row[idx["county"]]).zfill(3)
+    tr = str(row[idx["tract"]]).zfill(6)
+    bg = str(row[idx["block group"]]).strip()
+    return f"{st}{co}{tr}{bg}"
+
+
+# Helper to fetch census block-group population (matches 12-char GEOIDs in block_groups.geojson)
 def fetch_census_population(block_geoid_list: list) -> Optional[Dict[str, int]]:
     """
-    Fetch population for all blocks in Butte County from Census API.
+    Fetch population for all block groups in the configured county (2020 Decennial PL).
     Args:
-        block_geoid_list: List of block GEOIDs (unused, fetches all for county)
+        block_geoid_list: Unused; fetches all block groups for the county.
     Returns:
-        Dictionary mapping GEOID to population
+        Dictionary mapping GEOID (str) to population
     """
     params = {
-        "get": "P1_001N,GEOID",
-        "for": "block:*",
-        "in": f"state:{STATE_CODE} county:{COUNTY_CODE}"
+        "get": "P1_001N,NAME,state,county,tract,block group",
+        "for": "block group:*",
+        "in": f"state:{STATE_CODE} county:{COUNTY_CODE}",
     }
     try:
-        resp = requests.get(CENSUS_POP_URL, params=params, timeout=10)
+        resp = requests.get(
+            CENSUS_POP_URL, params=params, timeout=120, headers=HTTP_HEADERS
+        )
         resp.raise_for_status()
+        if not resp.content.strip():
+            logger.error("Census population: empty response body (status=%s)", resp.status_code)
+            return None
         data = resp.json()
         header = data[0]
         rows = data[1:]
-        pop_dict = {row[1]: int(row[0]) for row in rows}
+        pop_dict = {}
+        for row in rows:
+            geoid = _bg_geoid_from_pl_row(header, row)
+            pop_dict[geoid] = int(row[0])
         return pop_dict
     except Exception as e:
         logger.error(f"Census API population fetch failed: {e}")
@@ -166,27 +190,31 @@ def compute_exposure_population_real(gdf: pd.DataFrame) -> pd.DataFrame:
     gdf["exposure_population"] = gdf["GEOID"].map(pop_dict).fillna(0).astype(int)
     return mark_real(gdf, "exposure_population", source=provenance)
 
-# Helper to fetch census block housing units
+# Helper to fetch census block-group housing units
 def fetch_census_housing(block_geoid_list: list) -> Optional[Dict[str, int]]:
     """
-    Fetch housing units for all blocks in Butte County from Census API.
-    Args:
-        block_geoid_list: List of block GEOIDs (unused, fetches all for county)
-    Returns:
-        Dictionary mapping GEOID to number of housing units
+    Fetch housing units for all block groups in the configured county (2020 Decennial PL).
     """
     params = {
-        "get": "H1_001N,GEOID",
-        "for": "block:*",
-        "in": f"state:{STATE_CODE} county:{COUNTY_CODE}"
+        "get": "H1_001N,NAME,state,county,tract,block group",
+        "for": "block group:*",
+        "in": f"state:{STATE_CODE} county:{COUNTY_CODE}",
     }
     try:
-        resp = requests.get(CENSUS_HOUSING_URL, params=params, timeout=10)
+        resp = requests.get(
+            CENSUS_HOUSING_URL, params=params, timeout=120, headers=HTTP_HEADERS
+        )
         resp.raise_for_status()
+        if not resp.content.strip():
+            logger.error("Census housing: empty response body (status=%s)", resp.status_code)
+            return None
         data = resp.json()
         header = data[0]
         rows = data[1:]
-        housing_dict = {row[1]: int(row[0]) for row in rows}
+        housing_dict = {}
+        for row in rows:
+            geoid = _bg_geoid_from_pl_row(header, row)
+            housing_dict[geoid] = int(row[0])
         return housing_dict
     except Exception as e:
         logger.error(f"Census API housing fetch failed: {e}")
@@ -245,24 +273,49 @@ def fetch_acs_blockgroup(fields: list, for_clause: str, in_clause: str) -> Optio
     """
     Fetch ACS block group data for specified fields and geography.
     Args:
-        fields: List of field names to fetch
+        fields: List of field names to fetch (GEOID is synthesized from geographic columns)
         for_clause: 'for' clause of API request (e.g., "block group:*")
-        in_clause: 'in' clause of API request (e.g., "state:06 county:007")
+        in_clause: 'in' clause (e.g., "state:06 county:007")
     Returns:
         DataFrame with ACS data, or None on error
     """
+    fields_req = [f for f in fields if f != "GEOID"]
+    geo_cols = ["state", "county", "tract", "block group"]
+    get_list = fields_req + [c for c in geo_cols if c not in fields_req]
+    seen = set()
+    get_unique = []
+    for x in get_list:
+        if x not in seen:
+            seen.add(x)
+            get_unique.append(x)
     params = {
-        "get": ",".join(fields),
+        "get": ",".join(get_unique),
         "for": for_clause,
-        "in": in_clause
+        "in": in_clause,
     }
     try:
-        resp = requests.get(ACS_URL, params=params, timeout=10)
+        resp = requests.get(ACS_URL, params=params, timeout=120, headers=HTTP_HEADERS)
         resp.raise_for_status()
+        if not resp.content.strip():
+            logger.error(
+                "ACS API empty body (status=%s). Check VPN/firewall to api.census.gov",
+                resp.status_code,
+            )
+            return None
         data = resp.json()
         header = data[0]
         rows = data[1:]
-        return pd.DataFrame(rows, columns=header)
+        df = pd.DataFrame(rows, columns=header)
+        if "GEOID" not in df.columns and all(
+            c in df.columns for c in ("state", "county", "tract", "block group")
+        ):
+            df["GEOID"] = (
+                df["state"].astype(str).str.zfill(2)
+                + df["county"].astype(str).str.zfill(3)
+                + df["tract"].astype(str).str.zfill(6)
+                + df["block group"].astype(str).str.strip()
+            )
+        return df
     except Exception as e:
         logger.error(f"ACS API fetch failed: {e}")
         return None

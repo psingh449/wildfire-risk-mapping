@@ -46,12 +46,15 @@ The final output is a **Risk Score** (0-1 range) and **Expected Annual Loss (EAL
    pip install geopandas rasterio shapely fiona pyproj rtree osmnx
    ```
 
-3. **Download and process data:**
+3. **Download and process data** (Census, ACS, rasters, OSM). See **[DATA_REFRESH.md](DATA_REFRESH.md)** for the full ordered checklist and troubleshooting.
    ```bash
    python scripts/refresh_real_data.py
    python scripts/download_environmental_data.py
-   python scripts/process_nlcd_zonal_stats.py
-   python scripts/process_hifld_nearest.py
+   python scripts/extract_geospatial_zips.py
+   python scripts/process_whp_zonal_stats.py
+   python scripts/process_nlcd_vegetation.py
+   python scripts/process_nlcd_forest_distance.py
+   python scripts/build_hifld_distances_arcgis.py
    python scripts/process_osm_road_length.py
    ```
 
@@ -1383,29 +1386,15 @@ cat calculations.csv | column -t -s, | less
 
 #### How to Refresh Data
 
-1. **Refresh Census/ACS data:**
-   ```bash
-   python scripts/refresh_real_data.py
-   ```
+See **[DATA_REFRESH.md](DATA_REFRESH.md)** for the full sequence (Census, ACS, NLCD, WHP, OSM, facility distances). Short version:
 
-2. **Download environmental datasets:**
-   ```bash
-   python scripts/download_environmental_data.py
-   ```
+1. `python scripts/refresh_real_data.py`
+2. `python scripts/download_environmental_data.py` then `python scripts/extract_geospatial_zips.py`
+3. `python scripts/process_whp_zonal_stats.py`, `process_nlcd_vegetation.py`, `process_nlcd_forest_distance.py`
+4. `python scripts/build_hifld_distances_arcgis.py`, `python scripts/process_osm_road_length.py`
+5. `python -m src.pipeline.run_pipeline`
 
-3. **Process geospatial data:**
-   ```bash
-   python scripts/process_nlcd_zonal_stats.py
-   python scripts/process_hifld_nearest.py
-   python scripts/process_osm_road_length.py
-   ```
-
-4. **Rerun pipeline:**
-   ```bash
-   python -m src.pipeline.run_pipeline
-   ```
-
-5. **Check diagnostics:**
+**Check diagnostics:**
    - Review `data/real/diagnostics_report.csv`
    - Check logs for warnings/errors
 
