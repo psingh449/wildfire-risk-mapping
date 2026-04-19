@@ -1,12 +1,27 @@
 __pycache__/
-*.pyc
-.env
-.venv/
-.DS_Store
-# Ignore raw source data
-data/raw/census/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+.eggs/
+dist/
+build/
 
-# Allow processed input file
-!data/raw/block_groups.geojson
-data/interim/*
-data/geospatial/
+# Virtual environments
+.venv/
+.venv*/
+venv/
+ENV/
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local data outputs (keep structure; ignore large generated artifacts if needed)
+# data/processed/*.geojson
+# data/real/*.csv

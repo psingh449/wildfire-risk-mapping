@@ -103,16 +103,11 @@ def build_features(gdf):
     if "exposure_population" in gdf.columns:
         gdf["exposure_population_norm"] = minmax(gdf["exposure_population"])
 
-    # 2. Inversions on normalized fields
-    if "hazard_forest_distance_norm" in gdf:
-        gdf["hazard_forest_distance_norm"] = 1 - gdf["hazard_forest_distance_norm"]
-
-    if "res_fire_station_dist_norm" in gdf:
-        gdf["res_fire_station_dist_norm"] = 1 - gdf["res_fire_station_dist_norm"]
-
-    if "res_hospital_dist_norm" in gdf:
-        gdf["res_hospital_dist_norm"] = 1 - gdf["res_hospital_dist_norm"]
-
+    # 2. Direction fixes on normalized fields (single inversion per feature)
+    # hazard_forest_distance raw: 1/(1+d_km) — higher = closer to forest = higher hazard (keep norm).
+    # res_fire_station_dist / res_hospital_dist raw: 1/(1+d_km) — higher = closer = higher resilience (keep norm).
+    # vuln_vehicle_access raw: ACS "vehicle access" share — higher = more vehicles = lower vulnerability:
+    # invert so higher normalized score = higher vulnerability.
     if "vuln_vehicle_access_norm" in gdf:
         gdf["vuln_vehicle_access_norm"] = 1 - gdf["vuln_vehicle_access_norm"]
 
@@ -126,20 +121,13 @@ def build_features(gdf):
     for c in ["hazard_score", "exposure_score", "vulnerability_score", "resilience_score"]:
         gdf[c] = gdf[c].clip(0, 1)
 
-    # 4. Economic exposure proxy (raw dollars)
-    AVG_HOME_VALUE = 300000  # placeholder
-    if "exposure_housing" in gdf.columns:
-        gdf["building_value_est"] = gdf["exposure_housing"] * AVG_HOME_VALUE
-    else:
-        gdf["building_value_est"] = 0
-
-    # 5. Risk score and EAL (single source of truth)
+    # 5. Risk score and EAL (exposure_building_value = housing * ACS median; set in feature pipeline)
     gdf = compute_risk(gdf)
 
-    # 5b. Validation metrics (rows 20-27 in calculations.csv)
+    # 6. Validation metrics (rows 20-27 in calculations.csv)
     gdf = apply_validation_metrics(gdf)
 
-    # 6. Add diagnostics
+    # 7. Diagnostics
     gdf = add_diagnostics_to_gdf(gdf)
 
     return gdf

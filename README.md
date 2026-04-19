@@ -150,40 +150,29 @@ run_pipeline.py → run() function
     [Stage 1] step_ingestion()         → Load raw blocks and attributes
     [Stage 2] step_preprocessing()      → Standardize coordinates
     [Stage 3] run_feature_pipeline()    → Calculate all 17 features
-    [Stage 4] step_features()           → Organize features into components
-    [Stage 5] step_model()              → Calculate risk scores and EAL
+    [Stage 4] step_features()           → Composite scores, risk, EAL, validation metrics, diagnostics
+    [Stage 5] step_model()              → Pass-through (risk/EAL computed in step_features)
     ↓
-    [Export] Save to blocks.geojson
-    [Validate] Run quality checks
+    validate_columns()                  → Required output schema
+    step_export()                       → data/processed/blocks.geojson + run_summary.json
 ```
 
 **Entry Point Code Flow:**
 ```python
 def run():
-    print("Starting pipeline")
-    
-    # Stage 1: Load raw data (blocks and attributes)
     gdf = step_ingestion()
-    
-    # Stage 2: Prepare data (standardize coordinates, geographic clipping)
     gdf = step_preprocessing(gdf)
-    
-    # Stage 3: Calculate all features (hazard, exposure, vulnerability, resilience)
     gdf = run_feature_pipeline(gdf)
-    gdf = step_features(gdf)
-    
-    # Stage 4: Calculate final risk scores
-    gdf = step_model(gdf)
-    
-    # Stage 5: Export results and validate
-    # (Results saved to data/processed/blocks.geojson)
-    
-    print("Pipeline completed")
+    gdf = step_features(gdf)   # build_features: scores, compute_risk, validation metrics, diagnostics
+    gdf = step_model(gdf)      # no-op placeholder
+    validate_columns(gdf)
+    gdf = step_export(gdf)     # blocks.geojson + run_summary.json
 ```
 
 **Key files involved at entry:**
 - `src/pipeline/run_pipeline.py` — Main orchestrator
 - `src/pipeline/steps.py` — Individual stage implementations
+- `src/pipeline/steps_export.py` — GeoJSON + run summary export
 - `src/pipeline/feature_pipeline.py` — Feature engineering coordinator
 
 ### 2.2 5-Stage Pipeline Orchestration
@@ -247,8 +236,9 @@ def run():
    - Range: 0 to 1 (0 = no risk, 1 = maximum risk)
 
 3. **Expected Annual Loss (EAL):** Financial impact
-   - `eal = risk_score × building_value_est`
-   - Represents expected monetary damage per year
+   - `eal = risk_score × exposure_building_value`
+   - `exposure_building_value = housing_units × ACS median home value (B25077) at block group`
+   - Represents expected monetary damage per year (USD); maps use **`eal_norm`** (min–max of `eal`)
 
 4. **Normalized Metrics:** For visualization
    - `risk_score_norm` = min-max normalized across all blocks
@@ -926,43 +916,28 @@ gdf["risk_score"] = risk_score.clip(0, 1)  # Ensure 0-1 range
 
 **Formula:**
 ```
-eal = risk_score × building_value_est
+exposure_building_value = exposure_housing × median_home_value_BG   # ACS B25077 at block group
+eal = risk_score × exposure_building_value
 ```
 
 **Interpretation:**
-- **Financial impact:** Expected monetary damage per year
-- **building_value_est:** Total residential building value in block
-  - Estimated as: `exposure_housing × avg_home_value`
-  - Average home value typically ~$300,000 (regional parameter)
+- **Financial impact:** Expected monetary damage per year (USD)
+- **exposure_building_value:** Total residential building value proxy from Census housing units and ACS median home value by block group
 
 **Example Calculation:**
 ```
 risk_score = 0.2016
-housing_units = 100 houses
-avg_value_per_house = $300,000
-building_value_est = 100 × $300,000 = $30,000,000
+housing_units = 100
+median_home_value_BG = $300,000
+exposure_building_value = 100 × $300,000 = $30,000,000
 
 eal = 0.2016 × $30,000,000
     = $6,048,000
-    → Expected $6M damage per year for this block
 ```
 
-**Implementation:**
-```python
-# src/models/risk_model.py
-building_value_est = gdf["exposure_housing"] * 300000
-eal = gdf["risk_score"] * building_value_est
-gdf["eal"] = eal
-```
+**Implementation:** See `src/models/risk_model.py` and `compute_exposure_building_value_real` in `src/utils/real_data.py`.
 
-**Normalization for Visualization:**
-```python
-# Min-max normalization for choropleth display
-eal_min = gdf["eal"].min()
-eal_max = gdf["eal"].max()
-gdf["eal_normalized"] = (gdf["eal"] - eal_min) / (eal_max - eal_min)
-gdf["eal_normalized"] = gdf["eal_normalized"].clip(0, 1)
-```
+**Normalization for visualization:** `eal_norm` (min–max of `eal` across block groups); use this column in the frontend for choropleth scaling.
 
 ---
 
@@ -1117,10 +1092,7 @@ if avg_eal_per_block < 0:
     # Warning: negative EAL detected
 ```
 
-**Known Issues:**
-- ~55 blocks (~27.5%) have negative EAL values due to int32 overflow in building_value_est calculation
-- Bug: `building_value_est = exposure_housing * 300000` should be `float64` not `int32`
-- Fix: Convert to float64: `gdf["building_value_est"] = gdf["exposure_housing"].astype("float64") * 300000`
+**Note:** EAL uses `float64` arithmetic on `exposure_building_value` to avoid integer overflow when multiplying large housing counts by median values.
 
 #### 4. compare_with_fema_nri()
 **Purpose:** Compare our risk scores against FEMA's National Risk Index
@@ -1248,20 +1220,6 @@ Detailed explanation:
 
 ### 5.4 Troubleshooting Issues
 
-#### Issue: Negative EAL Values in Output
-**Symptom:** EAL column contains negative values
-**Root Cause:** Integer overflow in `building_value_est` calculation
-```python
-# WRONG (int32):
-building_value_est = exposure_housing * 300000
-# When exposure_housing > 7155: overflows to negative
-
-# CORRECT (float64):
-building_value_est = exposure_housing.astype("float64") * 300000
-```
-**Fix Location:** `src/features/build_features.py` line 132
-**Impact:** ~55 blocks (~27.5%) affected in typical data
-
 #### Issue: Out-of-Range Scores (>1.0 or <0)
 **Symptom:** Validation warns "out_of_range_resilience_score"
 **Possible Causes:**
@@ -1365,19 +1323,19 @@ The frontend should use a distinct, semantically meaningful color for each major
 **Economic Model:**
 
 ```
-building_value_est = exposure_housing × $300,000 (avg home value)
+exposure_building_value = exposure_housing × median_home_value_BG   # ACS B25077
 risk_score = hazard × exposure × vulnerability × (1 - resilience)
-eal = risk_score × building_value_est
+eal (USD) = risk_score × exposure_building_value
+eal_norm = min-max of eal for mapping
 ```
 
 **Example for a Block:**
 ```
-Exposure housing: 100 houses
-Building value: 100 × $300,000 = $30,000,000
+Exposure housing: 100 units; block-group median home value: $300,000
+exposure_building_value = $30,000,000
 
 Risk score: 0.15
-EAL = 0.15 × $30,000,000 = $4,500,000
-Expected annual damage for this block: $4.5 million
+EAL = 0.15 × $30,000,000 = $4,500,000 expected annual loss proxy (USD)
 ```
 
 **Data Dictionary:**
@@ -1516,6 +1474,7 @@ See `calculations_diagram_dev.mmd` for comprehensive visual flowchart.
 ### Files to Know About
 
 - **`calculations.csv`** — Canonical feature specification (28 columns, 27 rows)
+- **`METHODS.md`** — Methods summary for reproducibility and paper drafts
 - **`calculations_diagram_dev.mmd`** — Visual flowchart (Mermaid format)
 - **`data/processed/blocks.geojson`** — Main output with all calculations
 - **`data/real/diagnostics_report.csv`** — Validation issues summary

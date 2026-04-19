@@ -19,6 +19,7 @@ def generate_mock_blocks(n=49):
 
             row = {
                 "block_id": f"B{idx}",
+                "GEOID": f"06007{idx:07d}",
                 "county": "Butte",
                 "geometry": poly,
 

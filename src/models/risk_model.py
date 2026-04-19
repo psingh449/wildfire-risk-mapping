@@ -1,4 +1,7 @@
+import pandas as pd
+
 from src.utils.config import EPSILON
+
 
 def compute_risk(gdf):
     # Unified risk calculation (matches build_features.py)
@@ -10,12 +13,19 @@ def compute_risk(gdf):
         (1 - gdf["resilience_score"])
     ).clip(0, 1)
 
-    # EAL: risk_score * building_value_est
-    gdf["eal"] = gdf["risk_score"] * gdf.get("building_value_est", 0)
+    # EAL (USD): risk_score * exposure_building_value
+    # exposure_building_value = housing_units * ACS median home value (B25077) at block group
+    if "exposure_building_value" in gdf.columns:
+        bv = pd.to_numeric(gdf["exposure_building_value"], errors="coerce").fillna(0.0).astype("float64")
+    else:
+        bv = pd.Series(0.0, index=gdf.index, dtype="float64")
+    gdf["eal"] = gdf["risk_score"].astype("float64") * bv
+    gdf["eal"] = gdf["eal"].clip(lower=0.0)
 
-    # Normalize EAL for visualization
-    min_eal = gdf["eal"].min()
-    max_eal = gdf["eal"].max()
+    # Normalized EAL for maps (canonical name: eal_norm)
+    min_eal = float(gdf["eal"].min())
+    max_eal = float(gdf["eal"].max())
     gdf["eal_norm"] = (gdf["eal"] - min_eal) / (max_eal - min_eal + EPSILON)
+    gdf["eal_norm"] = gdf["eal_norm"].clip(0.0, 1.0)
 
     return gdf

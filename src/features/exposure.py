@@ -1,5 +1,11 @@
-from src.utils.real_data import compute_exposure_population_real, compute_exposure_housing_real, fallback_int, fallback_uniform
-from src.utils.source_tracker import mark_real, mark_dummy
+from src.utils.real_data import (
+    compute_exposure_population_real,
+    compute_exposure_housing_real,
+    compute_exposure_building_value_real,
+    fallback_int,
+    fallback_uniform,
+)
+from src.utils.source_tracker import mark_dummy
 
 def compute_exposure_population(gdf):
     try:
@@ -16,6 +22,8 @@ def compute_exposure_housing(gdf):
         return mark_dummy(gdf, "exposure_housing")
 
 def compute_exposure_building_value(gdf):
-    # TODO: Implement real building value calculation
-    gdf["exposure_building_value"] = fallback_uniform(gdf, "exposure_building_value")
-    return mark_dummy(gdf, "exposure_building_value")
+    try:
+        return compute_exposure_building_value_real(gdf)
+    except Exception:
+        gdf["exposure_building_value"] = fallback_uniform(gdf, "exposure_building_value")
+        return mark_dummy(gdf, "exposure_building_value")

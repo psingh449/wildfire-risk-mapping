@@ -1,4 +1,8 @@
-from src.utils.real_data import compute_hazard_wildfire_real, compute_hazard_forest_distance_real
+from src.utils.real_data import (
+    compute_hazard_wildfire_real,
+    compute_hazard_forest_distance_real,
+    compute_hazard_vegetation_real,
+)
 from src.utils.real_data import fallback_uniform
 from src.utils.source_tracker import mark_dummy
 
@@ -11,9 +15,11 @@ def compute_hazard_wildfire(gdf):
         return mark_dummy(gdf, "hazard_wildfire")
 
 def compute_hazard_vegetation(gdf):
-    # TODO: Implement real vegetation calculation
-    gdf["hazard_vegetation"] = fallback_uniform(gdf, "hazard_vegetation")
-    return mark_dummy(gdf, "hazard_vegetation")
+    try:
+        return compute_hazard_vegetation_real(gdf)
+    except Exception:
+        gdf["hazard_vegetation"] = fallback_uniform(gdf, "hazard_vegetation")
+        return mark_dummy(gdf, "hazard_vegetation")
 
 def compute_hazard_forest_distance(gdf):
     try:

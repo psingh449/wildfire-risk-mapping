@@ -26,6 +26,24 @@ def _resolve_calculations_csv() -> Path:
     raise FileNotFoundError("Could not locate calculations.csv")
 
 
+def _parse_limit(raw) -> Any:
+    """Parse min/max from calculations.csv including inf bounds."""
+    if raw is None:
+        return None
+    s = str(raw).strip()
+    if not s:
+        return None
+    sl = s.lower()
+    if sl in ("inf", "+inf", "infinity"):
+        return float("inf")
+    if sl in ("-inf", "-infinity"):
+        return float("-inf")
+    try:
+        return float(s)
+    except ValueError:
+        return None
+
+
 def _load_calculation_rules() -> None:
     try:
         csv_path = _resolve_calculations_csv()
@@ -35,14 +53,8 @@ def _load_calculation_rules() -> None:
                 var = row.get("geojson_property", "")
                 if not var:
                     continue
-                try:
-                    min_val = float(row.get("min", ""))
-                except Exception:
-                    min_val = None
-                try:
-                    max_val = float(row.get("max", ""))
-                except Exception:
-                    max_val = None
+                min_val = _parse_limit(row.get("min", ""))
+                max_val = _parse_limit(row.get("max", ""))
                 FIELD_LIMITS[var] = (min_val, max_val)
                 FIELD_NULLABLE[var] = (str(row.get("nullable", "")).strip().lower() == "yes")
                 FIELD_DESCRIPTIONS[var] = row.get("description", "")

@@ -1,5 +1,9 @@
 from src.utils.logger import get_logger
-from src.utils.validator import validate_columns, validate_nulls, validate_ranges
+from src.utils.validator import (
+    validate_ingestion_schema,
+    validate_ingestion_nulls,
+    validate_ranges,
+)
 from src.preprocessing.preprocess_blocks import preprocess
 from src.features.build_features import build_features
 
@@ -24,8 +28,8 @@ def step_ingestion():
         logger.warning(f"Falling back to mock due to error: {e}")
         gdf = generate_mock_blocks()
 
-    validate_columns(gdf)
-    validate_nulls(gdf)
+    validate_ingestion_schema(gdf)
+    validate_ingestion_nulls(gdf)
 
     return gdf
 

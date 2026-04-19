@@ -7,7 +7,7 @@ def test_compute_risk():
         "exposure_score": [0.6, 0.7, 0.1],
         "vulnerability_score": [0.4, 0.9, 0.3],
         "resilience_score": [0.2, 0.1, 0.5],
-        "building_value_est": [100000, 200000, 150000],
+        "exposure_building_value": [100000.0, 200000.0, 150000.0],
     })
     gdf = compute_risk(gdf)
     assert "risk_score" in gdf

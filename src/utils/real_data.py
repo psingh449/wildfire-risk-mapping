@@ -411,7 +411,9 @@ def compute_exposure_building_value_real(gdf: pd.DataFrame) -> pd.DataFrame:
     acs = acs.apply(pd.to_numeric, errors="coerce")
     value_map = dict(zip(acs["GEOID"], acs["B25077_001E"]))
     gdf["blockgroup"] = bg_col
-    gdf["exposure_building_value"] = gdf["blockgroup"].map(value_map).fillna(0) * gdf.get("exposure_housing", 1)
+    median_val = pd.to_numeric(gdf["blockgroup"].map(value_map), errors="coerce").fillna(0.0).astype("float64")
+    housing = pd.to_numeric(gdf.get("exposure_housing", 0), errors="coerce").fillna(0.0).astype("float64")
+    gdf["exposure_building_value"] = housing * median_val
     return mark_real(gdf, "exposure_building_value", source=provenance)
 
 def compute_hazard_wildfire_real(gdf: pd.DataFrame) -> pd.DataFrame:

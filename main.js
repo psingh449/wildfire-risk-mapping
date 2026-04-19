@@ -4,7 +4,20 @@ const height = +svg.attr("height");
 
 const DEFAULT_METRIC = "risk_score";
 
-// Badge helpers
+const METRIC_COLOR_RAMPS = {
+    risk_score: ["#FEE0D2", "#FC9272", "#D73027"],
+    hazard_score: ["#FEE8C8", "#FDBB84", "#F46D43"],
+    exposure_score: ["#FFF7BC", "#FEC44F", "#FDAE61"],
+    vulnerability_score: ["#EFEDF5", "#BCBDDC", "#8073AC"],
+    resilience_score: ["#E5F5E0", "#74C476", "#1A9850"],
+    eal_norm: ["#DEEBF7", "#9ECAE1", "#4575B4"],
+};
+
+function colorScaleForMetric(metric) {
+    const stops = METRIC_COLOR_RAMPS[metric] || METRIC_COLOR_RAMPS.risk_score;
+    return d3.scaleSequential(d3.interpolateRgbBasis(stops)).domain([0, 1]);
+}
+
 function sourceBadge(isReal) {
     const cls = isReal ? "badge badge-real" : "badge badge-dummy";
     const txt = isReal ? "REAL" : "DUMMY";
@@ -27,108 +40,97 @@ const descriptions = {
     exposure_score: "Population and assets exposed to wildfire.",
     vulnerability_score: "Sensitivity of the population to wildfire impacts.",
     resilience_score: "Ability to respond to and recover from wildfire events.",
-    eal_norm: "Expected Annual Loss (economic risk proxy based on property value and risk)."
+    eal_norm: "Expected Annual Loss (EAL), min–max scaled (eal_norm) for mapping; raw EAL is in USD."
 };
 
-// Tooltip
 const tooltip = d3.select("body")
     .append("div")
     .attr("class", "tooltip")
     .style("opacity", 0);
 
 function buildTooltip(p) {
+    const bval = p.exposure_building_value != null ? Math.round(p.exposure_building_value) : 0;
     let html = `
-<b>Risk:</b> ${p.risk_score?.toFixed(2) ?? "NA"}<br/>
-<b>Hazard:</b> ${p.hazard_score?.toFixed(2) ?? "NA"}<br/>
-<b>Exposure:</b> ${p.exposure_score?.toFixed(2) ?? "NA"}<br/>
-<b>Vulnerability:</b> ${p.vulnerability_score?.toFixed(2) ?? "NA"}<br/>
-<b>Resilience:</b> ${p.resilience_score?.toFixed(2) ?? "NA"}<br/>
+<b>Risk:</b> ${p.risk_score?.toFixed(4) ?? "NA"}<br/>
+<b>Hazard:</b> ${p.hazard_score?.toFixed(4) ?? "NA"}<br/>
+<b>Exposure:</b> ${p.exposure_score?.toFixed(4) ?? "NA"}<br/>
+<b>Vulnerability:</b> ${p.vulnerability_score?.toFixed(4) ?? "NA"}<br/>
+<b>Resilience:</b> ${p.resilience_score?.toFixed(4) ?? "NA"}<br/>
 <hr/>
 <b>Population:</b> ${p.exposure_population ?? "NA"} ${sourceBadge(isRealField(p, "exposure_population"))}<br/>
-<b>Building Value:</b> $${Math.round(p.building_value_est ?? 0).toLocaleString()} ${sourceBadge(isRealField(p, "exposure_building_value"))}<br/>
-<b>EAL:</b> $${Math.round(p.eal ?? 0).toLocaleString()} ${sourceBadge(isRealField(p, "eal"))}
+<b>Building value (ACS × housing):</b> $${bval.toLocaleString()} ${sourceBadge(isRealField(p, "exposure_building_value"))}<br/>
+<b>EAL (USD):</b> $${Math.round(p.eal ?? 0).toLocaleString()}<br/>
+<b>EAL (normalized):</b> ${p.eal_norm?.toFixed(4) ?? "NA"}
 `;
 
     if (DEBUG_MODE) {
         html += `
 <hr/>
 <b>Diagnostics:</b><br/>`;
-        if (p.diagnostics && Object.keys(p.diagnostics).length > 0) {
-            for (const [field, issues] of Object.entries(p.diagnostics)) {
-                html += `<b>${field}:</b> ${issues.join('; ')}<br/>`;
+        let diag = p.diagnostics;
+        if (typeof diag === "string") {
+            try { diag = JSON.parse(diag); } catch (e) { diag = {}; }
+        }
+        if (diag && typeof diag === "object" && Object.keys(diag).length > 0) {
+            for (const [field, issues] of Object.entries(diag)) {
+                const arr = Array.isArray(issues) ? issues : [issues];
+                html += `<b>${field}:</b> ${arr.join("; ")}<br/>`;
             }
         } else {
             html += "No validation issues.<br/>";
         }
         html += `
 <hr/>
-<b>DEBUG:</b><br/>
-
-hazard_wildfire: ${p.hazard_wildfire?.toFixed(2) ?? "NA"} ${sourceBadge(isRealField(p, "hazard_wildfire"))}<br/>
-hazard_vegetation: ${p.hazard_vegetation?.toFixed(2) ?? "NA"} ${sourceBadge(isRealField(p, "hazard_vegetation"))}<br/>
-hazard_forest_distance: ${p.hazard_forest_distance?.toFixed(2) ?? "NA"} ${sourceBadge(isRealField(p, "hazard_forest_distance"))}<br/>
-hazard_weather: ${p.hazard_weather?.toFixed(2) ?? "NA"} ${sourceBadge(isRealField(p, "hazard_weather"))}<br/>
-hazard_temperature: ${p.hazard_temperature?.toFixed(2) ?? "NA"} ${sourceBadge(isRealField(p, "hazard_temperature"))}<br/>
-hazard_wind: ${p.hazard_wind?.toFixed(2) ?? "NA"} ${sourceBadge(isRealField(p, "hazard_wind"))}<br/>
-
-<br/>
-
-exposure_population: ${p.exposure_population ?? "NA"} ${sourceBadge(isRealField(p, "exposure_population"))}<br/>
+<b>Feature values (debug):</b><br/>
+hazard_wildfire: ${p.hazard_wildfire?.toFixed(4) ?? "NA"} ${sourceBadge(isRealField(p, "hazard_wildfire"))}<br/>
+hazard_vegetation: ${p.hazard_vegetation?.toFixed(4) ?? "NA"} ${sourceBadge(isRealField(p, "hazard_vegetation"))}<br/>
+hazard_forest_distance: ${p.hazard_forest_distance?.toFixed(4) ?? "NA"} ${sourceBadge(isRealField(p, "hazard_forest_distance"))}<br/>
 exposure_housing: ${p.exposure_housing?.toFixed(0) ?? "NA"} ${sourceBadge(isRealField(p, "exposure_housing"))}<br/>
-exposure_building_value: ${p.exposure_building_value?.toFixed(0) ?? "NA"} ${sourceBadge(isRealField(p, "exposure_building_value"))}<br/>
-
-<br/>
-
-vuln_poverty: ${p.vuln_poverty?.toFixed(2) ?? "NA"} ${sourceBadge(isRealField(p, "vuln_poverty"))}<br/>
-vuln_elderly: ${p.vuln_elderly?.toFixed(2) ?? "NA"} ${sourceBadge(isRealField(p, "vuln_elderly"))}<br/>
-vuln_vehicle_access: ${p.vuln_vehicle_access?.toFixed(2) ?? "NA"} ${sourceBadge(isRealField(p, "vuln_vehicle_access"))}<br/>
-
-<br/>
-
-res_fire_station_dist: ${p.res_fire_station_dist?.toFixed(2) ?? "NA"} ${sourceBadge(isRealField(p, "res_fire_station_dist"))}<br/>
-res_hospital_dist: ${p.res_hospital_dist?.toFixed(2) ?? "NA"} ${sourceBadge(isRealField(p, "res_hospital_dist"))}<br/>
-res_road_access: ${p.res_road_access?.toFixed(2) ?? "NA"} ${sourceBadge(isRealField(p, "res_road_access"))}
+vuln_poverty: ${p.vuln_poverty?.toFixed(4) ?? "NA"} ${sourceBadge(isRealField(p, "vuln_poverty"))}<br/>
+vuln_elderly: ${p.vuln_elderly?.toFixed(4) ?? "NA"} ${sourceBadge(isRealField(p, "vuln_elderly"))}<br/>
+vuln_vehicle_access: ${p.vuln_vehicle_access?.toFixed(4) ?? "NA"} ${sourceBadge(isRealField(p, "vuln_vehicle_access"))}<br/>
+res_fire_station_dist: ${p.res_fire_station_dist?.toFixed(4) ?? "NA"} ${sourceBadge(isRealField(p, "res_fire_station_dist"))}<br/>
+res_hospital_dist: ${p.res_hospital_dist?.toFixed(4) ?? "NA"} ${sourceBadge(isRealField(p, "res_hospital_dist"))}<br/>
+res_road_access: ${p.res_road_access?.toFixed(4) ?? "NA"} ${sourceBadge(isRealField(p, "res_road_access"))}
 `;
     }
 
     return html;
 }
 
-// Load data
 d3.json("data/processed/blocks.geojson").then(data => {
     geoData = data;
     projection.fitSize([width, height], geoData);
     render(DEFAULT_METRIC);
     updateDescription(DEFAULT_METRIC);
+}).catch(err => {
+    document.getElementById("description").textContent =
+        "Could not load data/processed/blocks.geojson. Run: python -m src.pipeline.run_pipeline";
+    console.error(err);
 });
 
-// Dropdown
 d3.select("#metric").on("change", function () {
     const metric = this.value;
     render(metric);
     updateDescription(metric);
 });
 
-// Reset
 d3.select("#reset").on("click", function () {
     d3.select("#metric").property("value", DEFAULT_METRIC);
     render(DEFAULT_METRIC);
     updateDescription(DEFAULT_METRIC);
 });
 
-// Debug toggle
 d3.select("#debugToggle").on("change", function () {
     DEBUG_MODE = this.checked;
 });
 
 function updateDescription(metric) {
-    d3.select("#description").text(descriptions[metric]);
+    d3.select("#description").text(descriptions[metric] || "");
 }
 
 function render(metric) {
-
-    const color = d3.scaleSequential(d3.interpolateReds)
-        .domain([0, 1]);
+    const color = colorScaleForMetric(metric);
 
     svg.selectAll("*").remove();
 
@@ -136,7 +138,10 @@ function render(metric) {
         .data(geoData.features)
         .join("path")
         .attr("d", path)
-        .attr("fill", d => color(d.properties[metric]))
+        .attr("fill", d => {
+            const v = d.properties[metric];
+            return v != null && !isNaN(v) ? color(v) : "#ccc";
+        })
         .attr("stroke", "#333")
         .on("mouseover", function (event, d) {
             const p = d.properties;
@@ -156,7 +161,6 @@ function render(metric) {
             tooltip.transition().duration(200).style("opacity", 0);
         });
 
-    // Legend
     const legendWidth = 250;
     const legendHeight = 12;
 
