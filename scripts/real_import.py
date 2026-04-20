@@ -42,8 +42,10 @@ SOURCE_OSM = "osm"
 Q_POPULATION = "population"
 Q_HOUSING = "housing"
 Q_POVERTY = "poverty"
+Q_POVERTY_TRACT = "poverty_tract"
 Q_ELDERLY = "elderly"
 Q_VEHICLE_ACCESS = "vehicle_access"
+Q_VEHICLE_ACCESS_TRACT = "vehicle_access_tract"
 Q_MEDIAN_HOME_VALUE = "median_home_value"
 Q_WILDFIRE = "wildfire"
 Q_VEGETATION = "vegetation"
@@ -55,6 +57,19 @@ Q_ROADS_ACCESS = "roads_access"
 
 def _zfill_geoid_12(df: pd.DataFrame, col: str = "GEOID") -> None:
     df[col] = df[col].astype(str).str.strip().str.zfill(12)
+
+def _zfill_geoid_11(df: pd.DataFrame, col: str = "GEOID") -> None:
+    df[col] = df[col].astype(str).str.strip().str.zfill(11)
+
+def _all_null_measures(df: pd.DataFrame, cols: list[str]) -> bool:
+    present = [c for c in cols if c in df.columns]
+    if not present:
+        return True
+    non_null = 0
+    for c in present:
+        s = pd.to_numeric(df[c], errors="coerce")
+        non_null += int(s.notna().sum())
+    return non_null == 0
 
 
 def _response_to_json(resp: requests.Response) -> Any:
@@ -283,6 +298,25 @@ def import_acs_poverty(county_fips: str, *, refresh: bool) -> None:
     ref = DatasetRef(county_fips=county_fips, source_id=SOURCE_ACS_2021_5YR, quantity_id=Q_POVERTY)
     _write_if_needed(ref, df, response_json=raw, request={"api": resp.url.split("?")[0], "params": params}, overwrite=refresh)
 
+    # If ACS returns all-null estimates at block-group level, also cache tract-level as a defensible fallback.
+    if _all_null_measures(df, ["B17001_002E", "B17001_001E"]):
+        params_tr = {"get": "B17001_002E,B17001_001E", "for": "tract:*", "in": inc}
+        resp_tr = requests.get("https://api.census.gov/data/2021/acs/acs5", params=params_tr, timeout=180, headers=HTTP_HEADERS)
+        resp_tr.raise_for_status()
+        raw_tr = _response_to_json(resp_tr)
+        header_tr = raw_tr[0]
+        rows_tr = raw_tr[1:]
+        df_tr = pd.DataFrame(rows_tr, columns=header_tr)
+        if "GEOID" not in df_tr.columns:
+            df_tr["GEOID"] = (
+                df_tr["state"].astype(str).str.zfill(2)
+                + df_tr["county"].astype(str).str.zfill(3)
+                + df_tr["tract"].astype(str).str.zfill(6)
+            )
+        _zfill_geoid_11(df_tr, "GEOID")
+        ref_tr = DatasetRef(county_fips=county_fips, source_id=SOURCE_ACS_2021_5YR, quantity_id=Q_POVERTY_TRACT)
+        _write_if_needed(ref_tr, df_tr, response_json=raw_tr, request={"api": resp_tr.url.split('?')[0], "params": params_tr}, overwrite=refresh)
+
 
 def import_acs_elderly(county_fips: str, *, refresh: bool) -> None:
     county_fips = normalize_county_fips(county_fips)
@@ -327,6 +361,24 @@ def import_acs_vehicle_access(county_fips: str, *, refresh: bool) -> None:
     _zfill_geoid_12(df, "GEOID")
     ref = DatasetRef(county_fips=county_fips, source_id=SOURCE_ACS_2021_5YR, quantity_id=Q_VEHICLE_ACCESS)
     _write_if_needed(ref, df, response_json=raw, request={"api": resp.url.split("?")[0], "params": params}, overwrite=refresh)
+
+    # If ACS returns all-null estimates at block-group level, also cache tract-level as a defensible fallback.
+    if _all_null_measures(df, ["B08201_002E", "B08201_001E"]):
+        params_tr = {"get": "B08201_002E,B08201_001E", "for": "tract:*", "in": inc}
+        resp_tr = requests.get("https://api.census.gov/data/2021/acs/acs5", params=params_tr, timeout=180, headers=HTTP_HEADERS)
+        resp_tr.raise_for_status()
+        raw_tr = _response_to_json(resp_tr)
+        header_tr = raw_tr[0]
+        rows_tr = raw_tr[1:]
+        df_tr = pd.DataFrame(rows_tr, columns=header_tr)
+        df_tr["GEOID"] = (
+            df_tr["state"].astype(str).str.zfill(2)
+            + df_tr["county"].astype(str).str.zfill(3)
+            + df_tr["tract"].astype(str).str.zfill(6)
+        )
+        _zfill_geoid_11(df_tr, "GEOID")
+        ref_tr = DatasetRef(county_fips=county_fips, source_id=SOURCE_ACS_2021_5YR, quantity_id=Q_VEHICLE_ACCESS_TRACT)
+        _write_if_needed(ref_tr, df_tr, response_json=raw_tr, request={"api": resp_tr.url.split('?')[0], "params": params_tr}, overwrite=refresh)
 
 
 def import_acs_median_home_value(county_fips: str, *, refresh: bool) -> None:

@@ -469,8 +469,20 @@ def compute_vuln_poverty_real(gdf: pd.DataFrame) -> pd.DataFrame:
 
     # If BG-level estimates are unavailable (often returned as nulls), fall back to tract-level ACS.
     if acs["poverty_rate"].notna().sum() == 0:
+        # Prefer cached tract fallback if present (keeps runs offline-friendly).
+        try:
+            ref_tr = DatasetRef(county_fips=_get_county_fips(), source_id="acs_2021_5yr", quantity_id="poverty_tract")
+            if ref_tr.data_path.exists():
+                acs_tr = pd.read_csv(ref_tr.data_path, dtype=str)
+            else:
+                acs_tr = None
+        except Exception:
+            acs_tr = None
+        if acs_tr is None:
+            acs_tr = None
         st, co = _get_state_county_codes()
-        acs_tr = fetch_acs_blockgroup(["B17001_002E", "B17001_001E", "GEOID"], "tract:*", f"state:{st} county:{co}")
+        if acs_tr is None:
+            acs_tr = fetch_acs_blockgroup(["B17001_002E", "B17001_001E", "GEOID"], "tract:*", f"state:{st} county:{co}")
         if acs_tr is not None:
             acs_tr["B17001_002E"] = pd.to_numeric(acs_tr.get("B17001_002E"), errors="coerce")
             acs_tr["B17001_001E"] = pd.to_numeric(acs_tr.get("B17001_001E"), errors="coerce")
@@ -578,8 +590,18 @@ def compute_vuln_vehicle_access_real(gdf: pd.DataFrame) -> pd.DataFrame:
 
     # If BG-level estimates are unavailable (often returned as nulls), fall back to tract-level ACS.
     if acs["vehicle_access"].notna().sum() == 0:
+        # Prefer cached tract fallback if present (keeps runs offline-friendly).
+        try:
+            ref_tr = DatasetRef(county_fips=_get_county_fips(), source_id="acs_2021_5yr", quantity_id="vehicle_access_tract")
+            if ref_tr.data_path.exists():
+                acs_tr = pd.read_csv(ref_tr.data_path, dtype=str)
+            else:
+                acs_tr = None
+        except Exception:
+            acs_tr = None
         st, co = _get_state_county_codes()
-        acs_tr = fetch_acs_blockgroup(["B08201_002E", "B08201_001E", "GEOID"], "tract:*", f"state:{st} county:{co}")
+        if acs_tr is None:
+            acs_tr = fetch_acs_blockgroup(["B08201_002E", "B08201_001E", "GEOID"], "tract:*", f"state:{st} county:{co}")
         if acs_tr is not None:
             for c in ["B08201_002E", "B08201_001E"]:
                 if c in acs_tr.columns:
