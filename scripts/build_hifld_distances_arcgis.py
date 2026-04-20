@@ -8,6 +8,7 @@ if you require official HIFLD layers, replace this script with a shapefile-based
 
 Requires: data/processed/blocks.geojson, osmnx, geopandas
 """
+import argparse
 import sys
 from pathlib import Path
 
@@ -44,8 +45,13 @@ def load_osm_facilities(bbox_tuple, tags: dict) -> gpd.GeoDataFrame:
 
 
 def run():
-    blocks_path = REPO / "data" / "processed" / "blocks.geojson"
-    out_dir = REPO / "data" / "real"
+    p = argparse.ArgumentParser()
+    p.add_argument("--blocks", default=str(REPO / "data" / "processed" / "blocks.geojson"))
+    p.add_argument("--out-dir", default=str(REPO / "data" / "real"))
+    args = p.parse_args()
+
+    blocks_path = Path(args.blocks)
+    out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
     blocks = gpd.read_file(blocks_path)

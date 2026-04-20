@@ -95,6 +95,15 @@ def fallback_int(gdf: pd.DataFrame, var: str, size: Optional[int] = None, reason
     safe_max = int(max_val) if np.isfinite(max_val) else int(min_val) + 10000
     return generate_int(int(min_val), safe_max + 1, size)
 
+# Block-group tabulation GEOID length (state + county + tract + block group)
+BG_GEOID_LEN = 12
+
+
+def block_group_geoid_series(gdf: pd.DataFrame) -> pd.Series:
+    """First 12 characters of GEOID = block-group id (matches ACS/Census BG GEOID)."""
+    return gdf["GEOID"].astype(str).str.strip().str[:BG_GEOID_LEN]
+
+
 # --- Census API integration for population and housing ---
 CENSUS_POP_URL = "https://api.census.gov/data/2020/dec/pl"
 CENSUS_HOUSING_URL = "https://api.census.gov/data/2020/dec/pl"
@@ -351,7 +360,7 @@ def compute_vuln_poverty_real(gdf: pd.DataFrame) -> pd.DataFrame:
     if "GEOID" not in gdf.columns:
         gdf["vuln_poverty"] = fallback_uniform(gdf, "vuln_poverty", reason="No GEOID column")
         return mark_dummy(gdf, "vuln_poverty", reason="No GEOID column")
-    bg_col = gdf["GEOID"].str[:12-3]  # block group = first 12-3=9 digits
+    bg_col = block_group_geoid_series(gdf)
     if USE_STORED_REAL_DATA:
         acs = fetch_acs_bg_local("acs_poverty.csv")
         provenance = "local_acs_poverty.csv"
@@ -383,7 +392,7 @@ def compute_vuln_elderly_real(gdf: pd.DataFrame) -> pd.DataFrame:
     if "GEOID" not in gdf.columns:
         gdf["vuln_elderly"] = fallback_uniform(gdf, "vuln_elderly", reason="No GEOID column")
         return mark_dummy(gdf, "vuln_elderly", reason="No GEOID column")
-    bg_col = gdf["GEOID"].str[:9]
+    bg_col = block_group_geoid_series(gdf)
     if USE_STORED_REAL_DATA:
         acs = fetch_acs_bg_local("acs_elderly.csv")
         provenance = "local_acs_elderly.csv"
@@ -416,7 +425,7 @@ def compute_vuln_vehicle_access_real(gdf: pd.DataFrame) -> pd.DataFrame:
     if "GEOID" not in gdf.columns:
         gdf["vuln_vehicle_access"] = fallback_uniform(gdf, "vuln_vehicle_access", reason="No GEOID column")
         return mark_dummy(gdf, "vuln_vehicle_access", reason="No GEOID column")
-    bg_col = gdf["GEOID"].str[:9]
+    bg_col = block_group_geoid_series(gdf)
     if USE_STORED_REAL_DATA:
         acs = fetch_acs_bg_local("acs_vehicle_access.csv")
         provenance = "local_acs_vehicle_access.csv"
@@ -448,7 +457,7 @@ def compute_exposure_building_value_real(gdf: pd.DataFrame) -> pd.DataFrame:
     if "GEOID" not in gdf.columns:
         gdf["exposure_building_value"] = fallback_uniform(gdf, "exposure_building_value", reason="No GEOID column")
         return mark_dummy(gdf, "exposure_building_value", reason="No GEOID column")
-    bg_col = gdf["GEOID"].str[:9]
+    bg_col = block_group_geoid_series(gdf)
     if USE_STORED_REAL_DATA:
         acs = fetch_acs_bg_local("acs_building_value.csv")
         provenance = "local_acs_building_value.csv"

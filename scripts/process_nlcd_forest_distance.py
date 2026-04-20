@@ -3,6 +3,7 @@ import rasterio
 import numpy as np
 import os
 import pandas as pd
+import argparse
 from shapely.geometry import shape, mapping, Point
 from rasterio.features import shapes
 
@@ -39,8 +40,14 @@ def compute_nlcd_forest_distance(blocks_path, nlcd_raster_path, out_csv):
     print(f"Saved NLCD forest distance to {out_csv}")
 
 if __name__ == "__main__":
+    p = argparse.ArgumentParser()
+    p.add_argument("--blocks", default="data/processed/blocks.geojson")
+    p.add_argument("--nlcd", default="data/geospatial/nlcd/nlcd_2019_land_cover_l48_20210604.img")
+    p.add_argument("--out", default="data/real/nlcd_forest_distance.csv")
+    args = p.parse_args()
+
     compute_nlcd_forest_distance(
-        blocks_path="data/processed/blocks.geojson",
-        nlcd_raster_path="data/geospatial/nlcd/nlcd_2019_land_cover_l48_20210604.img",
-        out_csv="data/real/nlcd_forest_distance.csv"
+        blocks_path=args.blocks,
+        nlcd_raster_path=args.nlcd,
+        out_csv=args.out,
     )

@@ -1,0 +1,9 @@
+{
+  "generated_at_utc": "2026-04-19T06:48:18.332298+00:00",
+  "n_blocks": 200,
+  "mean_risk_score": 0.06410274085071525,
+  "std_risk_score": 0.04628388817480492,
+  "total_eal_usd": 7199460.9202660825,
+  "mean_eal_usd": 35997.30460133041,
+  "total_exposure_building_value_usd": 97929517.63302457
+}

@@ -5,6 +5,7 @@ Requires:
   - data/processed/blocks.geojson
   - WHP GeoTIFF under data/geospatial/whp/ (extract RDS-2015-0047.zip first; see extract_geospatial_zips.py)
 """
+import argparse
 import os
 import sys
 from pathlib import Path
@@ -57,9 +58,14 @@ def compute_whp_means(blocks_path: Path, whp_raster_path: Path, out_csv: Path) -
 
 
 def main():
-    blocks = REPO / "data" / "processed" / "blocks.geojson"
+    p = argparse.ArgumentParser()
+    p.add_argument("--blocks", default=str(REPO / "data" / "processed" / "blocks.geojson"))
+    p.add_argument("--out", default=str(REPO / "data" / "real" / "whp_zonal_stats.csv"))
+    args = p.parse_args()
+
+    blocks = Path(args.blocks)
     whp_dir = REPO / "data" / "geospatial" / "whp"
-    out = REPO / "data" / "real" / "whp_zonal_stats.csv"
+    out = Path(args.out)
     raster = find_whp_raster(whp_dir)
     print(f"Using WHP raster: {raster}")
     compute_whp_means(blocks, raster, out)

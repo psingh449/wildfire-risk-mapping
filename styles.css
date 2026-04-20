@@ -23,6 +23,23 @@ select, button {
     margin-left: 5px;
 }
 
+select.county-select {
+    min-width: 320px;
+    max-width: 480px;
+}
+
+/* Prefetched / priority counties (see data/county_manifest.json). Limited browser support for option styling. */
+select.county-select option.prefetched {
+    font-weight: 700;
+}
+
+.county-message {
+    margin: 0 0 8px 0;
+    font-size: 13px;
+    color: #8b4513;
+    min-height: 1.2em;
+}
+
 button {
     cursor: pointer;
 }

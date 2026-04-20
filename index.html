@@ -12,7 +12,10 @@
         <h1>Wildfire Risk Mapping</h1>
 
         <div class="controls">
-            <label for="metric">Select Metric:</label>
+            <label for="county">County:</label>
+            <select id="county" class="county-select" title="Bold options are priority demo counties (browser-prefetched when packaged)."></select>
+
+            <label for="metric">Metric:</label>
             <select id="metric">
                 <option value="risk_score">Risk</option>
                 <option value="hazard_score">Hazard</option>
@@ -31,6 +34,7 @@
             </label>
         </div>
 
+        <p id="countyMessage" class="county-message" aria-live="polite"></p>
         <div id="description" class="description"></div>
 
         <div class="map-container">

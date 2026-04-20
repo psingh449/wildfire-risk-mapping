@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "prefetched_county_ids": [
+    "06007",
+    "06073",
+    "08013",
+    "41039"
+  ],
+  "datasets": {
+    "06007": "data/processed/counties/06007/blocks.geojson"
+  },
+  "notes": "Add entries under datasets when you publish data/processed/counties/{id}/blocks.geojson for more counties. prefetched_county_ids controls bold labels in the county menu."
+}

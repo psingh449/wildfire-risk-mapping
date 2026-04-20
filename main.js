@@ -32,6 +32,7 @@ const projection = d3.geoMercator();
 const path = d3.geoPath().projection(projection);
 
 let geoData;
+let countyManifest;
 let DEBUG_MODE = true;
 
 const descriptions = {
@@ -98,15 +99,105 @@ res_road_access: ${p.res_road_access?.toFixed(4) ?? "NA"} ${sourceBadge(isRealFi
     return html;
 }
 
-d3.json("data/processed/blocks.geojson").then(data => {
-    geoData = data;
-    projection.fitSize([width, height], geoData);
-    render(DEFAULT_METRIC);
-    updateDescription(DEFAULT_METRIC);
+function fitProjectionToGeo() {
+    if (geoData && geoData.features && geoData.features.length > 0) {
+        projection.fitSize([width, height], geoData);
+    } else {
+        projection
+            .scale(1)
+            .translate([width / 2, height / 2]);
+        const outline = { type: "Feature", geometry: { type: "Polygon", coordinates: [[[-125, 24], [-66, 24], [-66, 50], [-125, 50], [-125, 24]]] } };
+        projection.fitSize([width, height], outline);
+    }
+}
+
+function prefetchPackagedCounties(manifest, currentId) {
+    const ids = manifest.prefetched_county_ids || [];
+    for (const id of ids) {
+        const url = manifest.datasets && manifest.datasets[id];
+        if (!url || id === currentId) continue;
+        fetch(url).catch(() => {});
+    }
+}
+
+function loadCounty(id, manifest) {
+    const url = manifest.datasets && manifest.datasets[id];
+    const msg = d3.select("#countyMessage");
+    if (!url) {
+        geoData = { type: "FeatureCollection", features: [] };
+        fitProjectionToGeo();
+        msg.text(
+            "No packaged block-level GeoJSON for this county yet. " +
+            "Add data/processed/counties/" + id + "/blocks.geojson and register it in data/county_manifest.json, " +
+            "or choose another county."
+        );
+        return Promise.resolve();
+    }
+    msg.text("");
+    return d3.json(url).then(data => {
+        geoData = data;
+        fitProjectionToGeo();
+    }).catch(err => {
+        geoData = { type: "FeatureCollection", features: [] };
+        fitProjectionToGeo();
+        msg.text("Failed to load county GeoJSON: " + (err && err.message ? err.message : String(err)));
+        console.error(err);
+    });
+}
+
+function populateCountySelect(list, manifest) {
+    const sel = document.getElementById("county");
+    const prefetched = new Set(manifest.prefetched_county_ids || []);
+    for (const c of list.counties) {
+        const o = document.createElement("option");
+        o.value = c.id;
+        o.textContent = c.label;
+        if (prefetched.has(c.id)) o.className = "prefetched";
+        sel.appendChild(o);
+    }
+    const datasets = manifest.datasets || {};
+    let defaultId = null;
+    for (const id of manifest.prefetched_county_ids || []) {
+        if (datasets[id]) {
+            defaultId = id;
+            break;
+        }
+    }
+    if (!defaultId && Object.keys(datasets).length) {
+        defaultId = Object.keys(datasets)[0];
+    }
+    const fallback = list.counties[0] && list.counties[0].id;
+    const start = defaultId || fallback;
+    if (start) sel.value = start;
+    return start;
+}
+
+Promise.all([
+    d3.json("data/county_list.json"),
+    d3.json("data/county_manifest.json")
+]).then(([list, manifest]) => {
+    countyManifest = manifest;
+    const startId = populateCountySelect(list, manifest);
+    return loadCounty(startId, manifest).then(() => {
+        prefetchPackagedCounties(manifest, startId);
+        const metric = d3.select("#metric").property("value") || DEFAULT_METRIC;
+        render(metric);
+        updateDescription(metric);
+    });
 }).catch(err => {
     document.getElementById("description").textContent =
-        "Could not load data/processed/blocks.geojson. Run: python -m src.pipeline.run_pipeline";
+        "Could not load county list or manifest. Ensure data/county_list.json and data/county_manifest.json exist (run scripts/build_county_list.py for the list).";
+    document.getElementById("countyMessage").textContent = String(err && err.message ? err.message : err);
     console.error(err);
+});
+
+d3.select("#county").on("change", function () {
+    const id = this.value;
+    loadCounty(id, countyManifest).then(() => {
+        const metric = d3.select("#metric").property("value") || DEFAULT_METRIC;
+        render(metric);
+        updateDescription(metric);
+    });
 });
 
 d3.select("#metric").on("change", function () {
@@ -135,7 +226,7 @@ function render(metric) {
     svg.selectAll("*").remove();
 
     svg.selectAll("path")
-        .data(geoData.features)
+        .data((geoData && geoData.features) ? geoData.features : [])
         .join("path")
         .attr("d", path)
         .attr("fill", d => {
