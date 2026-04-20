@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "county_fips": "06007",
+  "source_id": "census_pl_2020",
+  "quantity_id": "population",
+  "retrieved_at_utc": "2026-04-20T05:06:22.682777+00:00",
+  "files": {
+    "data": "data/real_cache/counties/06007/census_pl_2020/population/data.csv",
+    "response": "data/real_cache/counties/06007/census_pl_2020/population/response.json"
+  },
+  "request": {
+    "api": "https://api.census.gov/data/2020/dec/pl",
+    "params": {
+      "get": "P1_001N",
+      "for": "block group:*",
+      "in": "state:06 county:007"
+    }
+  },
+  "schema": {
+    "columns": [
+      "GEOID",
+      "population"
+    ],
+    "join_key": "GEOID"
+  },
+  "row_count": 200,
+  "sha256": {
+    "data": "8bea8300cc94e37b41ffdf1faf933263d4a645453a99a44f4f89c7410a29d54c"
+  },
+  "notes": null
+}

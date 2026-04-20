@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "county_fips": "06007",
+  "source_id": "nlcd",
+  "quantity_id": "vegetation",
+  "retrieved_at_utc": "2026-04-20T06:18:27.267494+00:00",
+  "files": {
+    "data": "data/real_cache/counties/06007/nlcd/vegetation/data.csv",
+    "response": "data/real_cache/counties/06007/nlcd/vegetation/response.json"
+  },
+  "request": {
+    "generator": "scripts/process_nlcd_vegetation.py"
+  },
+  "schema": {
+    "columns": [
+      "block_id",
+      "nlcd_vegetation"
+    ],
+    "join_key": "block_id"
+  },
+  "row_count": 200,
+  "sha256": {
+    "data": "32803c5622fdffacab687a4fe96b9ef5603cb2b3a6531708dc74ab1d4de11b22"
+  },
+  "notes": "Generated locally by script; response.json contains script stdout/stderr and inputs."
+}

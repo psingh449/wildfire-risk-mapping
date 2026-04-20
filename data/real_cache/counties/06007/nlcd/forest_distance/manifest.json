@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "county_fips": "06007",
+  "source_id": "nlcd",
+  "quantity_id": "forest_distance",
+  "retrieved_at_utc": "2026-04-20T06:18:30.863888+00:00",
+  "files": {
+    "data": "data/real_cache/counties/06007/nlcd/forest_distance/data.csv",
+    "response": "data/real_cache/counties/06007/nlcd/forest_distance/response.json"
+  },
+  "request": {
+    "generator": "scripts/process_nlcd_forest_distance.py"
+  },
+  "schema": {
+    "columns": [
+      "block_id",
+      "nlcd_forest_distance"
+    ],
+    "join_key": "block_id"
+  },
+  "row_count": 200,
+  "sha256": {
+    "data": "b51c342a4f5415c9b9662456fe1727aef393b70aed1715434f64ed09e3a47b03"
+  },
+  "notes": "Generated locally by script; response.json contains script stdout/stderr and inputs."
+}

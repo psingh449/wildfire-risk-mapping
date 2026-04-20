@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "county_fips": "06007",
+  "source_id": "hifld",
+  "quantity_id": "fire_stations_distance",
+  "retrieved_at_utc": "2026-04-20T05:08:20.530144+00:00",
+  "files": {
+    "data": "data/real_cache/counties/06007/hifld/fire_stations_distance/data.csv",
+    "response": "data/real_cache/counties/06007/hifld/fire_stations_distance/response.json"
+  },
+  "request": {
+    "generator": "scripts/build_hifld_distances_arcgis.py"
+  },
+  "schema": {
+    "columns": [
+      "block_id",
+      "fire_station_dist"
+    ],
+    "join_key": "block_id"
+  },
+  "row_count": 200,
+  "sha256": {
+    "data": "9a71247ada341d9a440ba1cc5bd1fc82507842820bb7357ffb02160726816da7"
+  },
+  "notes": null
+}

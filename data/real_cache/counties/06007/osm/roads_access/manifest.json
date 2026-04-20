@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "county_fips": "06007",
+  "source_id": "osm",
+  "quantity_id": "roads_access",
+  "retrieved_at_utc": "2026-04-20T05:21:27.221709+00:00",
+  "files": {
+    "data": "data/real_cache/counties/06007/osm/roads_access/data.csv",
+    "response": "data/real_cache/counties/06007/osm/roads_access/response.json"
+  },
+  "request": {
+    "generator": "scripts/process_osm_road_length.py"
+  },
+  "schema": {
+    "columns": [
+      "block_id",
+      "road_length"
+    ],
+    "join_key": "block_id"
+  },
+  "row_count": 200,
+  "sha256": {
+    "data": "d5d5ba69dfe7dd9e000316962f02e3c55c9fe8169ef8135159476838df205c9c"
+  },
+  "notes": "Generated locally by script; response.json contains script stdout/stderr and inputs."
+}

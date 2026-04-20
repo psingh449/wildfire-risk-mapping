@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "county_fips": "06007",
+  "source_id": "hifld",
+  "quantity_id": "hospitals_distance",
+  "retrieved_at_utc": "2026-04-20T05:08:22.908778+00:00",
+  "files": {
+    "data": "data/real_cache/counties/06007/hifld/hospitals_distance/data.csv",
+    "response": "data/real_cache/counties/06007/hifld/hospitals_distance/response.json"
+  },
+  "request": {
+    "generator": "scripts/build_hifld_distances_arcgis.py"
+  },
+  "schema": {
+    "columns": [
+      "block_id",
+      "hospital_dist"
+    ],
+    "join_key": "block_id"
+  },
+  "row_count": 200,
+  "sha256": {
+    "data": "8f1c9e29cb57029960c1a13191fb7f0017f8e943e05984009345ac966779bc42"
+  },
+  "notes": null
+}

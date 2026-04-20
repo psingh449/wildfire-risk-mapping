@@ -1,0 +1,20 @@
+{
+  "generated": true,
+  "script_run": {
+    "argv": [
+      "C:\\Users\\prade\\AppData\\Local\\Programs\\Python\\Python310\\python.exe",
+      "scripts/process_nlcd_vegetation.py",
+      "--blocks",
+      "data\\processed\\counties\\06007\\blocks.geojson",
+      "--out",
+      "data/real/nlcd_vegetation.csv"
+    ],
+    "exit_code": 0,
+    "stdout": "Saved vegetation proxy (OSM) to data/real/nlcd_vegetation.csv\n",
+    "stderr": "C:\\Users\\prade\\source\\repos\\cse6242-155\\wildfire-risk-mapping\\scripts\\process_nlcd_vegetation.py:69: DeprecationWarning: The 'unary_union' attribute is deprecated, use the 'union_all()' method instead.\n  forest_union = forest_m.geometry.unary_union\n"
+  },
+  "inputs": {
+    "blocks_geojson": "data/processed/counties/06007/blocks.geojson"
+  },
+  "source_csv": "data/real/nlcd_vegetation.csv"
+}

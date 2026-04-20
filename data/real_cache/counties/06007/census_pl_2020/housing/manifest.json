@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "county_fips": "06007",
+  "source_id": "census_pl_2020",
+  "quantity_id": "housing",
+  "retrieved_at_utc": "2026-04-20T05:06:23.911660+00:00",
+  "files": {
+    "data": "data/real_cache/counties/06007/census_pl_2020/housing/data.csv",
+    "response": "data/real_cache/counties/06007/census_pl_2020/housing/response.json"
+  },
+  "request": {
+    "api": "https://api.census.gov/data/2020/dec/pl",
+    "params": {
+      "get": "H1_001N",
+      "for": "block group:*",
+      "in": "state:06 county:007"
+    }
+  },
+  "schema": {
+    "columns": [
+      "GEOID",
+      "housing_units"
+    ],
+    "join_key": "GEOID"
+  },
+  "row_count": 200,
+  "sha256": {
+    "data": "75ecc11ede69fc3304a6a7c7c6d0173dc0ad034ad6e3a685c0f0cc77ce64d702"
+  },
+  "notes": null
+}

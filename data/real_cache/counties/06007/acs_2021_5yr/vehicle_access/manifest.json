@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "county_fips": "06007",
+  "source_id": "acs_2021_5yr",
+  "quantity_id": "vehicle_access",
+  "retrieved_at_utc": "2026-04-20T05:07:07.107285+00:00",
+  "files": {
+    "data": "data/real_cache/counties/06007/acs_2021_5yr/vehicle_access/data.csv",
+    "response": "data/real_cache/counties/06007/acs_2021_5yr/vehicle_access/response.json"
+  },
+  "request": {
+    "api": "https://api.census.gov/data/2021/acs/acs5",
+    "params": {
+      "get": "B08201_002E,B08201_001E",
+      "for": "block group:*",
+      "in": "state:06 county:007"
+    }
+  },
+  "schema": {
+    "columns": [
+      "B08201_002E",
+      "B08201_001E",
+      "state",
+      "county",
+      "tract",
+      "block group",
+      "GEOID"
+    ],
+    "join_key": "GEOID"
+  },
+  "row_count": 200,
+  "sha256": {
+    "data": "f5fc3c948b5547b9d7a8cdd9f979beeee01ae6dcf2e264c3cd7cdada87358944"
+  },
+  "notes": null
+}

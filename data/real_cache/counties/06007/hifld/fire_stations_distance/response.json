@@ -1,0 +1,19 @@
+{
+  "generated": true,
+  "script_run": {
+    "argv": [
+      "C:\\Users\\prade\\AppData\\Local\\Programs\\Python\\Python310\\python.exe",
+      "scripts/build_hifld_distances_arcgis.py",
+      "--blocks",
+      "data\\processed\\counties\\06007\\blocks.geojson",
+      "--out-dir",
+      "data\\real"
+    ],
+    "exit_code": 0,
+    "stdout": "Downloading OSM fire_station features (bbox)...\n  34 features\nDownloading OSM hospital features (bbox)...\n  7 features\nWrote data\\real\\fire_station_dist.csv\nWrote data\\real\\hospital_dist.csv\n",
+    "stderr": ""
+  },
+  "inputs": {
+    "blocks_geojson": "data/processed/counties/06007/blocks.geojson"
+  }
+}

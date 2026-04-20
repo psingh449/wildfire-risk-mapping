@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "county_fips": "06007",
+  "source_id": "acs_2021_5yr",
+  "quantity_id": "elderly",
+  "retrieved_at_utc": "2026-04-20T05:07:05.481303+00:00",
+  "files": {
+    "data": "data/real_cache/counties/06007/acs_2021_5yr/elderly/data.csv",
+    "response": "data/real_cache/counties/06007/acs_2021_5yr/elderly/response.json"
+  },
+  "request": {
+    "api": "https://api.census.gov/data/2021/acs/acs5",
+    "params": {
+      "get": "B01001_001E,B01001_020E,B01001_021E,B01001_022E,B01001_023E,B01001_024E,B01001_025E",
+      "for": "block group:*",
+      "in": "state:06 county:007"
+    }
+  },
+  "schema": {
+    "columns": [
+      "B01001_001E",
+      "B01001_020E",
+      "B01001_021E",
+      "B01001_022E",
+      "B01001_023E",
+      "B01001_024E",
+      "B01001_025E",
+      "state",
+      "county",
+      "tract",
+      "block group",
+      "GEOID"
+    ],
+    "join_key": "GEOID"
+  },
+  "row_count": 200,
+  "sha256": {
+    "data": "274b4914702e5009ae101e641d889f556a0ceb7ce0e82f7b9ccd84ea4c32c239"
+  },
+  "notes": null
+}

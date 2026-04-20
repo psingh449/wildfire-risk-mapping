@@ -7,7 +7,12 @@ def compute_road_length(blocks_path, osm_pbf_path, out_csv):
     gdf_blocks = gpd.read_file(blocks_path)
     # Download/parse OSM roads for Butte County bounding box
     bounds = gdf_blocks.total_bounds  # minx, miny, maxx, maxy
-    G = ox.graph_from_bbox(bounds[3], bounds[1], bounds[2], bounds[0], network_type='drive', simplify=True)
+    # OSMnx 2.x: bbox is (left, bottom, right, top) == (minx, miny, maxx, maxy) in WGS84
+    G = ox.graph_from_bbox(
+        bbox=(bounds[0], bounds[1], bounds[2], bounds[3]),
+        network_type="drive",
+        simplify=True,
+    )
     gdf_edges = ox.graph_to_gdfs(G, nodes=False)
     gdf_edges = gdf_edges.to_crs(gdf_blocks.crs)
     road_lengths = []
