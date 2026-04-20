@@ -7,7 +7,7 @@ import pandas as pd
 from pathlib import Path
 from typing import Tuple, Optional, Dict, Any
 from src.utils.dummy_data import generate_uniform, generate_int
-from src.utils.source_tracker import mark_real, mark_dummy
+from src.utils.source_tracker import mark_real, mark_dummy, mark_estimated
 from src.utils.config import REAL_DATA_DIR, USE_STORED_REAL_DATA
 from src.utils.real_cache import DatasetRef, normalize_county_fips, split_county_fips, write_dataset
 
@@ -481,7 +481,7 @@ def compute_vuln_poverty_real(gdf: pd.DataFrame) -> pd.DataFrame:
             # Last-resort: fill remaining missing with county mean rather than hard 0.
             county_mean = float(pd.to_numeric(acs_tr["poverty_rate"], errors="coerce").dropna().mean()) if acs_tr["poverty_rate"].notna().any() else 0.0
             gdf["vuln_poverty"] = pd.to_numeric(gdf["vuln_poverty"], errors="coerce").fillna(county_mean).clip(lower=0.0)
-            return mark_real(gdf, "vuln_poverty", source="ACS API (tract fallback)")
+            return mark_estimated(gdf, "vuln_poverty", method="ACS tract poverty_rate -> BG (assign by tract GEOID)")
 
     poverty_map = dict(zip(acs["GEOID"].astype(str), acs["poverty_rate"]))
     gdf["blockgroup"] = bg_col
@@ -590,7 +590,7 @@ def compute_vuln_vehicle_access_real(gdf: pd.DataFrame) -> pd.DataFrame:
             gdf["vuln_vehicle_access"] = pd.to_numeric(gdf["tract"].map(vehicle_map), errors="coerce")
             county_mean = float(pd.to_numeric(acs_tr["vehicle_access"], errors="coerce").dropna().mean()) if acs_tr["vehicle_access"].notna().any() else 0.0
             gdf["vuln_vehicle_access"] = gdf["vuln_vehicle_access"].fillna(county_mean).clip(lower=0.0, upper=1.0)
-            return mark_real(gdf, "vuln_vehicle_access", source="ACS API (tract fallback)")
+            return mark_estimated(gdf, "vuln_vehicle_access", method="ACS tract vehicle_access -> BG (assign by tract GEOID)")
 
     vehicle_map = dict(zip(acs["GEOID"].astype(str), acs["vehicle_access"]))
     gdf["blockgroup"] = bg_col
@@ -643,8 +643,15 @@ def compute_exposure_building_value_real(gdf: pd.DataFrame) -> pd.DataFrame:
     housing = pd.to_numeric(gdf.get("exposure_housing", 0), errors="coerce").fillna(0.0).astype("float64")
     # If a BG median is missing, use county mean rather than hard 0 to avoid collapsing EAL.
     county_mean = float(pd.to_numeric(acs["B25077_001E"], errors="coerce").dropna().mean()) if acs["B25077_001E"].notna().any() else 0.0
+    had_missing = pd.isna(median_val).any()
     median_val = pd.Series(median_val, index=gdf.index).fillna(county_mean)
     gdf["exposure_building_value"] = (housing * median_val).clip(lower=0.0)
+    if had_missing:
+        return mark_estimated(
+            gdf,
+            "exposure_building_value",
+            method=f"{provenance}; impute missing BG medians with county mean",
+        )
     return mark_real(gdf, "exposure_building_value", source=provenance)
 
 def compute_hazard_wildfire_real(gdf: pd.DataFrame) -> pd.DataFrame:
@@ -657,7 +664,7 @@ def compute_hazard_wildfire_real(gdf: pd.DataFrame) -> pd.DataFrame:
     """
     import os
     import pandas as pd
-    from src.utils.source_tracker import mark_real, mark_dummy
+    from src.utils.source_tracker import mark_real, mark_dummy, mark_proxy
     county_fips = _get_county_fips()
     ref = DatasetRef(county_fips=county_fips, source_id="whp", quantity_id="wildfire")
     csv_path = ref.data_path
@@ -689,7 +696,7 @@ def compute_hazard_wildfire_real(gdf: pd.DataFrame) -> pd.DataFrame:
         prox = pd.to_numeric(gdf2.get("hazard_forest_distance"), errors="coerce").fillna(0.0)
         proxy = (0.5 * veg + 0.5 * prox).clip(lower=0.0, upper=1.0)
         gdf["hazard_wildfire"] = proxy.astype(float)
-        return mark_real(gdf, "hazard_wildfire", source="proxy: 0.5*vegetation + 0.5*forest_proximity (OSM)")
+        return mark_proxy(gdf, "hazard_wildfire", method="0.5*vegetation + 0.5*forest_proximity (OSM proxy)")
     except Exception:
         gdf["hazard_wildfire"] = fallback_uniform(gdf, "hazard_wildfire", reason="No WHP zonal stats CSV found")
         return mark_dummy(gdf, "hazard_wildfire", reason="No WHP zonal stats CSV found")
@@ -704,7 +711,7 @@ def compute_hazard_vegetation_real(gdf: pd.DataFrame) -> pd.DataFrame:
     """
     import os
     import pandas as pd
-    from src.utils.source_tracker import mark_real, mark_dummy
+    from src.utils.source_tracker import mark_dummy, mark_proxy
     county_fips = _get_county_fips()
     ref = DatasetRef(county_fips=county_fips, source_id="nlcd", quantity_id="vegetation")
     csv_path = ref.data_path
@@ -722,7 +729,7 @@ def compute_hazard_vegetation_real(gdf: pd.DataFrame) -> pd.DataFrame:
         df["block_id"] = _block_id_series(df, "block_id")
         gdf = gdf.merge(df, on="block_id", how="left")
         gdf["hazard_vegetation"] = gdf["nlcd_vegetation"].fillna(0)
-        return mark_real(gdf, "hazard_vegetation", source=str(csv_path if csv_path.exists() else legacy))
+        return mark_proxy(gdf, "hazard_vegetation", method="OSM landcover proxy (generated CSV)")
     gdf["hazard_vegetation"] = fallback_uniform(gdf, "hazard_vegetation", reason="No NLCD vegetation CSV found")
     return mark_dummy(gdf, "hazard_vegetation", reason="No NLCD vegetation CSV found")
 
@@ -736,7 +743,7 @@ def compute_hazard_forest_distance_real(gdf: pd.DataFrame) -> pd.DataFrame:
     """
     import os
     import pandas as pd
-    from src.utils.source_tracker import mark_real, mark_dummy
+    from src.utils.source_tracker import mark_dummy, mark_proxy
     county_fips = _get_county_fips()
     ref = DatasetRef(county_fips=county_fips, source_id="nlcd", quantity_id="forest_distance")
     csv_path = ref.data_path
@@ -754,7 +761,7 @@ def compute_hazard_forest_distance_real(gdf: pd.DataFrame) -> pd.DataFrame:
         df["block_id"] = _block_id_series(df, "block_id")
         gdf = gdf.merge(df, on="block_id", how="left")
         gdf["hazard_forest_distance"] = gdf["nlcd_forest_distance"].fillna(0)
-        return mark_real(gdf, "hazard_forest_distance", source=str(csv_path if csv_path.exists() else legacy))
+        return mark_proxy(gdf, "hazard_forest_distance", method="OSM forest-distance proxy (generated CSV)")
     gdf["hazard_forest_distance"] = fallback_uniform(gdf, "hazard_forest_distance", reason="No NLCD forest distance CSV found")
     return mark_dummy(gdf, "hazard_forest_distance", reason="No NLCD forest distance CSV found")
 

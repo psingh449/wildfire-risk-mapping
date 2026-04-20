@@ -18,14 +18,45 @@ function colorScaleForMetric(metric) {
     return d3.scaleSequential(d3.interpolateRgbBasis(stops)).domain([0, 1]);
 }
 
-function sourceBadge(isReal) {
-    const cls = isReal ? "badge badge-real" : "badge badge-dummy";
-    const txt = isReal ? "REAL" : "DUMMY";
-    return `<span class="${cls}">${txt}</span>`;
+function _qualityFor(p, key) {
+    const raw = p[key + "_source"] || "MISSING";
+    if (raw === "DUMMY") return "MISSING";
+    return raw;
 }
 
-function isRealField(p, key) {
-    return p[key + "_source"] === "REAL";
+function _abbrToken(s) {
+    const t = String(s || "").toLowerCase();
+    if (t.includes("acs")) return "acs";
+    if (t.includes("census")) return "census";
+    if (t.includes("hifld")) return "hifld";
+    if (t.includes("osm")) return "osm";
+    if (t.includes("whp")) return "whp";
+    if (t.includes("nlcd")) return "nlcd";
+    if (t.includes("tract")) return "tract";
+    if (t.includes("county mean") || t.includes("county-mean") || t.includes("county mean")) return "county-mean";
+    if (t.includes("impute")) return "impute";
+    return "misc";
+}
+
+function _debugTag(p, key) {
+    const q = _qualityFor(p, key);
+    const prov = p[key + "_provenance"] || "";
+    if (!DEBUG_MODE) return "";
+    if (q === "REAL") return `[src:${_abbrToken(prov)}]`;
+    if (q === "ESTIMATED") return `[est:${_abbrToken(prov)}]`;
+    if (q === "PROXY") return `[px:${_abbrToken(prov)}]`;
+    return `[missing]`;
+}
+
+function _formatValue(p, key, fmt) {
+    const q = _qualityFor(p, key);
+    const v = p[key];
+    const missing = q === "MISSING" || v == null || (typeof v === "number" && !Number.isFinite(v));
+    if (missing) return `— ${_debugTag(p, key)}`.trim();
+    const base = fmt(v);
+    const star = (q === "ESTIMATED" || q === "PROXY") ? "*" : "";
+    const tag = _debugTag(p, key);
+    return `${base}${star}${tag ? " " + tag : ""}`;
 }
 
 const projection = d3.geoMercator();
@@ -33,7 +64,8 @@ const path = d3.geoPath().projection(projection);
 
 let geoData;
 let countyManifest;
-let DEBUG_MODE = true;
+const _params = new URLSearchParams(window.location.search);
+let DEBUG_MODE = _params.get("debug") === "1" || _params.get("debug") === "true";
 
 const descriptions = {
     risk_score: "Overall wildfire risk combining hazard, exposure, vulnerability, and resilience.",
@@ -58,10 +90,11 @@ function buildTooltip(p) {
 <b>Vulnerability:</b> ${p.vulnerability_score?.toFixed(4) ?? "NA"}<br/>
 <b>Resilience:</b> ${p.resilience_score?.toFixed(4) ?? "NA"}<br/>
 <hr/>
-<b>Population:</b> ${p.exposure_population ?? "NA"} ${sourceBadge(isRealField(p, "exposure_population"))}<br/>
-<b>Building value (ACS × housing):</b> $${bval.toLocaleString()} ${sourceBadge(isRealField(p, "exposure_building_value"))}<br/>
-<b>EAL (USD):</b> $${Math.round(p.eal ?? 0).toLocaleString()}<br/>
-<b>EAL (normalized):</b> ${p.eal_norm?.toFixed(4) ?? "NA"}
+<b>Population:</b> ${_formatValue(p, "exposure_population", v => Number(v).toLocaleString())}<br/>
+<b>Housing units:</b> ${_formatValue(p, "exposure_housing", v => Math.round(v).toLocaleString())}<br/>
+<b>Building value:</b> ${_formatValue(p, "exposure_building_value", v => "$" + Math.round(v).toLocaleString())}<br/>
+<b>EAL (USD):</b> ${_formatValue(p, "eal", v => "$" + Math.round(v).toLocaleString())}<br/>
+<b>EAL (normalized):</b> ${_formatValue(p, "eal_norm", v => Number(v).toFixed(4))}
 `;
 
     if (DEBUG_MODE) {
@@ -83,16 +116,15 @@ function buildTooltip(p) {
         html += `
 <hr/>
 <b>Feature values (debug):</b><br/>
-hazard_wildfire: ${p.hazard_wildfire?.toFixed(4) ?? "NA"} ${sourceBadge(isRealField(p, "hazard_wildfire"))}<br/>
-hazard_vegetation: ${p.hazard_vegetation?.toFixed(4) ?? "NA"} ${sourceBadge(isRealField(p, "hazard_vegetation"))}<br/>
-hazard_forest_distance: ${p.hazard_forest_distance?.toFixed(4) ?? "NA"} ${sourceBadge(isRealField(p, "hazard_forest_distance"))}<br/>
-exposure_housing: ${p.exposure_housing?.toFixed(0) ?? "NA"} ${sourceBadge(isRealField(p, "exposure_housing"))}<br/>
-vuln_poverty: ${p.vuln_poverty?.toFixed(4) ?? "NA"} ${sourceBadge(isRealField(p, "vuln_poverty"))}<br/>
-vuln_elderly: ${p.vuln_elderly?.toFixed(4) ?? "NA"} ${sourceBadge(isRealField(p, "vuln_elderly"))}<br/>
-vuln_vehicle_access: ${p.vuln_vehicle_access?.toFixed(4) ?? "NA"} ${sourceBadge(isRealField(p, "vuln_vehicle_access"))}<br/>
-res_fire_station_dist: ${p.res_fire_station_dist?.toFixed(4) ?? "NA"} ${sourceBadge(isRealField(p, "res_fire_station_dist"))}<br/>
-res_hospital_dist: ${p.res_hospital_dist?.toFixed(4) ?? "NA"} ${sourceBadge(isRealField(p, "res_hospital_dist"))}<br/>
-res_road_access: ${p.res_road_access?.toFixed(4) ?? "NA"} ${sourceBadge(isRealField(p, "res_road_access"))}
+hazard_wildfire: ${_formatValue(p, "hazard_wildfire", v => Number(v).toFixed(4))}<br/>
+hazard_vegetation: ${_formatValue(p, "hazard_vegetation", v => Number(v).toFixed(4))}<br/>
+hazard_forest_distance: ${_formatValue(p, "hazard_forest_distance", v => Number(v).toFixed(4))}<br/>
+vuln_poverty: ${_formatValue(p, "vuln_poverty", v => Number(v).toFixed(4))}<br/>
+vuln_elderly: ${_formatValue(p, "vuln_elderly", v => Number(v).toFixed(4))}<br/>
+vuln_vehicle_access: ${_formatValue(p, "vuln_vehicle_access", v => Number(v).toFixed(4))}<br/>
+res_fire_station_dist: ${_formatValue(p, "res_fire_station_dist", v => Number(v).toFixed(4))}<br/>
+res_hospital_dist: ${_formatValue(p, "res_hospital_dist", v => Number(v).toFixed(4))}<br/>
+res_road_access: ${_formatValue(p, "res_road_access", v => Number(v).toFixed(4))}
 `;
     }
 
@@ -215,6 +247,12 @@ d3.select("#reset").on("click", function () {
 d3.select("#debugToggle").on("change", function () {
     DEBUG_MODE = this.checked;
 });
+
+// Initialize toggle from query param if present
+try {
+    const t = document.getElementById("debugToggle");
+    if (t) t.checked = DEBUG_MODE;
+} catch (e) {}
 
 function updateDescription(metric) {
     d3.select("#description").text(descriptions[metric] || "");
