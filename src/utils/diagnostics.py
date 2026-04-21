@@ -66,6 +66,26 @@ def _load_calculation_rules() -> None:
 _load_calculation_rules()
 
 
+def log_calculations_schema_warnings(gdf: pd.DataFrame) -> None:
+    """
+    Compare exported columns to geojson_property names in calculations.csv
+    (rows with exists_in_code == Yes). Logs warnings only; never raises.
+    """
+    try:
+        from src.utils.calculations_reference import documented_geojson_properties
+
+        expected = documented_geojson_properties(exists_in_code_only=True)
+        missing = [c for c in expected if c not in gdf.columns]
+        if missing:
+            logger.warning(
+                "calculations.csv expects these geojson_property columns (exists_in_code=Yes) "
+                "but they are missing from the export — %s",
+                ", ".join(missing),
+            )
+    except Exception as e:
+        logger.warning("calculations.csv schema check skipped: %s", e)
+
+
 def validate_row(row: pd.Series) -> Dict[str, Any]:
     """
     Validate a single row (Series) and return a dict of field: [issues].
@@ -100,6 +120,7 @@ def add_diagnostics_to_gdf(gdf: pd.DataFrame) -> pd.DataFrame:
     Returns:
         DataFrame with diagnostics column
     """
+    log_calculations_schema_warnings(gdf)
     diagnostics = []
     summary = {}
     for idx, row in gdf.iterrows():
