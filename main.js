@@ -39,6 +39,9 @@ function _abbrToken(s) {
 }
 
 function _debugTag(p, key) {
+    if ((key === "eal" || key === "eal_norm") && DEBUG_MODE) {
+        return _debugTagEalFamily(p, key);
+    }
     const q = _qualityFor(p, key);
     const prov = p[key + "_provenance"] || "";
     if (!DEBUG_MODE) return "";
@@ -48,8 +51,26 @@ function _debugTag(p, key) {
     return `[missing]`;
 }
 
+/** EAL / eal_norm inherit display quality from exposure_building_value (calculations.csv). */
+function _qualityForEalFamily(p, key) {
+    const bq = _qualityFor(p, "exposure_building_value");
+    if (bq === "MISSING") return "MISSING";
+    if (bq === "ESTIMATED" || bq === "PROXY") return bq;
+    return "REAL";
+}
+
+function _debugTagEalFamily(p, key) {
+    const bq = _qualityFor(p, "exposure_building_value");
+    const prov = p.exposure_building_value_provenance || "";
+    if (bq === "MISSING") return `[missing]`;
+    if (bq === "REAL") return `[src:${_abbrToken(prov)}]`;
+    if (bq === "ESTIMATED") return `[est:${_abbrToken(prov)}]`;
+    if (bq === "PROXY") return `[px:${_abbrToken(prov)}]`;
+    return `[missing]`;
+}
+
 function _formatValue(p, key, fmt) {
-    const q = _qualityFor(p, key);
+    const q = (key === "eal" || key === "eal_norm") ? _qualityForEalFamily(p, key) : _qualityFor(p, key);
     const v = p[key];
     const missing = q === "MISSING" || v == null || (typeof v === "number" && !Number.isFinite(v));
     if (missing) return `— ${_debugTag(p, key)}`.trim();
