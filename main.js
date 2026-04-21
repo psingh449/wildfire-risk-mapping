@@ -1,11 +1,33 @@
 const MAP_PANELS = [
-    { panelId: "map-panel-eal", metric: "eal_norm", legendLabel: "EL (eal_norm)" },
-    { panelId: "map-panel-risk", metric: "risk_score", legendLabel: "RISC (risk_score)" },
-    { panelId: "map-panel-hazard", metric: "hazard_score", legendLabel: "HAZARD" },
-    { panelId: "map-panel-exposure", metric: "exposure_score", legendLabel: "EXPOSURE" },
-    { panelId: "map-panel-vulnerability", metric: "vulnerability_score", legendLabel: "VULNERABILITY" },
-    { panelId: "map-panel-resilience", metric: "resilience_score", legendLabel: "RESILIENCE" },
+    { panelId: "map-panel-eal", metric: "eal_norm" },
+    { panelId: "map-panel-risk", metric: "risk_score" },
+    { panelId: "map-panel-hazard", metric: "hazard_score" },
+    { panelId: "map-panel-exposure", metric: "exposure_score" },
+    { panelId: "map-panel-vulnerability", metric: "vulnerability_score" },
+    { panelId: "map-panel-resilience", metric: "resilience_score" },
 ];
+
+const BASE_STROKE = 0.65;
+const HIGHLIGHT_STROKE = 3.25;
+
+/** Stable id for linking the same block across all six maps. */
+function blockKeyFromProperties(p) {
+    if (!p) return "";
+    if (p.block_id != null && String(p.block_id).length) return String(p.block_id);
+    if (p.GEOID != null && String(p.GEOID).length) return String(p.GEOID);
+    return "";
+}
+
+let hoveredBlockId = null;
+
+function updateBlockHighlight() {
+    const hid = hoveredBlockId;
+    d3.selectAll(".map-cell svg.map-svg path.block-feature")
+        .attr("stroke-width", function () {
+            const id = this.getAttribute("data-block-id") || "";
+            return hid != null && hid !== "" && id !== "" && id === hid ? HIGHLIGHT_STROKE : BASE_STROKE;
+        });
+}
 
 const METRIC_COLOR_RAMPS = {
     risk_score: ["#FEE0D2", "#FC9272", "#D73027"],
@@ -15,6 +37,17 @@ const METRIC_COLOR_RAMPS = {
     resilience_score: ["#E5F5E0", "#74C476", "#1A9850"],
     eal_norm: ["#DEEBF7", "#9ECAE1", "#4575B4"],
 };
+
+/** Darkest stop in each choropleth ramp — used for linked UI/tooltip accents. */
+function darkestColor(metric) {
+    const ramp = METRIC_COLOR_RAMPS[metric] || METRIC_COLOR_RAMPS.risk_score;
+    return ramp[ramp.length - 1];
+}
+
+function tooltipAccent(metric, label, valueHtml) {
+    const c = darkestColor(metric);
+    return `<span style="color:${c}"><b>${label}</b> ${valueHtml}</span>`;
+}
 
 function colorScaleForMetric(metric) {
     const stops = METRIC_COLOR_RAMPS[metric] || METRIC_COLOR_RAMPS.risk_score;
@@ -97,21 +130,25 @@ const tooltip = d3.select("body")
     .style("opacity", 0);
 
 function buildTooltip(p) {
+    const rs = (v) => (v != null && Number.isFinite(v) ? Number(v).toFixed(4) : "NA");
     let html = `
-<b>Risk:</b> ${p.risk_score?.toFixed(4) ?? "NA"}<br/>
-<b>Hazard:</b> ${p.hazard_score?.toFixed(4) ?? "NA"}<br/>
-<b>Exposure:</b> ${p.exposure_score?.toFixed(4) ?? "NA"}<br/>
-<b>Vulnerability:</b> ${p.vulnerability_score?.toFixed(4) ?? "NA"}<br/>
-<b>Resilience:</b> ${p.resilience_score?.toFixed(4) ?? "NA"}<br/>
+${tooltipAccent("risk_score", "Risk:", rs(p.risk_score))}<br/>
+${tooltipAccent("hazard_score", "Hazard:", rs(p.hazard_score))}<br/>
+${tooltipAccent("exposure_score", "Exposure:", rs(p.exposure_score))}<br/>
+${tooltipAccent("vulnerability_score", "Vulnerability:", rs(p.vulnerability_score))}<br/>
+${tooltipAccent("resilience_score", "Resilience:", rs(p.resilience_score))}<br/>
 <hr/>
-<b>Population:</b> ${_formatValue(p, "exposure_population", v => Number(v).toLocaleString())}<br/>
-<b>Housing units:</b> ${_formatValue(p, "exposure_housing", v => Math.round(v).toLocaleString())}<br/>
-<b>Building value:</b> ${_formatValue(p, "exposure_building_value", v => "$" + Math.round(v).toLocaleString())}<br/>
-<b>EAL (USD):</b> ${_formatValue(p, "eal", v => "$" + Math.round(v).toLocaleString())}<br/>
-<b>EAL (normalized):</b> ${_formatValue(p, "eal_norm", v => Number(v).toFixed(4))}
+${tooltipAccent("exposure_score", "Population:", _formatValue(p, "exposure_population", v => Number(v).toLocaleString()))}<br/>
+${tooltipAccent("exposure_score", "Housing units:", _formatValue(p, "exposure_housing", v => Math.round(v).toLocaleString()))}<br/>
+${tooltipAccent("exposure_score", "Building value:", _formatValue(p, "exposure_building_value", v => "$" + Math.round(v).toLocaleString()))}<br/>
+${tooltipAccent("eal_norm", "EAL (USD):", _formatValue(p, "eal", v => "$" + Math.round(v).toLocaleString()))}<br/>
+${tooltipAccent("eal_norm", "EAL (normalized):", _formatValue(p, "eal_norm", v => Number(v).toFixed(4)))}
 `;
 
     if (DEBUG_MODE) {
+        const ch = darkestColor("hazard_score");
+        const cv = darkestColor("vulnerability_score");
+        const cr = darkestColor("resilience_score");
         html += `
 <hr/>
 <b>Diagnostics:</b><br/>`;
@@ -129,16 +166,18 @@ function buildTooltip(p) {
         }
         html += `
 <hr/>
-<b>Feature values (debug):</b><br/>
-hazard_wildfire: ${_formatValue(p, "hazard_wildfire", v => Number(v).toFixed(4))}<br/>
-hazard_vegetation: ${_formatValue(p, "hazard_vegetation", v => Number(v).toFixed(4))}<br/>
-hazard_forest_distance: ${_formatValue(p, "hazard_forest_distance", v => Number(v).toFixed(4))}<br/>
-vuln_poverty: ${_formatValue(p, "vuln_poverty", v => Number(v).toFixed(4))}<br/>
-vuln_elderly: ${_formatValue(p, "vuln_elderly", v => Number(v).toFixed(4))}<br/>
-vuln_vehicle_access: ${_formatValue(p, "vuln_vehicle_access", v => Number(v).toFixed(4))}<br/>
-res_fire_station_dist: ${_formatValue(p, "res_fire_station_dist", v => Number(v).toFixed(4))}<br/>
-res_hospital_dist: ${_formatValue(p, "res_hospital_dist", v => Number(v).toFixed(4))}<br/>
-res_road_access: ${_formatValue(p, "res_road_access", v => Number(v).toFixed(4))}
+<span style="color:${ch}"><b>Feature values (hazard inputs):</b></span><br/>
+<span style="color:${ch}"><b>hazard_wildfire:</b> ${_formatValue(p, "hazard_wildfire", v => Number(v).toFixed(4))}</span><br/>
+<span style="color:${ch}"><b>hazard_vegetation:</b> ${_formatValue(p, "hazard_vegetation", v => Number(v).toFixed(4))}</span><br/>
+<span style="color:${ch}"><b>hazard_forest_distance:</b> ${_formatValue(p, "hazard_forest_distance", v => Number(v).toFixed(4))}</span><br/>
+<span style="color:${cv}"><b>Vulnerability inputs:</b></span><br/>
+<span style="color:${cv}"><b>vuln_poverty:</b> ${_formatValue(p, "vuln_poverty", v => Number(v).toFixed(4))}</span><br/>
+<span style="color:${cv}"><b>vuln_elderly:</b> ${_formatValue(p, "vuln_elderly", v => Number(v).toFixed(4))}</span><br/>
+<span style="color:${cv}"><b>vuln_vehicle_access:</b> ${_formatValue(p, "vuln_vehicle_access", v => Number(v).toFixed(4))}</span><br/>
+<span style="color:${cr}"><b>Resilience inputs:</b></span><br/>
+<span style="color:${cr}"><b>res_fire_station_dist:</b> ${_formatValue(p, "res_fire_station_dist", v => Number(v).toFixed(4))}</span><br/>
+<span style="color:${cr}"><b>res_hospital_dist:</b> ${_formatValue(p, "res_hospital_dist", v => Number(v).toFixed(4))}</span><br/>
+<span style="color:${cr}"><b>res_road_access:</b> ${_formatValue(p, "res_road_access", v => Number(v).toFixed(4))}</span>
 `;
     }
 
@@ -149,6 +188,9 @@ function attachTooltipHandlers(selection) {
     selection
         .on("mouseover", function (event, d) {
             const p = d.properties;
+            const bid = blockKeyFromProperties(p);
+            hoveredBlockId = bid || null;
+            updateBlockHighlight();
             tooltip.transition().duration(200).style("opacity", .9);
             tooltip.html(buildTooltip(p))
                 .style("left", (event.pageX + 10) + "px")
@@ -159,7 +201,17 @@ function attachTooltipHandlers(selection) {
                 .style("left", (event.pageX + 10) + "px")
                 .style("top", (event.pageY - 20) + "px");
         })
-        .on("mouseout", function () {
+        .on("mouseout", function (event, d) {
+            const bid = blockKeyFromProperties(d.properties);
+            const rt = event.relatedTarget;
+            if (rt && typeof rt.closest === "function") {
+                const nextPath = rt.closest("path.block-feature");
+                if (nextPath && (nextPath.getAttribute("data-block-id") || "") === bid) {
+                    return;
+                }
+            }
+            hoveredBlockId = null;
+            updateBlockHighlight();
             tooltip.transition().duration(200).style("opacity", 0);
         });
 }
@@ -179,45 +231,52 @@ function fitProjectionToGeo(mapWidth, mapHeight) {
 function getCellDimensions() {
     const first = document.querySelector("#map-panel-eal svg.map-svg");
     if (first) {
-        const w = +first.getAttribute("width") || 440;
-        const h = +first.getAttribute("height") || 280;
+        const w = +first.getAttribute("width") || 320;
+        const h = +first.getAttribute("height") || 220;
         return { width: w, height: h };
     }
-    return { width: 440, height: 280 };
+    return { width: 320, height: 220 };
 }
 
 function renderAll() {
     const { width: mapW, height: mapH } = getCellDimensions();
     fitProjectionToGeo(mapW, mapH);
+    hoveredBlockId = null;
 
-    for (const { panelId, metric, legendLabel } of MAP_PANELS) {
-        const svg = d3.select(`#${panelId} svg.map-svg`);
-        if (svg.empty()) continue;
+    for (const { panelId, metric } of MAP_PANELS) {
+        const mapSvg = d3.select(`#${panelId} svg.map-svg`);
+        const legendSvg = d3.select(`#${panelId} svg.legend-svg`);
+        if (mapSvg.empty()) continue;
 
         const color = colorScaleForMetric(metric);
         const gradientId = `legend-gradient-${metric}`;
 
-        svg.selectAll("*").remove();
+        mapSvg.selectAll("*").remove();
+        if (!legendSvg.empty()) legendSvg.selectAll("*").remove();
 
-        svg.selectAll("path")
+        mapSvg.selectAll("path")
             .data((geoData && geoData.features) ? geoData.features : [])
             .join("path")
+            .attr("class", "block-feature")
+            .attr("data-block-id", d => blockKeyFromProperties(d.properties))
             .attr("d", path)
             .attr("fill", d => {
                 const v = d.properties[metric];
                 return v != null && !isNaN(v) ? color(v) : "#ccc";
             })
             .attr("stroke", "#333")
+            .attr("stroke-width", BASE_STROKE)
             .call(attachTooltipHandlers);
 
+        if (legendSvg.empty()) continue;
+
         const legendWidth = 250;
-        const legendHeight = 12;
+        const legendBarH = 12;
+        const svgW = +legendSvg.attr("width") || 440;
+        const gx = (svgW - legendWidth) / 2;
+        const accent = darkestColor(metric);
 
-        const legendGroup = svg.append("g")
-            .attr("transform", "translate(20,20)");
-
-        const defs = svg.append("defs");
-
+        const defs = legendSvg.append("defs");
         const gradient = defs.append("linearGradient")
             .attr("id", gradientId);
 
@@ -228,14 +287,12 @@ function renderAll() {
             .attr("offset", d => d * 100 + "%")
             .attr("stop-color", d => color(d));
 
-        legendGroup.append("text")
-            .attr("y", -8)
-            .attr("class", "legend-title")
-            .text(legendLabel);
+        const legendGroup = legendSvg.append("g")
+            .attr("transform", `translate(${gx}, 8)`);
 
         legendGroup.append("rect")
             .attr("width", legendWidth)
-            .attr("height", legendHeight)
+            .attr("height", legendBarH)
             .style("fill", `url(#${gradientId})`);
 
         const scale = d3.scaleLinear()
@@ -246,10 +303,19 @@ function renderAll() {
             .ticks(5)
             .tickFormat(d3.format(".1f"));
 
-        legendGroup.append("g")
-            .attr("transform", `translate(0,${legendHeight})`)
-            .call(axis);
+        const axisG = legendGroup.append("g")
+            .attr("transform", `translate(0,${legendBarH})`);
+        axisG.call(axis);
+        axisG.selectAll("text")
+            .attr("font-size", "10px")
+            .attr("fill", accent);
+        axisG.selectAll("line")
+            .attr("stroke", accent);
+        axisG.select(".domain")
+            .attr("stroke", accent);
     }
+
+    updateBlockHighlight();
 }
 
 function prefetchPackagedCounties(manifest, currentId) {

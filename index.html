@@ -1,7 +1,8 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Wildfire Risk Map</title>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <link rel="stylesheet" href="styles.css">
@@ -15,7 +16,7 @@
             <label for="county">County:</label>
             <select id="county" class="county-select" title="Bold options are priority demo counties (browser-prefetched when packaged)."></select>
 
-            <label style="margin-left:10px;">
+            <label class="debug-toggle">
                 <input type="checkbox" id="debugToggle" checked />
                 Debug mode
             </label>
@@ -23,39 +24,62 @@
 
         <p id="countyMessage" class="county-message" aria-live="polite"></p>
         <p class="description">
-            Six block-group maps in a 2×3 grid: <strong>EL</strong> (EAL, normalized for the choropleth) and <strong>RISC</strong> (overall risk) on the first row; hazard, exposure, vulnerability, and resilience on the next two rows.
+            Six block-group maps in a 3×2 grid:
+            <span class="metric-accent metric-accent-el"><strong>EL</strong></span>
+            (<span class="metric-accent metric-accent-el">EAL</span>, normalized for the choropleth) and
+            <span class="metric-accent metric-accent-risk"><strong>RISC</strong></span>
+            (overall risk) on the first row;
+            <span class="metric-accent metric-accent-hazard">hazard</span>,
+            <span class="metric-accent metric-accent-exposure">exposure</span>,
+            <span class="metric-accent metric-accent-vulnerability">vulnerability</span>, and
+            <span class="metric-accent metric-accent-resilience">resilience</span>
+            on the next two rows.
             Hover any map for the same full-detail tooltip.
         </p>
 
         <div class="map-grid" id="mapGrid">
             <div class="map-cell" id="map-panel-eal">
-                <h3 class="map-title">EAL (EL)</h3>
-                <svg class="map-svg" width="440" height="280" aria-label="EAL EL map"></svg>
+                <h3 class="map-title metric-accent metric-accent-el">EAL (EL)</h3>
+                <div class="map-stack">
+                    <svg class="map-svg" width="320" height="220" aria-label="EAL EL map"></svg>
+                    <svg class="legend-svg" width="320" height="44" aria-hidden="true"></svg>
+                </div>
             </div>
             <div class="map-cell" id="map-panel-risk">
-                <h3 class="map-title">Risk (RISC)</h3>
-                <svg class="map-svg" width="440" height="280" aria-label="Risk RISC map"></svg>
+                <h3 class="map-title metric-accent metric-accent-risk">Risk (RISC)</h3>
+                <div class="map-stack">
+                    <svg class="map-svg" width="320" height="220" aria-label="Risk RISC map"></svg>
+                    <svg class="legend-svg" width="320" height="44" aria-hidden="true"></svg>
+                </div>
             </div>
             <div class="map-cell" id="map-panel-hazard">
-                <h3 class="map-title">Hazard</h3>
-                <svg class="map-svg" width="440" height="280" aria-label="Hazard map"></svg>
+                <h3 class="map-title metric-accent metric-accent-hazard">Hazard</h3>
+                <div class="map-stack">
+                    <svg class="map-svg" width="320" height="220" aria-label="Hazard map"></svg>
+                    <svg class="legend-svg" width="320" height="44" aria-hidden="true"></svg>
+                </div>
             </div>
             <div class="map-cell" id="map-panel-exposure">
-                <h3 class="map-title">Exposure</h3>
-                <svg class="map-svg" width="440" height="280" aria-label="Exposure map"></svg>
+                <h3 class="map-title metric-accent metric-accent-exposure">Exposure</h3>
+                <div class="map-stack">
+                    <svg class="map-svg" width="320" height="220" aria-label="Exposure map"></svg>
+                    <svg class="legend-svg" width="320" height="44" aria-hidden="true"></svg>
+                </div>
             </div>
             <div class="map-cell" id="map-panel-vulnerability">
-                <h3 class="map-title">Vulnerability</h3>
-                <svg class="map-svg" width="440" height="280" aria-label="Vulnerability map"></svg>
+                <h3 class="map-title metric-accent metric-accent-vulnerability">Vulnerability</h3>
+                <div class="map-stack">
+                    <svg class="map-svg" width="320" height="220" aria-label="Vulnerability map"></svg>
+                    <svg class="legend-svg" width="320" height="44" aria-hidden="true"></svg>
+                </div>
             </div>
             <div class="map-cell" id="map-panel-resilience">
-                <h3 class="map-title">Resilience</h3>
-                <svg class="map-svg" width="440" height="280" aria-label="Resilience map"></svg>
+                <h3 class="map-title metric-accent metric-accent-resilience">Resilience</h3>
+                <div class="map-stack">
+                    <svg class="map-svg" width="320" height="220" aria-label="Resilience map"></svg>
+                    <svg class="legend-svg" width="320" height="44" aria-hidden="true"></svg>
+                </div>
             </div>
-        </div>
-
-        <div class="footer">
-            <p>Block-group level wildfire risk visualization (prototype)</p>
         </div>
     </div>
 
