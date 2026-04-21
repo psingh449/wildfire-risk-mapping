@@ -16,9 +16,11 @@ This wildfire risk mapping system predicts how much wildfire danger each geograp
 The final output is a **Risk Score** (0-1 range) and **Expected Annual Loss (EAL)** — a dollar amount representing how much damage we expect in a typical year for each block.
 
 **Key Features:**
-- Specification-Driven architecture (calculations.csv documents WHAT, Python code implements HOW)
-- Only weights and min/max bounds are dynamically read from calculations.csv at runtime
-- Everything else (URLs, formulas, API parameters) is hardcoded in Python
+- **Canonical metric spec:** [`calculations.csv`](calculations.csv) is the single source of truth for each KPI’s meaning, formula summary, data quality tiers (`REAL` / `ESTIMATED` / `PROXY` / `MISSING`), cache paths under `data/real_cache/`, and pointers to implementation files. When you change a calculation or add a KPI, update that row in the same change.
+- **Prefetch counties (first full cache pass):** Counties listed in `prefetched_county_ids` inside [`data/county_manifest.json`](data/county_manifest.json) are bolded in the UI and should be populated first. Run `python scripts/prefetch_real_cache_prefetch_counties.py` to import all `real_cache` datasets for those counties only (equivalent to `real_import.py --county … --all` per county).
+- Specification-driven architecture (calculations.csv documents WHAT, Python code implements HOW)
+- Weights and min/max bounds are read from `calculations.csv` at runtime for diagnostics; shared numeric constants (e.g. hazard wildfire proxy weights) live in `src/utils/calculations_reference.py` alongside the CSV
+- Pipeline validation logs **warnings** (never fails the build) if an export is missing columns that `calculations.csv` marks as `exists_in_code=Yes`
 - Comprehensive validation with 8 quality check metrics
 - Fallback/dummy data generation when APIs fail
 - Full provenance tracking (all data marked REAL or DUMMY)
