@@ -15,30 +15,43 @@
             <label for="county">County:</label>
             <select id="county" class="county-select" title="Bold options are priority demo counties (browser-prefetched when packaged)."></select>
 
-            <label for="metric">Metric:</label>
-            <select id="metric">
-                <option value="risk_score">Risk</option>
-                <option value="hazard_score">Hazard</option>
-                <option value="exposure_score">Exposure</option>
-                <option value="vulnerability_score">Vulnerability</option>
-                <option value="resilience_score">Resilience</option>
-                <option value="eal_norm">EAL (Economic Loss)</option>
-            </select>
-
-            <button id="reset">Reset</button>
-
-            <!-- ✅ NEW (Commit 18) -->
             <label style="margin-left:10px;">
                 <input type="checkbox" id="debugToggle" checked />
-                Debug Mode
+                Debug mode
             </label>
         </div>
 
         <p id="countyMessage" class="county-message" aria-live="polite"></p>
-        <div id="description" class="description"></div>
+        <p class="description">
+            Six block-group maps in a 2×3 grid: <strong>EL</strong> (EAL, normalized for the choropleth) and <strong>RISC</strong> (overall risk) on the first row; hazard, exposure, vulnerability, and resilience on the next two rows.
+            Hover any map for the same full-detail tooltip.
+        </p>
 
-        <div class="map-container">
-            <svg width="900" height="600"></svg>
+        <div class="map-grid" id="mapGrid">
+            <div class="map-cell" id="map-panel-eal">
+                <h3 class="map-title">EAL (EL)</h3>
+                <svg class="map-svg" width="440" height="280" aria-label="EAL EL map"></svg>
+            </div>
+            <div class="map-cell" id="map-panel-risk">
+                <h3 class="map-title">Risk (RISC)</h3>
+                <svg class="map-svg" width="440" height="280" aria-label="Risk RISC map"></svg>
+            </div>
+            <div class="map-cell" id="map-panel-hazard">
+                <h3 class="map-title">Hazard</h3>
+                <svg class="map-svg" width="440" height="280" aria-label="Hazard map"></svg>
+            </div>
+            <div class="map-cell" id="map-panel-exposure">
+                <h3 class="map-title">Exposure</h3>
+                <svg class="map-svg" width="440" height="280" aria-label="Exposure map"></svg>
+            </div>
+            <div class="map-cell" id="map-panel-vulnerability">
+                <h3 class="map-title">Vulnerability</h3>
+                <svg class="map-svg" width="440" height="280" aria-label="Vulnerability map"></svg>
+            </div>
+            <div class="map-cell" id="map-panel-resilience">
+                <h3 class="map-title">Resilience</h3>
+                <svg class="map-svg" width="440" height="280" aria-label="Resilience map"></svg>
+            </div>
         </div>
 
         <div class="footer">

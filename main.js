@@ -1,8 +1,11 @@
-const svg = d3.select("svg");
-const width = +svg.attr("width");
-const height = +svg.attr("height");
-
-const DEFAULT_METRIC = "risk_score";
+const MAP_PANELS = [
+    { panelId: "map-panel-eal", metric: "eal_norm", legendLabel: "EL (eal_norm)" },
+    { panelId: "map-panel-risk", metric: "risk_score", legendLabel: "RISC (risk_score)" },
+    { panelId: "map-panel-hazard", metric: "hazard_score", legendLabel: "HAZARD" },
+    { panelId: "map-panel-exposure", metric: "exposure_score", legendLabel: "EXPOSURE" },
+    { panelId: "map-panel-vulnerability", metric: "vulnerability_score", legendLabel: "VULNERABILITY" },
+    { panelId: "map-panel-resilience", metric: "resilience_score", legendLabel: "RESILIENCE" },
+];
 
 const METRIC_COLOR_RAMPS = {
     risk_score: ["#FEE0D2", "#FC9272", "#D73027"],
@@ -88,22 +91,12 @@ let countyManifest;
 const _params = new URLSearchParams(window.location.search);
 let DEBUG_MODE = _params.get("debug") === "1" || _params.get("debug") === "true";
 
-const descriptions = {
-    risk_score: "Overall wildfire risk combining hazard, exposure, vulnerability, and resilience.",
-    hazard_score: "Likelihood and intensity of wildfire occurrence.",
-    exposure_score: "Population and assets exposed to wildfire.",
-    vulnerability_score: "Sensitivity of the population to wildfire impacts.",
-    resilience_score: "Ability to respond to and recover from wildfire events.",
-    eal_norm: "Expected Annual Loss (EAL), min–max scaled (eal_norm) for mapping; raw EAL is in USD."
-};
-
 const tooltip = d3.select("body")
     .append("div")
     .attr("class", "tooltip")
     .style("opacity", 0);
 
 function buildTooltip(p) {
-    const bval = p.exposure_building_value != null ? Math.round(p.exposure_building_value) : 0;
     let html = `
 <b>Risk:</b> ${p.risk_score?.toFixed(4) ?? "NA"}<br/>
 <b>Hazard:</b> ${p.hazard_score?.toFixed(4) ?? "NA"}<br/>
@@ -152,15 +145,110 @@ res_road_access: ${_formatValue(p, "res_road_access", v => Number(v).toFixed(4))
     return html;
 }
 
-function fitProjectionToGeo() {
+function attachTooltipHandlers(selection) {
+    selection
+        .on("mouseover", function (event, d) {
+            const p = d.properties;
+            tooltip.transition().duration(200).style("opacity", .9);
+            tooltip.html(buildTooltip(p))
+                .style("left", (event.pageX + 10) + "px")
+                .style("top", (event.pageY - 20) + "px");
+        })
+        .on("mousemove", function (event) {
+            tooltip
+                .style("left", (event.pageX + 10) + "px")
+                .style("top", (event.pageY - 20) + "px");
+        })
+        .on("mouseout", function () {
+            tooltip.transition().duration(200).style("opacity", 0);
+        });
+}
+
+function fitProjectionToGeo(mapWidth, mapHeight) {
     if (geoData && geoData.features && geoData.features.length > 0) {
-        projection.fitSize([width, height], geoData);
+        projection.fitSize([mapWidth, mapHeight], geoData);
     } else {
         projection
             .scale(1)
-            .translate([width / 2, height / 2]);
+            .translate([mapWidth / 2, mapHeight / 2]);
         const outline = { type: "Feature", geometry: { type: "Polygon", coordinates: [[[-125, 24], [-66, 24], [-66, 50], [-125, 50], [-125, 24]]] } };
-        projection.fitSize([width, height], outline);
+        projection.fitSize([mapWidth, mapHeight], outline);
+    }
+}
+
+function getCellDimensions() {
+    const first = document.querySelector("#map-panel-eal svg.map-svg");
+    if (first) {
+        const w = +first.getAttribute("width") || 440;
+        const h = +first.getAttribute("height") || 280;
+        return { width: w, height: h };
+    }
+    return { width: 440, height: 280 };
+}
+
+function renderAll() {
+    const { width: mapW, height: mapH } = getCellDimensions();
+    fitProjectionToGeo(mapW, mapH);
+
+    for (const { panelId, metric, legendLabel } of MAP_PANELS) {
+        const svg = d3.select(`#${panelId} svg.map-svg`);
+        if (svg.empty()) continue;
+
+        const color = colorScaleForMetric(metric);
+        const gradientId = `legend-gradient-${metric}`;
+
+        svg.selectAll("*").remove();
+
+        svg.selectAll("path")
+            .data((geoData && geoData.features) ? geoData.features : [])
+            .join("path")
+            .attr("d", path)
+            .attr("fill", d => {
+                const v = d.properties[metric];
+                return v != null && !isNaN(v) ? color(v) : "#ccc";
+            })
+            .attr("stroke", "#333")
+            .call(attachTooltipHandlers);
+
+        const legendWidth = 250;
+        const legendHeight = 12;
+
+        const legendGroup = svg.append("g")
+            .attr("transform", "translate(20,20)");
+
+        const defs = svg.append("defs");
+
+        const gradient = defs.append("linearGradient")
+            .attr("id", gradientId);
+
+        gradient.selectAll("stop")
+            .data(d3.range(0, 1.01, 0.05))
+            .enter()
+            .append("stop")
+            .attr("offset", d => d * 100 + "%")
+            .attr("stop-color", d => color(d));
+
+        legendGroup.append("text")
+            .attr("y", -8)
+            .attr("class", "legend-title")
+            .text(legendLabel);
+
+        legendGroup.append("rect")
+            .attr("width", legendWidth)
+            .attr("height", legendHeight)
+            .style("fill", `url(#${gradientId})`);
+
+        const scale = d3.scaleLinear()
+            .domain([0, 1])
+            .range([0, legendWidth]);
+
+        const axis = d3.axisBottom(scale)
+            .ticks(5)
+            .tickFormat(d3.format(".1f"));
+
+        legendGroup.append("g")
+            .attr("transform", `translate(0,${legendHeight})`)
+            .call(axis);
     }
 }
 
@@ -178,7 +266,7 @@ function loadCounty(id, manifest) {
     const msg = d3.select("#countyMessage");
     if (!url) {
         geoData = { type: "FeatureCollection", features: [] };
-        fitProjectionToGeo();
+        fitProjectionToGeo(getCellDimensions().width, getCellDimensions().height);
         msg.text(
             "No packaged block-level GeoJSON for this county yet. " +
             "Add data/processed/counties/" + id + "/blocks.geojson and register it in data/county_manifest.json, " +
@@ -189,10 +277,10 @@ function loadCounty(id, manifest) {
     msg.text("");
     return d3.json(url).then(data => {
         geoData = data;
-        fitProjectionToGeo();
+        fitProjectionToGeo(getCellDimensions().width, getCellDimensions().height);
     }).catch(err => {
         geoData = { type: "FeatureCollection", features: [] };
-        fitProjectionToGeo();
+        fitProjectionToGeo(getCellDimensions().width, getCellDimensions().height);
         msg.text("Failed to load county GeoJSON: " + (err && err.message ? err.message : String(err)));
         console.error(err);
     });
@@ -233,123 +321,30 @@ Promise.all([
     const startId = populateCountySelect(list, manifest);
     return loadCounty(startId, manifest).then(() => {
         prefetchPackagedCounties(manifest, startId);
-        const metric = d3.select("#metric").property("value") || DEFAULT_METRIC;
-        render(metric);
-        updateDescription(metric);
+        renderAll();
     });
 }).catch(err => {
-    document.getElementById("description").textContent =
-        "Could not load county list or manifest. Ensure data/county_list.json and data/county_manifest.json exist (run scripts/build_county_list.py for the list).";
-    document.getElementById("countyMessage").textContent = String(err && err.message ? err.message : err);
+    const msg = document.getElementById("countyMessage");
+    if (msg) {
+        msg.textContent =
+            "Could not load county list or manifest. Ensure data/county_list.json and data/county_manifest.json exist (run scripts/build_county_list.py for the list). " +
+            (err && err.message ? err.message : String(err));
+    }
     console.error(err);
 });
 
 d3.select("#county").on("change", function () {
     const id = this.value;
     loadCounty(id, countyManifest).then(() => {
-        const metric = d3.select("#metric").property("value") || DEFAULT_METRIC;
-        render(metric);
-        updateDescription(metric);
+        renderAll();
     });
-});
-
-d3.select("#metric").on("change", function () {
-    const metric = this.value;
-    render(metric);
-    updateDescription(metric);
-});
-
-d3.select("#reset").on("click", function () {
-    d3.select("#metric").property("value", DEFAULT_METRIC);
-    render(DEFAULT_METRIC);
-    updateDescription(DEFAULT_METRIC);
 });
 
 d3.select("#debugToggle").on("change", function () {
     DEBUG_MODE = this.checked;
 });
 
-// Initialize toggle from query param if present
 try {
     const t = document.getElementById("debugToggle");
     if (t) t.checked = DEBUG_MODE;
 } catch (e) {}
-
-function updateDescription(metric) {
-    d3.select("#description").text(descriptions[metric] || "");
-}
-
-function render(metric) {
-    const color = colorScaleForMetric(metric);
-
-    svg.selectAll("*").remove();
-
-    svg.selectAll("path")
-        .data((geoData && geoData.features) ? geoData.features : [])
-        .join("path")
-        .attr("d", path)
-        .attr("fill", d => {
-            const v = d.properties[metric];
-            return v != null && !isNaN(v) ? color(v) : "#ccc";
-        })
-        .attr("stroke", "#333")
-        .on("mouseover", function (event, d) {
-            const p = d.properties;
-
-            tooltip.transition().duration(200).style("opacity", .9);
-
-            tooltip.html(buildTooltip(p))
-                .style("left", (event.pageX + 10) + "px")
-                .style("top", (event.pageY - 20) + "px");
-        })
-        .on("mousemove", function (event) {
-            tooltip
-                .style("left", (event.pageX + 10) + "px")
-                .style("top", (event.pageY - 20) + "px");
-        })
-        .on("mouseout", function () {
-            tooltip.transition().duration(200).style("opacity", 0);
-        });
-
-    const legendWidth = 250;
-    const legendHeight = 12;
-
-    const legendGroup = svg.append("g")
-        .attr("transform", "translate(20,20)");
-
-    const gradientId = "legend-gradient";
-
-    const defs = svg.append("defs");
-
-    const gradient = defs.append("linearGradient")
-        .attr("id", gradientId);
-
-    gradient.selectAll("stop")
-        .data(d3.range(0, 1.01, 0.05))
-        .enter()
-        .append("stop")
-        .attr("offset", d => d * 100 + "%")
-        .attr("stop-color", d => color(d));
-
-    legendGroup.append("text")
-        .attr("y", -8)
-        .attr("class", "legend-title")
-        .text(metric.toUpperCase());
-
-    legendGroup.append("rect")
-        .attr("width", legendWidth)
-        .attr("height", legendHeight)
-        .style("fill", `url(#${gradientId})`);
-
-    const scale = d3.scaleLinear()
-        .domain([0, 1])
-        .range([0, legendWidth]);
-
-    const axis = d3.axisBottom(scale)
-        .ticks(5)
-        .tickFormat(d3.format(".1f"));
-
-    legendGroup.append("g")
-        .attr("transform", `translate(0,${legendHeight})`)
-        .call(axis);
-}
