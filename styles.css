@@ -125,6 +125,31 @@ button {
     max-width: min(420px, 92vw);
 }
 
+.tooltip-grid {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    column-gap: 10px;
+    row-gap: 3px;
+    align-items: baseline;
+}
+
+.tooltip-label {
+    white-space: nowrap;
+}
+
+.tooltip-value {
+    color: #000;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+    min-width: 92px;
+}
+
+/* Big numbers (counts/$) are visually offset. */
+.tooltip-big .tooltip-value {
+    min-width: 160px;
+}
+
 .badge {
     padding: 1px 4px;
     border-radius: 3px;

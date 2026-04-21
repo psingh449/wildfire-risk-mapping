@@ -44,9 +44,15 @@ function darkestColor(metric) {
     return ramp[ramp.length - 1];
 }
 
-function tooltipAccent(metric, label, valueHtml) {
+function _fmtScore2(v) {
+    const n = Number(v);
+    if (!Number.isFinite(n)) return "NA";
+    return n.toFixed(2);
+}
+
+function _tooltipRow(metric, label, valueHtml) {
     const c = darkestColor(metric);
-    return `<span style="color:${c}"><b>${label}</b> ${valueHtml}</span>`;
+    return `<span class="tooltip-label" style="color:${c}"><b>${label}</b></span><span class="tooltip-value">${valueHtml}</span>`;
 }
 
 function colorScaleForMetric(metric) {
@@ -130,20 +136,26 @@ const tooltip = d3.select("body")
     .style("opacity", 0);
 
 function buildTooltip(p) {
-    const rs = (v) => (v != null && Number.isFinite(v) ? Number(v).toFixed(4) : "NA");
-    let html = `
-${tooltipAccent("risk_score", "Risk:", rs(p.risk_score))}<br/>
-${tooltipAccent("hazard_score", "Hazard:", rs(p.hazard_score))}<br/>
-${tooltipAccent("exposure_score", "Exposure:", rs(p.exposure_score))}<br/>
-${tooltipAccent("vulnerability_score", "Vulnerability:", rs(p.vulnerability_score))}<br/>
-${tooltipAccent("resilience_score", "Resilience:", rs(p.resilience_score))}<br/>
-<hr/>
-${tooltipAccent("exposure_score", "Population:", _formatValue(p, "exposure_population", v => Number(v).toLocaleString()))}<br/>
-${tooltipAccent("exposure_score", "Housing units:", _formatValue(p, "exposure_housing", v => Math.round(v).toLocaleString()))}<br/>
-${tooltipAccent("exposure_score", "Building value:", _formatValue(p, "exposure_building_value", v => "$" + Math.round(v).toLocaleString()))}<br/>
-${tooltipAccent("eal_norm", "EAL (USD):", _formatValue(p, "eal", v => "$" + Math.round(v).toLocaleString()))}<br/>
-${tooltipAccent("eal_norm", "EAL (normalized):", _formatValue(p, "eal_norm", v => Number(v).toFixed(4)))}
-`;
+    const scoresHtml = [
+        _tooltipRow("risk_score", "Risk:", _fmtScore2(p.risk_score)),
+        _tooltipRow("hazard_score", "Hazard:", _fmtScore2(p.hazard_score)),
+        _tooltipRow("exposure_score", "Exposure:", _fmtScore2(p.exposure_score)),
+        _tooltipRow("vulnerability_score", "Vulnerability:", _fmtScore2(p.vulnerability_score)),
+        _tooltipRow("resilience_score", "Resilience:", _fmtScore2(p.resilience_score)),
+        _tooltipRow("eal_norm", "EL (eal_norm):", _fmtScore2(p.eal_norm)),
+    ].join("");
+
+    const bigHtml = [
+        _tooltipRow("exposure_score", "Population:", _formatValue(p, "exposure_population", v => Number(v).toLocaleString())),
+        _tooltipRow("exposure_score", "Housing units:", _formatValue(p, "exposure_housing", v => Math.round(v).toLocaleString())),
+        _tooltipRow("exposure_score", "Building value:", _formatValue(p, "exposure_building_value", v => "$" + Math.round(v).toLocaleString())),
+        _tooltipRow("eal_norm", "EAL (USD):", _formatValue(p, "eal", v => "$" + Math.round(v).toLocaleString())),
+    ].join("");
+
+    let html =
+        `<div class="tooltip-grid tooltip-scores">${scoresHtml}</div>` +
+        `<hr/>` +
+        `<div class="tooltip-grid tooltip-big">${bigHtml}</div>`;
 
     if (DEBUG_MODE) {
         const ch = darkestColor("hazard_score");
@@ -167,17 +179,17 @@ ${tooltipAccent("eal_norm", "EAL (normalized):", _formatValue(p, "eal_norm", v =
         html += `
 <hr/>
 <span style="color:${ch}"><b>Feature values (hazard inputs):</b></span><br/>
-<span style="color:${ch}"><b>hazard_wildfire:</b> ${_formatValue(p, "hazard_wildfire", v => Number(v).toFixed(4))}</span><br/>
-<span style="color:${ch}"><b>hazard_vegetation:</b> ${_formatValue(p, "hazard_vegetation", v => Number(v).toFixed(4))}</span><br/>
-<span style="color:${ch}"><b>hazard_forest_distance:</b> ${_formatValue(p, "hazard_forest_distance", v => Number(v).toFixed(4))}</span><br/>
+<span style="color:${ch}"><b>hazard_wildfire:</b> ${_formatValue(p, "hazard_wildfire", v => Number(v).toFixed(2))}</span><br/>
+<span style="color:${ch}"><b>hazard_vegetation:</b> ${_formatValue(p, "hazard_vegetation", v => Number(v).toFixed(2))}</span><br/>
+<span style="color:${ch}"><b>hazard_forest_distance:</b> ${_formatValue(p, "hazard_forest_distance", v => Number(v).toFixed(2))}</span><br/>
 <span style="color:${cv}"><b>Vulnerability inputs:</b></span><br/>
-<span style="color:${cv}"><b>vuln_poverty:</b> ${_formatValue(p, "vuln_poverty", v => Number(v).toFixed(4))}</span><br/>
-<span style="color:${cv}"><b>vuln_elderly:</b> ${_formatValue(p, "vuln_elderly", v => Number(v).toFixed(4))}</span><br/>
-<span style="color:${cv}"><b>vuln_vehicle_access:</b> ${_formatValue(p, "vuln_vehicle_access", v => Number(v).toFixed(4))}</span><br/>
+<span style="color:${cv}"><b>vuln_poverty:</b> ${_formatValue(p, "vuln_poverty", v => Number(v).toFixed(2))}</span><br/>
+<span style="color:${cv}"><b>vuln_elderly:</b> ${_formatValue(p, "vuln_elderly", v => Number(v).toFixed(2))}</span><br/>
+<span style="color:${cv}"><b>vuln_vehicle_access:</b> ${_formatValue(p, "vuln_vehicle_access", v => Number(v).toFixed(2))}</span><br/>
 <span style="color:${cr}"><b>Resilience inputs:</b></span><br/>
-<span style="color:${cr}"><b>res_fire_station_dist:</b> ${_formatValue(p, "res_fire_station_dist", v => Number(v).toFixed(4))}</span><br/>
-<span style="color:${cr}"><b>res_hospital_dist:</b> ${_formatValue(p, "res_hospital_dist", v => Number(v).toFixed(4))}</span><br/>
-<span style="color:${cr}"><b>res_road_access:</b> ${_formatValue(p, "res_road_access", v => Number(v).toFixed(4))}</span>
+<span style="color:${cr}"><b>res_fire_station_dist:</b> ${_formatValue(p, "res_fire_station_dist", v => Number(v).toFixed(2))}</span><br/>
+<span style="color:${cr}"><b>res_hospital_dist:</b> ${_formatValue(p, "res_hospital_dist", v => Number(v).toFixed(2))}</span><br/>
+<span style="color:${cr}"><b>res_road_access:</b> ${_formatValue(p, "res_road_access", v => Number(v).toFixed(2))}</span>
 `;
     }
 
