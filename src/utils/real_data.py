@@ -712,13 +712,23 @@ def compute_hazard_wildfire_real(gdf: pd.DataFrame) -> pd.DataFrame:
     # If the WHP zonal-stats CSV is missing, we still produce a deterministic, explainable
     # hazard proxy based on (a) vegetation cover and (b) proximity to forest/woodland.
     try:
+        from src.utils.calculations_reference import (
+            HAZARD_WILDFIRE_PROXY_FOREST_WEIGHT,
+            HAZARD_WILDFIRE_PROXY_VEG_WEIGHT,
+        )
+
         gdf2 = compute_hazard_vegetation_real(gdf.copy())
         gdf2 = compute_hazard_forest_distance_real(gdf2)
         veg = pd.to_numeric(gdf2.get("hazard_vegetation"), errors="coerce").fillna(0.0)
         prox = pd.to_numeric(gdf2.get("hazard_forest_distance"), errors="coerce").fillna(0.0)
-        proxy = (0.5 * veg + 0.5 * prox).clip(lower=0.0, upper=1.0)
+        wv, wf = HAZARD_WILDFIRE_PROXY_VEG_WEIGHT, HAZARD_WILDFIRE_PROXY_FOREST_WEIGHT
+        proxy = (wv * veg + wf * prox).clip(lower=0.0, upper=1.0)
         gdf["hazard_wildfire"] = proxy.astype(float)
-        return mark_proxy(gdf, "hazard_wildfire", method="0.5*vegetation + 0.5*forest_proximity (OSM proxy)")
+        return mark_proxy(
+            gdf,
+            "hazard_wildfire",
+            method=f"{wv}*vegetation + {wf}*forest_proximity (OSM proxy)",
+        )
     except Exception:
         gdf["hazard_wildfire"] = fallback_uniform(gdf, "hazard_wildfire", reason="No WHP zonal stats CSV found")
         return mark_dummy(gdf, "hazard_wildfire", reason="No WHP zonal stats CSV found")
