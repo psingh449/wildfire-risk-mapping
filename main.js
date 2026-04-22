@@ -55,6 +55,27 @@ function _tooltipRow(metric, label, valueHtml) {
     return `<span class="tooltip-label" style="color:${c}"><b>${label}</b></span><span class="tooltip-value">${valueHtml}</span>`;
 }
 
+function _splitValueAndQualifier(formatted) {
+    const s = String(formatted ?? "");
+    const m = s.match(/^(.*?)(?:\s+(\[[^\]]+\]))\s*$/);
+    if (!m) return { value: s, qual: "" };
+    const value = (m[1] || "").trim();
+    const qual = (m[2] || "").trim();
+    // If it didn't actually end with a bracketed qualifier, keep whole string as value.
+    if (!qual.startsWith("[") || !qual.endsWith("]")) return { value: s, qual: "" };
+    return { value, qual };
+}
+
+function _tooltipRow3(metric, label, formattedValueWithQual) {
+    const c = darkestColor(metric);
+    const parts = _splitValueAndQualifier(formattedValueWithQual);
+    return (
+        `<span class="tooltip-label" style="color:${c}"><b>${label}</b></span>` +
+        `<span class="tooltip-value">${parts.value}</span>` +
+        `<span class="tooltip-qual">${parts.qual}</span>`
+    );
+}
+
 function colorScaleForMetric(metric) {
     const stops = METRIC_COLOR_RAMPS[metric] || METRIC_COLOR_RAMPS.risk_score;
     return d3.scaleSequential(d3.interpolateRgbBasis(stops)).domain([0, 1]);
@@ -176,21 +197,32 @@ function buildTooltip(p) {
         } else {
             html += "No validation issues.<br/>";
         }
-        html += `
-<hr/>
-<span style="color:${ch}"><b>Feature values (hazard inputs):</b></span><br/>
-<span style="color:${ch}"><b>hazard_wildfire:</b> ${_formatValue(p, "hazard_wildfire", v => Number(v).toFixed(2))}</span><br/>
-<span style="color:${ch}"><b>hazard_vegetation:</b> ${_formatValue(p, "hazard_vegetation", v => Number(v).toFixed(2))}</span><br/>
-<span style="color:${ch}"><b>hazard_forest_distance:</b> ${_formatValue(p, "hazard_forest_distance", v => Number(v).toFixed(2))}</span><br/>
-<span style="color:${cv}"><b>Vulnerability inputs:</b></span><br/>
-<span style="color:${cv}"><b>vuln_poverty:</b> ${_formatValue(p, "vuln_poverty", v => Number(v).toFixed(2))}</span><br/>
-<span style="color:${cv}"><b>vuln_elderly:</b> ${_formatValue(p, "vuln_elderly", v => Number(v).toFixed(2))}</span><br/>
-<span style="color:${cv}"><b>vuln_vehicle_access:</b> ${_formatValue(p, "vuln_vehicle_access", v => Number(v).toFixed(2))}</span><br/>
-<span style="color:${cr}"><b>Resilience inputs:</b></span><br/>
-<span style="color:${cr}"><b>res_fire_station_dist:</b> ${_formatValue(p, "res_fire_station_dist", v => Number(v).toFixed(2))}</span><br/>
-<span style="color:${cr}"><b>res_hospital_dist:</b> ${_formatValue(p, "res_hospital_dist", v => Number(v).toFixed(2))}</span><br/>
-<span style="color:${cr}"><b>res_road_access:</b> ${_formatValue(p, "res_road_access", v => Number(v).toFixed(2))}</span>
-`;
+        const hazardDebug = [
+            _tooltipRow3("hazard_score", "hazard_wildfire:", _formatValue(p, "hazard_wildfire", v => Number(v).toFixed(2))),
+            _tooltipRow3("hazard_score", "hazard_vegetation:", _formatValue(p, "hazard_vegetation", v => Number(v).toFixed(2))),
+            _tooltipRow3("hazard_score", "hazard_forest_distance:", _formatValue(p, "hazard_forest_distance", v => Number(v).toFixed(2))),
+        ].join("");
+
+        const vulnDebug = [
+            _tooltipRow3("vulnerability_score", "vuln_poverty:", _formatValue(p, "vuln_poverty", v => Number(v).toFixed(2))),
+            _tooltipRow3("vulnerability_score", "vuln_elderly:", _formatValue(p, "vuln_elderly", v => Number(v).toFixed(2))),
+            _tooltipRow3("vulnerability_score", "vuln_vehicle_access:", _formatValue(p, "vuln_vehicle_access", v => Number(v).toFixed(2))),
+        ].join("");
+
+        const resDebug = [
+            _tooltipRow3("resilience_score", "res_fire_station_dist:", _formatValue(p, "res_fire_station_dist", v => Number(v).toFixed(2))),
+            _tooltipRow3("resilience_score", "res_hospital_dist:", _formatValue(p, "res_hospital_dist", v => Number(v).toFixed(2))),
+            _tooltipRow3("resilience_score", "res_road_access:", _formatValue(p, "res_road_access", v => Number(v).toFixed(2))),
+        ].join("");
+
+        html +=
+            `<hr/>` +
+            `<div class="tooltip-section-title" style="color:${ch}">Feature values (hazard inputs)</div>` +
+            `<div class="tooltip-grid3">${hazardDebug}</div>` +
+            `<div class="tooltip-section-title" style="color:${cv}">Vulnerability inputs</div>` +
+            `<div class="tooltip-grid3">${vulnDebug}</div>` +
+            `<div class="tooltip-section-title" style="color:${cr}">Resilience inputs</div>` +
+            `<div class="tooltip-grid3">${resDebug}</div>`;
     }
 
     return html;
