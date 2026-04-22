@@ -91,12 +91,12 @@ button {
 }
 
 /* Darkest choropleth stop per metric (matches main.js METRIC_COLOR_RAMPS). */
-.metric-accent-el { color: #4575B4; }
-.metric-accent-risk { color: #D73027; }
-.metric-accent-hazard { color: #F46D43; }
-.metric-accent-exposure { color: #FDAE61; }
-.metric-accent-vulnerability { color: #8073AC; }
-.metric-accent-resilience { color: #1A9850; }
+.metric-accent-el { color: #00695C; }
+.metric-accent-risk { color: #B71C1C; }
+.metric-accent-hazard { color: #E65100; }
+.metric-accent-exposure { color: #0369A1; }
+.metric-accent-vulnerability { color: #5B21B6; }
+.metric-accent-resilience { color: #047857; }
 
 .map-stack {
     display: flex;

@@ -30,12 +30,13 @@ function updateBlockHighlight() {
 }
 
 const METRIC_COLOR_RAMPS = {
-    risk_score: ["#FEE0D2", "#FC9272", "#D73027"],
-    hazard_score: ["#FEE8C8", "#FDBB84", "#F46D43"],
-    exposure_score: ["#FFF7BC", "#FEC44F", "#FDAE61"],
-    vulnerability_score: ["#EFEDF5", "#BCBDDC", "#8073AC"],
-    resilience_score: ["#E5F5E0", "#74C476", "#1A9850"],
-    eal_norm: ["#DEEBF7", "#9ECAE1", "#4575B4"],
+    // Option 2 palette (all six distinct)
+    eal_norm: ["#E0F3F0", "#2CA89A", "#00695C"], // teal
+    risk_score: ["#FFEBEE", "#EF5350", "#B71C1C"], // red
+    hazard_score: ["#FFF8E1", "#FFA726", "#E65100"], // orange
+    exposure_score: ["#F0F9FF", "#38BDF8", "#0369A1"], // sky
+    vulnerability_score: ["#FAF5FF", "#A78BFA", "#5B21B6"], // plum
+    resilience_score: ["#ECFDF5", "#34D399", "#047857"], // emerald
 };
 
 /** Darkest stop in each choropleth ramp — used for linked UI/tooltip accents. */
