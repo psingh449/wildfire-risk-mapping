@@ -1,9 +1,9 @@
 {
-  "generated_at_utc": "2026-04-19T06:48:18.332298+00:00",
+  "generated_at_utc": "2026-04-20T08:28:49.471395+00:00",
   "n_blocks": 200,
-  "mean_risk_score": 0.06410274085071525,
-  "std_risk_score": 0.04628388817480492,
-  "total_eal_usd": 7199460.9202660825,
-  "mean_eal_usd": 35997.30460133041,
-  "total_exposure_building_value_usd": 97929517.63302457
+  "mean_risk_score": 0.011714140748474757,
+  "std_risk_score": 0.017718715816585233,
+  "total_eal_usd": 434595219.4389616,
+  "mean_eal_usd": 2172976.097194808,
+  "total_exposure_building_value_usd": 29925274598.83721
 }

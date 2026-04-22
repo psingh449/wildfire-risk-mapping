@@ -3,7 +3,7 @@
   "county_fips": "06007",
   "source_id": "acs_2021_5yr",
   "quantity_id": "median_home_value",
-  "retrieved_at_utc": "2026-04-20T05:07:08.649662+00:00",
+  "retrieved_at_utc": "2026-04-20T07:18:52.500813+00:00",
   "files": {
     "data": "data/real_cache/counties/06007/acs_2021_5yr/median_home_value/data.csv",
     "response": "data/real_cache/counties/06007/acs_2021_5yr/median_home_value/response.json"

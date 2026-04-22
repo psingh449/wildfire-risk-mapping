@@ -447,6 +447,23 @@ def compute_vuln_poverty_real(gdf: pd.DataFrame) -> pd.DataFrame:
     if USE_STORED_REAL_DATA:
         acs = fetch_acs_bg_local("acs_poverty.csv")
         provenance = "local_acs_poverty.csv"
+        # If BG cache is missing (or intentionally skipped because ACS returned all-nulls), prefer tract fallback.
+        if acs is None:
+            try:
+                ref_tr = DatasetRef(county_fips=_get_county_fips(), source_id="acs_2021_5yr", quantity_id="poverty_tract")
+                acs_tr = pd.read_csv(ref_tr.data_path, dtype=str) if ref_tr.data_path.exists() else None
+            except Exception:
+                acs_tr = None
+            if acs_tr is not None:
+                acs_tr["B17001_002E"] = pd.to_numeric(acs_tr.get("B17001_002E"), errors="coerce")
+                acs_tr["B17001_001E"] = pd.to_numeric(acs_tr.get("B17001_001E"), errors="coerce")
+                acs_tr["poverty_rate"] = acs_tr["B17001_002E"] / acs_tr["B17001_001E"]
+                poverty_map = dict(zip(acs_tr["GEOID"].astype(str), acs_tr["poverty_rate"]))
+                gdf["tract"] = tr_col
+                gdf["vuln_poverty"] = pd.to_numeric(gdf["tract"].map(poverty_map), errors="coerce")
+                county_mean = float(pd.to_numeric(acs_tr["poverty_rate"], errors="coerce").dropna().mean()) if acs_tr["poverty_rate"].notna().any() else 0.0
+                gdf["vuln_poverty"] = gdf["vuln_poverty"].fillna(county_mean).clip(lower=0.0)
+                return mark_estimated(gdf, "vuln_poverty", method="ACS tract poverty_rate (cache) -> BG (assign by tract GEOID)")
     else:
         st, co = _get_state_county_codes()
         acs = fetch_acs_blockgroup(["B17001_002E", "B17001_001E", "GEOID"], "block group:*", f"state:{st} county:{co}")
@@ -565,6 +582,24 @@ def compute_vuln_vehicle_access_real(gdf: pd.DataFrame) -> pd.DataFrame:
     if USE_STORED_REAL_DATA:
         acs = fetch_acs_bg_local("acs_vehicle_access.csv")
         provenance = "local_acs_vehicle_access.csv"
+        # If BG cache is missing (or intentionally skipped because ACS returned all-nulls), prefer tract fallback.
+        if acs is None:
+            try:
+                ref_tr = DatasetRef(county_fips=_get_county_fips(), source_id="acs_2021_5yr", quantity_id="vehicle_access_tract")
+                acs_tr = pd.read_csv(ref_tr.data_path, dtype=str) if ref_tr.data_path.exists() else None
+            except Exception:
+                acs_tr = None
+            if acs_tr is not None:
+                for c in ["B08201_002E", "B08201_001E"]:
+                    if c in acs_tr.columns:
+                        acs_tr[c] = pd.to_numeric(acs_tr[c], errors="coerce")
+                acs_tr["vehicle_access"] = 1 - (acs_tr["B08201_002E"] / acs_tr["B08201_001E"])
+                vehicle_map = dict(zip(acs_tr["GEOID"].astype(str), acs_tr["vehicle_access"]))
+                gdf["tract"] = tr_col
+                gdf["vuln_vehicle_access"] = pd.to_numeric(gdf["tract"].map(vehicle_map), errors="coerce")
+                county_mean = float(pd.to_numeric(acs_tr["vehicle_access"], errors="coerce").dropna().mean()) if acs_tr["vehicle_access"].notna().any() else 0.0
+                gdf["vuln_vehicle_access"] = gdf["vuln_vehicle_access"].fillna(county_mean).clip(lower=0.0, upper=1.0)
+                return mark_estimated(gdf, "vuln_vehicle_access", method="ACS tract vehicle_access (cache) -> BG (assign by tract GEOID)")
     else:
         fields = ["B08201_002E", "B08201_001E", "GEOID"]
         st, co = _get_state_county_codes()

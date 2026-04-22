@@ -295,8 +295,20 @@ def import_acs_poverty(county_fips: str, *, refresh: bool) -> None:
             + df["block group"].astype(str).str.strip()
         )
     _zfill_geoid_12(df, "GEOID")
-    ref = DatasetRef(county_fips=county_fips, source_id=SOURCE_ACS_2021_5YR, quantity_id=Q_POVERTY)
-    _write_if_needed(ref, df, response_json=raw, request={"api": resp.url.split("?")[0], "params": params}, overwrite=refresh)
+    # Census API currently returns null for these measures at block-group geography (for many counties).
+    # Treat an all-null response as "not available at this grain" rather than caching misleading BG data.
+    if not _all_null_measures(df, ["B17001_002E", "B17001_001E"]):
+        ref = DatasetRef(county_fips=county_fips, source_id=SOURCE_ACS_2021_5YR, quantity_id=Q_POVERTY)
+        _write_if_needed(ref, df, response_json=raw, request={"api": resp.url.split("?")[0], "params": params}, overwrite=refresh)
+    else:
+        # If a previous run wrote an all-null BG dataset, remove it so downstream code won't mistake it for usable data.
+        ref = DatasetRef(county_fips=county_fips, source_id=SOURCE_ACS_2021_5YR, quantity_id=Q_POVERTY)
+        for p in (ref.data_path, ref.manifest_path, ref.response_path):
+            try:
+                if p.exists():
+                    p.unlink()
+            except Exception:
+                pass
 
     # If ACS returns all-null estimates at block-group level, also cache tract-level as a defensible fallback.
     if _all_null_measures(df, ["B17001_002E", "B17001_001E"]):
@@ -359,8 +371,20 @@ def import_acs_vehicle_access(county_fips: str, *, refresh: bool) -> None:
         + df["block group"].astype(str).str.strip()
     )
     _zfill_geoid_12(df, "GEOID")
-    ref = DatasetRef(county_fips=county_fips, source_id=SOURCE_ACS_2021_5YR, quantity_id=Q_VEHICLE_ACCESS)
-    _write_if_needed(ref, df, response_json=raw, request={"api": resp.url.split("?")[0], "params": params}, overwrite=refresh)
+    # Census API currently returns null for these measures at block-group geography (for many counties).
+    # Treat an all-null response as "not available at this grain" rather than caching misleading BG data.
+    if not _all_null_measures(df, ["B08201_002E", "B08201_001E"]):
+        ref = DatasetRef(county_fips=county_fips, source_id=SOURCE_ACS_2021_5YR, quantity_id=Q_VEHICLE_ACCESS)
+        _write_if_needed(ref, df, response_json=raw, request={"api": resp.url.split("?")[0], "params": params}, overwrite=refresh)
+    else:
+        # If a previous run wrote an all-null BG dataset, remove it so downstream code won't mistake it for usable data.
+        ref = DatasetRef(county_fips=county_fips, source_id=SOURCE_ACS_2021_5YR, quantity_id=Q_VEHICLE_ACCESS)
+        for p in (ref.data_path, ref.manifest_path, ref.response_path):
+            try:
+                if p.exists():
+                    p.unlink()
+            except Exception:
+                pass
 
     # If ACS returns all-null estimates at block-group level, also cache tract-level as a defensible fallback.
     if _all_null_measures(df, ["B08201_002E", "B08201_001E"]):
