@@ -83,9 +83,33 @@ function _splitValueAndQualifier(formatted) {
 }
 
 
-function colorScaleForMetric(metric) {
+function _computeDomainForMetric(metric, features) {
+    // Default: metrics are already normalized to [0,1] in the pipeline.
+    if (metric !== "risk_score") return [0, 1];
+    // Risk can be very small due to multiplicative formula; for visualization we min-max scale within the selected county.
+    const vals = [];
+    for (const f of features || []) {
+        const v = f && f.properties ? f.properties[metric] : null;
+        const n = Number(v);
+        if (Number.isFinite(n)) vals.push(n);
+    }
+    if (!vals.length) return [0, 1];
+    let min = Math.min(...vals);
+    let max = Math.max(...vals);
+    if (!Number.isFinite(min) || !Number.isFinite(max)) return [0, 1];
+    if (min === max) {
+        // Avoid degenerate scale; keep a tiny span.
+        const eps = min === 0 ? 1e-6 : Math.abs(min) * 0.01;
+        min = Math.max(0, min - eps);
+        max = max + eps;
+    }
+    return [min, max];
+}
+
+function colorScaleForMetric(metric, features) {
     const stops = METRIC_COLOR_RAMPS[metric] || METRIC_COLOR_RAMPS.risk_score;
-    return d3.scaleSequential(d3.interpolateRgbBasis(stops)).domain([0, 1]);
+    const domain = _computeDomainForMetric(metric, features);
+    return d3.scaleSequential(d3.interpolateRgbBasis(stops)).domain(domain);
 }
 
 function _qualityFor(p, key) {
@@ -294,20 +318,22 @@ function renderAll() {
     const { width: mapW, height: mapH } = getCellDimensions();
     fitProjectionToGeo(mapW, mapH);
     hoveredBlockId = null;
+    const features = (geoData && geoData.features) ? geoData.features : [];
 
     for (const { panelId, metric } of MAP_PANELS) {
         const mapSvg = d3.select(`#${panelId} svg.map-svg`);
         const legendSvg = d3.select(`#${panelId} svg.legend-svg`);
         if (mapSvg.empty()) continue;
 
-        const color = colorScaleForMetric(metric);
+        const domain = _computeDomainForMetric(metric, features);
+        const color = colorScaleForMetric(metric, features);
         const gradientId = `legend-gradient-${metric}`;
 
         mapSvg.selectAll("*").remove();
         if (!legendSvg.empty()) legendSvg.selectAll("*").remove();
 
         mapSvg.selectAll("path")
-            .data((geoData && geoData.features) ? geoData.features : [])
+            .data(features)
             .join("path")
             .attr("class", "block-feature")
             .attr("data-block-id", d => blockKeyFromProperties(d.properties))
@@ -337,7 +363,7 @@ function renderAll() {
             .enter()
             .append("stop")
             .attr("offset", d => d * 100 + "%")
-            .attr("stop-color", d => color(d));
+            .attr("stop-color", d => color(domain[0] + d * (domain[1] - domain[0])));
 
         const legendGroup = legendSvg.append("g")
             .attr("transform", `translate(${gx}, 8)`);
@@ -348,12 +374,18 @@ function renderAll() {
             .style("fill", `url(#${gradientId})`);
 
         const scale = d3.scaleLinear()
-            .domain([0, 1])
+            .domain(domain)
             .range([0, legendWidth]);
+
+        const tickFmt = (() => {
+            // For tiny risk ranges, show more precision; otherwise keep concise.
+            if (metric === "risk_score" && domain[1] <= 0.1) return d3.format(".3f");
+            return d3.format(".2f");
+        })();
 
         const axis = d3.axisBottom(scale)
             .ticks(5)
-            .tickFormat(d3.format(".1f"));
+            .tickFormat(tickFmt);
 
         const axisG = legendGroup.append("g")
             .attr("transform", `translate(0,${legendBarH})`);
