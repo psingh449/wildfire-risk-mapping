@@ -22,8 +22,8 @@ The final output is a **Risk Score** (0-1 range) and **Expected Annual Loss (EAL
 - Weights and min/max bounds are read from `calculations.csv` at runtime for diagnostics; shared numeric constants (e.g. hazard wildfire proxy weights) live in `src/utils/calculations_reference.py` alongside the CSV
 - Pipeline validation logs **warnings** (never fails the build) if an export is missing columns that `calculations.csv` marks as `exists_in_code=Yes`
 - Comprehensive validation with 8 quality check metrics
-- Fallback/dummy data generation when APIs fail
-- Full provenance tracking (all data marked REAL or DUMMY)
+- Fallback and synthetic data when live fetches or files are missing
+- Full provenance tracking with quality tiers (`REAL` / `ESTIMATED` / `PROXY` / `MISSING`); the legacy label `DUMMY` may still appear in older runs
 
 **System Components:**
 
@@ -33,6 +33,95 @@ The final output is a **Risk Score** (0-1 range) and **Expected Annual Loss (EAL
 | **Exposure** | People and assets at risk | Population count, housing units, building value | Census data, property assessments, infrastructure |
 | **Vulnerability** | Social fragility & sensitivity | Poverty rate, elderly percentage, vehicle access | ACS socioeconomic data, demographic characteristics |
 | **Resilience** | Response and recovery capacity | Fire station proximity, hospital access, road connectivity | Emergency services locations, network access |
+
+### 1.1.1 How each value is built (plain language)
+
+The following list follows every numbered row in [`calculations.csv`](calculations.csv). A **small area** is the same neighborhood-sized polygon used throughout the map and export file (U.S. Census *block group*). Words like “multiply” and “scale” are everyday math, not a particular software.
+
+**Hazard — what physical fire risk looks like in the place**
+
+1. **Wildfire hazard (fuel map or backup blend).** We average the national “wildfire fuel” map across your small area. If that map is missing, we use a stand-in that mixes how wooded the area is with how close homes are to forest-like land. If nothing is available, the value is left blank in the data.
+2. **Vegetation and brush as fuel (stand-in from open map data).** We measure how much of the small area is covered by tree- or forest-like land from an open, volunteer-maintained map when that table exists; otherwise a placeholder is used. This is a **proxy**, not a satellite land cover product.
+3. **Distance to forest-like land.** We use how many miles or kilometers the center of the area is from the nearest patch of forest-like land, then turn that into a 0–1 “closeness to fuel” score (closer to fuel usually means a higher number here).
+4. **Combined hazard score.** The three pieces above are each scaled to the same 0–1 range across all small areas in the run, then combined with equal weighting by default (one-third each). The weights can be read from the tracking sheet; see the technical table below.
+
+**Exposure — who and what is in the way**
+
+5. **Population count.** The official once-a-decade head count of people in that small area.
+6. **Housing unit count.** How many homes and apartments the census records for the same small area.
+7. **Total home value (rough dollar exposure).** We multiply the number of homes by a typical home value for the surrounding neighborhood area. If a typical value is missing for a pocket, the county’s average is used so the number does not collapse to zero. Quality flags mark “real,” “estimate,” or “missing.”
+8. **Combined exposure score.** The three items above (population, homes, and total home value) are scaled to 0–1 and then averaged with default equal weights, similar to hazard.
+
+**Vulnerability — who may have a harder time in an emergency**
+
+9. **Poverty share.** The share of people in poverty for the small area, using the latest small-area social survey. When the survey does not release that detail for every tiny zone, a slightly larger **tract** neighborhood is used and the same value is shared across the smaller areas that sit in it, marked as an **estimate.**
+10. **Older adult share.** The share of people roughly 65 and older, with missing pockets filled from the county average so gaps do not break the map.
+11. **Vehicle access (then flipped in the final blend).** We start from the share of homes that have a vehicle available. Before building the overall vulnerability score, the direction is adjusted so that **less** access to a vehicle counts as **higher** vulnerability, because evacuating is harder when fewer people have a car. Tract-based sharing applies when the finest geography is not published, same as poverty.
+12. **Combined vulnerability score.** The three pieces above are scaled to 0–1 and combined with default equal weighting, after the direction fix for the vehicle item.
+
+**Resilience — help that is close by**
+
+13. **Fire station nearness.** From distance to the nearest fire station, we form a 0–1 “how close is help” score.
+14. **Hospital nearness.** Same idea for hospitals: closer facilities yield a higher score in this building block of resilience.
+15. **Road access.** We relate total road length inside the small area to its land area to describe how “connected” the street network is, scaled to 0–1.
+16. **Combined resilience score.** The three nearness/road items are scaled and averaged with default equal weighting. Higher here means *more* capacity to respond, which *lowers* overall risk in the final formula below.
+
+**Model outputs**
+
+17. **Overall risk score.** The four combined scores (hazard, exposure, vulnerability, resilience) are multiplied as: *hazard × exposure × vulnerability × (one minus resilience)*. The last part means: more resilience *reduces* risk. The result is on a 0–1 scale and can be very small in practice because of multiplying several fractions.
+18. **Expected annual loss in dollars (EAL).** The overall risk score is multiplied by the total home value proxy in row 7 to give a rough dollar “expected” loss per year for that place—not a real insurance quote, but a way to rank economic exposure.
+19. **EAL for coloring the map (normalized).** The dollar amounts are re-scaled from lowest to highest across *all* small areas in the run so the “Expected annual loss” map shows contrast. This is only for the dollar-loss picture; the **Risk** map uses a different display trick (see §6.1).
+
+**Validation and quality (mostly for analysis, not the main public labels)**
+
+20. **Which county a small area belongs to.** A simple link from each polygon to a county so results can be rolled up to county level.
+21. **Comparison to a national government risk index (when a separate file is present).** Puts county results next to a federal benchmark, when available, and records how well they line up.
+22. **County average risk.** The average of all small-area risk scores inside the county.
+23. **County total EAL.** The sum of all small-area EAL values inside the county.
+24. **Overlap with past fires (when perimeters are present).** Checks whether high-risk areas line up with where fires actually burned, using a simple overlap summary.
+25. **Discrimination of risk vs. fire history (when labels exist).** A standard “did our ranking separate burned and unburned” score when such labels are available.
+26. **Risk concentration.** Describes whether risk is spread out or piled into a few places (e.g. top share of total risk).
+27. **Inequality of risk (Gini).** Summarizes how unequal the distribution of risk is across all small areas.
+
+**How to read the map and stars.** A star in the app usually means a number is an **estimate** or a **stand-in (proxy)**, not the primary data source. Debug mode in the app can add short text tags. **Risk** map colors are stretched from the lowest to the highest *risk* **inside the selected county** so you can see differences, while the number in the readout is unchanged.
+
+### 1.1.2 Technical reference (one row per `calculations.csv` line)
+
+Each row lists the **GeoJSON property** name, the **calculation** (as implemented in code, not a prose rewrite of the whole pipeline), and where to look first. Weights in composite scores are taken from `weight_group` / `weight` in `calculations.csv` and applied to `*_norm` columns after per-run min–max (`src/features/build_features.py:build_features`).
+
+| # | `geojson_property` | What the code does | Key implementation |
+|---|--------------------|--------------------|--------------------|
+| 1 | `hazard_wildfire` | Zonal mean of WHP raster, else `0.5*norm(hazard_vegetation) + 0.5*norm(hazard_forest_distance)`; else missing | `compute_hazard_wildfire*`, `src/utils/real_data.py` |
+| 2 | `hazard_vegetation` | OSM-proxy vegetation fraction from `nlcd/vegetation` cache or legacy paths | `compute_hazard_vegetation_real` |
+| 3 | `hazard_forest_distance` | `1/(1+d_km)` from forest distance table | `compute_hazard_forest_distance_real` |
+| 4 | `hazard_score` | `Σ w_i * feature_norm_i` over `hazard_wildfire_norm`, `hazard_vegetation_norm`, `hazard_forest_distance_norm` | `build_features:weighted_sum` |
+| 5 | `exposure_population` | Census 2020 PL `P1_001N` at block group | `compute_exposure_population_real` |
+| 6 | `exposure_housing` | Census 2020 PL `H1_001N` at block group | `compute_exposure_housing_real` |
+| 7 | `exposure_building_value` | `exposure_housing * B25077_001E` (BG), county-mean impute missing medians | `compute_exposure_building_value_real` |
+| 8 | `exposure_score` | Weighted sum of `exposure_population_norm`, `exposure_housing_norm`, `exposure_building_value_norm` | `build_features:weighted_sum` |
+| 9 | `vuln_poverty` | `B17001_002E/B17001_001E` at BG, else tract `poverty_tract` assigned by tract GEOID | `compute_vuln_poverty_real`, `scripts/real_import.py:import_acs_poverty` |
+| 10 | `vuln_elderly` | 65+ share from `B01001` bands; county-mean fill | `compute_vuln_elderly_real` |
+| 11 | `vuln_vehicle_access` | `1 - B08201_002E/B08201_001E` (vehicle-availability); tract fallback; then `vuln_vehicle_access_norm = 1 - norm` before vulnerability score | `compute_vuln_vehicle_access_real` |
+| 12 | `vulnerability_score` | Weighted sum of `vuln_poverty_norm`, `vuln_elderly_norm`, `vuln_vehicle_access_norm` | `build_features:weighted_sum` |
+| 13 | `res_fire_station_dist` | `1/(1+d_km)` to nearest fire station from cache | `compute_res_fire_station_dist_real` |
+| 14 | `res_hospital_dist` | `1/(1+d_km)` to nearest hospital from cache | `compute_res_hospital_dist_real` |
+| 15 | `res_road_access` | `road_length/area` from OSM-derived table, scaled 0–1 in feature layer | `compute_res_road_access_real` |
+| 16 | `resilience_score` | Weighted sum of `res_fire_station_dist_norm`, `res_hospital_dist_norm`, `res_road_access_norm` | `build_features:weighted_sum` |
+| 17 | `risk_score` | `hazard_score * exposure_score * vulnerability_score * (1 - resilience_score)` clipped to `[0,1]` | `src/models/risk_model.py:compute_risk` |
+| 18 | `eal` | `risk_score * exposure_building_value` | `src/models/risk_model.py` |
+| 19 | `eal_norm` | min–max of `eal` across all rows in the processed frame | `src/models/risk_model.py` (EAL map uses `eal_norm` in `main.js`) |
+| 20 | `block_to_county_mapping` | Aggregated / mapping field for block→county | `src/validation/metrics.py:apply_validation_metrics` |
+| 21 | `fema_nri_comparison` | Object with `corr`/`rmse` vs. optional FEMA NRI file | `src/validation/metrics.py` |
+| 22 | `county_risk` | e.g. `mean(risk_score)` by `county_fips` | `src/validation/metrics.py` |
+| 23 | `county_eal` | e.g. `sum(eal)` by `county_fips` | `src/validation/metrics.py` |
+| 24 | `fire_overlap_ratio` | Burn overlap / decile test vs. MTBS (if perimeters) | `compute_historical_fire_overlap` |
+| 25 | `auc_score` | ROC AUC of `risk_score` vs. `_burned_label` when available | `compute_auc_fire_prediction` |
+| 26 | `risk_concentration` | Top-decile / concentration metric on `risk_score` | `compute_risk_concentration` |
+| 27 | `gini_risk` | Gini of `risk_score` | `compute_lorenz_curve` |
+
+**Provenance and quality** — For each primary measure (rows 1–3, 5–7, 9–11, 13–15) the export includes paired fields ending in `_source` and `_provenance` (see the CSV columns `quality_tiers`, `quality_field`, and `provenance_field`). Tiers use `REAL`, `ESTIMATED`, `PROXY`, or `MISSING` as in `calculations.csv`. UI formatting: `main.js` (`_formatValue` / `_debugTag`).
+
+**Cache layout** — Per-county files live under `data/real_cache/counties/{county_fips}/…` (see the `cache_primary` column in `calculations.csv`). The importer is `scripts/real_import.py`; batch prefetch for `prefetched_county_ids` in `data/county_manifest.json` is `scripts/prefetch_real_cache_prefetch_counties.py`.
 
 ### 1.2 Quick Start (6 Steps)
 
@@ -243,11 +332,9 @@ def run():
 3. **Expected Annual Loss (EAL):** Financial impact
    - `eal = risk_score × exposure_building_value`
    - `exposure_building_value = housing_units × ACS median home value (B25077) at block group`
-   - Represents expected monetary damage per year (USD); maps use **`eal_norm`** (min–max of `eal`)
+   - Represents expected monetary damage per year (USD)
 
-4. **Normalized Metrics:** For visualization
-   - `risk_score_norm` = min-max normalized across all blocks
-   - `eal_norm` = min-max normalized across all blocks
+4. **Normalized metrics for display:** `eal_norm` = min–max of `eal` over all block groups in the run (export column). The **Risk** choropleth in `index.html` / `main.js` does *not* add a `risk_score_norm` column: it only scales the **color** of `risk_score` between the min and max **within the currently loaded county** so very small but unequal `risk_score` values remain visible. Tooltip values stay as raw `risk_score`.
 
 **Files involved:**
 - `src/pipeline/steps.py:step_model()`
@@ -356,7 +443,7 @@ Runtime Behavior (Actual calculations)
 | res_road_access | calculations.csv row 15 | `src/features/resilience.py` | OSM data |
 | hazard_score | calculations.csv row 4 | `src/features/build_features.py` | Composite |
 | exposure_score | calculations.csv row 8 | `src/features/build_features.py` | Composite |
-| vuln_score | calculations.csv row 12 | `src/features/build_features.py` | Composite |
+| vulnerability_score | calculations.csv row 12 | `src/features/build_features.py` | Composite |
 | resilience_score | calculations.csv row 16 | `src/features/build_features.py` | Composite |
 | risk_score | calculations.csv row 17 | `src/models/risk_model.py` | Model |
 | eal | calculations.csv row 18 | `src/models/risk_model.py` | Model |
@@ -868,14 +955,14 @@ Marked: exposure_population_source = "DUMMY"
 | 9 | vuln_poverty | Vulnerability | weight: 0.333, min/max | source_url, API | Direct feature |
 | 10 | vuln_elderly | Vulnerability | weight: 0.333, min/max | source_url, API | Direct feature |
 | 11 | vuln_vehicle_access | Vulnerability | weight: 0.333, min/max | source_url, API | Direct feature |
-| 12 | vuln_score | Vulnerability | weights: 0.333 ea | formula | Composite |
+| 12 | vulnerability_score | Vulnerability | weights: 0.333 ea | formula | Composite |
 | 13 | res_fire_station_dist | Resilience | weight: 0.333, min/max | source_url | Direct feature |
 | 14 | res_hospital_dist | Resilience | weight: 0.333, min/max | source_url | Direct feature |
 | 15 | res_road_access | Resilience | weight: 0.333, min/max | source_url, API | Direct feature |
 | 16 | resilience_score | Resilience | weights: 0.333 ea | formula | Composite |
 | 17 | risk_score | Model | min/max | formula | Output metric |
 | 18 | eal | Model | min/max | formula | Output metric |
-| 19 | eal_normalized | Model | min/max | formula | Output metric |
+| 19 | eal_norm | Model | min/max of `eal` in run | formula | Output metric (EAL map) |
 | 20-27 | validation_* | Validation | — | formula | Quality checks |
 
 ### 4.6 Risk Score Calculation Formula
@@ -953,28 +1040,13 @@ eal = 0.2016 × $30,000,000
 Located in: `src/utils/validator.py`
 
 #### 1. validate_columns()
-**Purpose:** Check all required features exist with correct column names
+**Purpose:** Check that base feature columns (before composites) are present; log warnings, do not abort the run.
 
-**Implementation:**
-```python
-def validate_columns(gdf):
-    required_columns = [
-        'hazard_wildfire', 'hazard_vegetation', 'hazard_forest_distance', 'hazard_score',
-        'exposure_population', 'exposure_housing', 'exposure_building_value', 'exposure_score',
-        'vuln_poverty', 'vuln_elderly', 'vuln_vehicle_access', 'vuln_score',
-        'res_fire_station_dist', 'res_hospital_dist', 'res_road_access', 'resilience_score',
-        'risk_score', 'eal'
-    ]
-    missing = [col for col in required_columns if col not in gdf.columns]
-    if missing:
-        raise ValueError(f"Missing columns: {missing}")
-    return True
-```
+**Implementation (see `src/utils/validator.py:validate_columns`):** Missing entries are reported with `logger.warning` against `REQUIRED_COLUMNS` (the 12 direct inputs: hazard, exposure, vulnerability, resilience sub-features). Composite scores, `risk_score`, and `eal` are covered by later checks in `CRITICAL_FIELDS` / `run_all_validations` as applicable.
 
 **What it checks:**
-- All 17 features present
-- All 4 component scores present
-- Risk and EAL columns exist
+- All raw input features that downstream steps expect
+- (Separately) provenance, ranges, and diagnostics in `run_all_validations`
 
 #### 2. validate_nulls()
 **Purpose:** Check for missing/null values that would indicate incomplete computation
@@ -1274,7 +1346,7 @@ import geopandas as gpd
 gdf = gpd.read_file('data/processed/blocks.geojson')
 
 # Run basic checks
-print(validate_columns(gdf))      # Check all features exist
+validate_columns(gdf)             # logs warnings if base feature columns are missing
 print(validate_nulls(gdf))        # Check no nulls
 print(validate_ranges(gdf))       # Check 0-1 ranges
 print(validate_types(gdf))        # Check data types
@@ -1294,34 +1366,31 @@ print(f"Gini Coefficient: {gini:.3f}")
 
 ## 6. Visualization, Frontend, and Reference
 
-### 6.1 Color Palette and Choropleth Ramps
+### 6.1 Color palette and choropleth ramps (Option 2, six distinct hues)
 
-The frontend should use a distinct, semantically meaningful color for each major layer so users can easily distinguish between wildfire threat, human consequence, and recovery capacity.
+`main.js` defines `METRIC_COLOR_RAMPS` with three stops each; `d3.interpolateRgbBasis` spans low → high. The **EAL** and **Risk** result panels use a thicker stroke; the four **component** panels (Hazard, Exposure, Vulnerability, Resilience) use a dotted border.
 
-| Layer | Color Name | Primary Hex | Low (0) | Mid (0.5) | High (1.0) | Rationale |
-|-------|-----------|---|---|---|---|-----------|
-| **Risk** | Crimson Red | <span style="background-color:#D73027;color:#D73027;">█</span> `#D73027` | <span style="background-color:#FEE0D2;color:#FEE0D2;">█</span> `#FEE0D2` | <span style="background-color:#FC9272;color:#FC9272;">█</span> `#FC9272` | <span style="background-color:#D73027;color:#D73027;">█</span> `#D73027` | Primary danger signal; highest visual weight |
-| **Hazard** | Burnt Orange | <span style="background-color:#F46D43;color:#F46D43;">█</span> `#F46D43` | <span style="background-color:#FEE8C8;color:#FEE8C8;">█</span> `#FEE8C8` | <span style="background-color:#FDBB84;color:#FDBB84;">█</span> `#FDBB84` | <span style="background-color:#F46D43;color:#F46D43;">█</span> `#F46D43` | Fire, heat, ignition intuition |
-| **Exposure** | Golden Orange | <span style="background-color:#FDAE61;color:#FDAE61;">█</span> `#FDAE61` | <span style="background-color:#FFF7BC;color:#FFF7BC;">█</span> `#FFF7BC` | <span style="background-color:#FEC44F;color:#FEC44F;">█</span> `#FEC44F` | <span style="background-color:#FDAE61;color:#FDAE61;">█</span> `#FDAE61` | Population and asset presence; warmth |
-| **Vulnerability** | Purple | <span style="background-color:#8073AC;color:#8073AC;">█</span> `#8073AC` | <span style="background-color:#EFEDF5;color:#EFEDF5;">█</span> `#EFEDF5` | <span style="background-color:#BCBDDC;color:#BCBDDC;">█</span> `#BCBDDC` | <span style="background-color:#8073AC;color:#8073AC;">█</span> `#8073AC` | Social fragility; distinct from hazard/exposure |
-| **Resilience** | Teal Green | <span style="background-color:#1A9850;color:#1A9850;">█</span> `#1A9850` | <span style="background-color:#E5F5E0;color:#E5F5E0;">█</span> `#E5F5E0` | <span style="background-color:#74C476;color:#74C476;">█</span> `#74C476` | <span style="background-color:#1A9850;color:#1A9850;">█</span> `#1A9850` | Response and recovery capacity; positive (green) |
-| **Expected Annual Loss (EAL)** | Deep Blue | <span style="background-color:#4575B4;color:#4575B4;">█</span> `#4575B4` | <span style="background-color:#DEEBF7;color:#DEEBF7;">█</span> `#DEEBF7` | <span style="background-color:#9ECAE1;color:#9ECAE1;">█</span> `#9ECAE1` | <span style="background-color:#4575B4;color:#4575B4;">█</span> `#4575B4` | Economic/financial interpretation |
-| **Diagnostics / Missing** | Neutral Gray | <span style="background-color:#9E9E9E;color:#9E9E9E;">█</span> `#9E9E9E` | — | — | — | Non-data or warning state; neutral |
+| Map panel | `metric` in code | Color stops (low → mid → high) | Notes |
+|-----------|------------------|-------------------------------|--------|
+| **Expected annual loss (normalized)** | `eal_norm` | `#E0F3F0` → `#2CA89A` → `#00695C` | Uses export column `eal_norm` (min–max of `eal` *within the run*; domain for color is \([0,1]\) on that scale). |
+| **Risk** | `risk_score` | `#FFEBEE` → `#EF5350` → `#B71C1C` | **Display domain:** `main.js` sets the color *domain* to \([\min, \max]\) of `risk_score` **in the current county** so small values still show contrast. Tooltip and stored value remain raw `risk_score`. |
+| **Hazard** | `hazard_score` | `#FFF8E1` → `#FFA726` → `#E65100` | Domain \([0,1]\) for the composite score. |
+| **Exposure** | `exposure_score` | `#F0F9FF` → `#38BDF8` → `#0369A1` | Domain \([0,1]\). |
+| **Vulnerability** | `vulnerability_score` | `#FAF5FF` → `#A78BFA` → `#5B21B6` | Domain \([0,1]\). |
+| **Resilience** | `resilience_score` | `#ECFDF5` → `#34D399` → `#047857` | Domain \([0,1]\). |
 
-### 6.2 Visualization Guidelines
+Tooltip and legend accents use the **darkest** stop in each ramp (`darkestColor(metric)`).
 
-**Color Usage:**
-- Keep `risk` visually strongest using red (primary layer)
-- Keep `hazard` orange rather than red so it's distinguishable from overall `risk`
-- Keep `resilience` green because higher resilience reduces overall risk
-- Use the same base hue for legends, layer buttons, tooltips, and map ramps
+### 6.2 Visualization guidelines
 
-**Interactive Features:**
-- **Layer toggle:** Allow users to switch between Risk, Hazard, Exposure, Vulnerability, Resilience, EAL
-- **Hover tooltip:** Show block details (values, data sources, diagnostics)
-- **Debug mode:** Option to show provenance and diagnostics
-- **Zoom levels:** Aggregate to county at low zoom, show blocks at high zoom
-- **Export:** Download filtered blocks as GeoJSON or CSV
+**Color usage**
+- **Risk** uses red, **Hazard** uses orange, **EAL** uses teal, **Exposure** sky blue, **Vulnerability** purple, **Resilience** emerald so layers are not confused.
+- Provenance/quality: stars and `?debug=1` URL flag follow rules in `calculations.csv` and `main.js` (see §1.1.1–1.1.2).
+
+**Interactive behavior**
+- Six linked panels: hover highlights the same `block_id` / `GEOID` across all maps.
+- **Debug mode** (`?debug=1`): extra bracketed tags on some lines.
+- **County selection:** prefetched counties from `data/county_manifest.json` render **bold** in the UI.
 
 ### 6.3 Data Dictionary and Economic Model
 
@@ -1490,8 +1559,7 @@ python -m http.server 8000
 # Run tests
 pytest tests/ --maxfail=10 --disable-warnings -q
 
-# Generate documentation
-cd docs && make html
+# Optional: metric dependency source (Mermaid) at docs/calculations_diagram-v1.mmd
 
 # View output
 cat data/processed/blocks.geojson | jq '.features[0]'
@@ -1507,6 +1575,6 @@ For bug reports and questions:
 
 ---
 
-**Last Updated:** 2024  
-**Version:** 1.0  
-**Status:** Complete Documentation
+**Last updated:** April 2026  
+**Version:** 1.1 (aligned with `calculations.csv` and Option 2 UI)  
+**Status:** Living documentation; prefer [`calculations.csv`](calculations.csv) for exact formulas and cache paths

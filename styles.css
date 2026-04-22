@@ -112,14 +112,27 @@ button {
     height: auto;
     max-height: 220px;
     background: #fff;
+    touch-action: none;
+    cursor: grab;
+    user-select: none;
+}
+.map-cell .map-svg:active {
+    cursor: grabbing;
+}
+
+/* Keep stroke width readable when zoomed in (map layer is scale-transformed). */
+.map-cell .map-svg g.map-zoom-layer path {
+    vector-effect: non-scaling-stroke;
 }
 
 .map-cell .legend-svg {
     display: block;
     width: 100%;
     height: auto;
-    max-height: 48px;
+    max-height: 56px;
     background: transparent;
+    /* Allow d3 axis labels at min/max to extend past the bar without clipping. */
+    overflow: visible;
 }
 
 .tooltip {

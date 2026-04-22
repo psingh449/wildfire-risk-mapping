@@ -45,10 +45,54 @@ function darkestColor(metric) {
     return ramp[ramp.length - 1];
 }
 
-function _fmtScore2(v) {
+/**
+ * Main tooltip line for a panel metric: one decimal for most maps; extra digits for
+ * very small risk scores.
+ */
+function _fmtPanelTooltip(v, metric) {
     const n = Number(v);
     if (!Number.isFinite(n)) return "NA";
-    return n.toFixed(2);
+    if (metric === "risk_score") {
+        if (n < 0.01) return n.toFixed(3);
+        if (n < 0.1) return n.toFixed(2);
+    }
+    return n.toFixed(1);
+}
+
+/** Legend axis: one decimal (non-risk); risk uses more decimals when the county range is small. */
+function legendTickFormatForMetric(metric, domain) {
+    if (metric !== "risk_score") return d3.format(".1f");
+    const lo = domain[0];
+    const hi = domain[1];
+    const span = Number(hi) - Number(lo);
+    const m = Math.max(Math.abs(Number(lo)), Math.abs(Number(hi)), span, 1e-9);
+    if (m < 0.01) return d3.format(".4f");
+    if (m < 0.1) return d3.format(".3f");
+    if (m < 0.5) return d3.format(".2f");
+    return d3.format(".1f");
+}
+
+/**
+ * d3's default "nice" ticks often omit the exact data min/max. Always merge endpoints
+ * so the legend matches the color ramp (notably the risk map's county window).
+ */
+function legendTickValues(domain, maxInnerTicks = 4) {
+    const lo = domain[0];
+    const hi = domain[1];
+    if (!Number.isFinite(lo) || !Number.isFinite(hi)) return [];
+    if (lo === hi) return [lo];
+    const inner = d3.ticks(lo, hi, maxInnerTicks);
+    const raw = [lo, ...inner, hi].filter((x) => Number.isFinite(x));
+    raw.sort((a, b) => a - b);
+    const span = Math.max(hi - lo, Number.EPSILON);
+    const dedupeEps = Math.max(1e-9, span * 1e-6);
+    const out = [raw[0]];
+    for (let i = 1; i < raw.length; i++) {
+        if (raw[i] - out[out.length - 1] > dedupeEps) {
+            out.push(raw[i]);
+        }
+    }
+    return out;
 }
 
 function _tooltipRowCols(metric, label, valueInner, qualInner, labelBlack) {
@@ -177,6 +221,36 @@ function _formatValue(p, key, fmt) {
 const projection = d3.geoMercator();
 const path = d3.geoPath().projection(projection);
 
+/** Shared across all six maps; use identity after each county load. */
+let mapZoomTransform = d3.zoomIdentity;
+let _mapZoomSyncing = false;
+
+const mapZoom = d3
+    .zoom()
+    .scaleExtent([0.35, 48])
+    .on("zoom", (event) => {
+        if (_mapZoomSyncing) return;
+        mapZoomTransform = event.transform;
+        d3.selectAll("svg.map-svg g.map-zoom-layer").attr("transform", mapZoomTransform);
+        _mapZoomSyncing = true;
+        d3.selectAll("svg.map-svg").each(function () {
+            d3.select(this).call(mapZoom.transform, mapZoomTransform);
+        });
+        _mapZoomSyncing = false;
+    });
+
+let _mapZoomInstalled = false;
+
+function resetMapView() {
+    mapZoomTransform = d3.zoomIdentity;
+    d3.selectAll("svg.map-svg g.map-zoom-layer").attr("transform", mapZoomTransform);
+    _mapZoomSyncing = true;
+    d3.selectAll("svg.map-svg").each(function () {
+        d3.select(this).call(mapZoom.transform, mapZoomTransform);
+    });
+    _mapZoomSyncing = false;
+}
+
 let geoData;
 let countyManifest;
 const _params = new URLSearchParams(window.location.search);
@@ -194,12 +268,12 @@ function buildTooltip(p) {
     };
 
     const scoresHtml = [
-        _tooltipRowCols("risk_score", "Risk:", _fmtScore2(p.risk_score), "", false),
-        _tooltipRowCols("hazard_score", "Hazard:", _fmtScore2(p.hazard_score), "", false),
-        _tooltipRowCols("exposure_score", "Exposure:", _fmtScore2(p.exposure_score), "", false),
-        _tooltipRowCols("vulnerability_score", "Vulnerability:", _fmtScore2(p.vulnerability_score), "", false),
-        _tooltipRowCols("resilience_score", "Resilience:", _fmtScore2(p.resilience_score), "", false),
-        _tooltipRowCols("eal_norm", "EL (eal_norm):", _fmtScore2(p.eal_norm), "", false),
+        _tooltipRowCols("risk_score", "Risk:", _fmtPanelTooltip(p.risk_score, "risk_score"), "", false),
+        _tooltipRowCols("hazard_score", "Hazard:", _fmtPanelTooltip(p.hazard_score, "hazard_score"), "", false),
+        _tooltipRowCols("exposure_score", "Exposure:", _fmtPanelTooltip(p.exposure_score, "exposure_score"), "", false),
+        _tooltipRowCols("vulnerability_score", "Vulnerability:", _fmtPanelTooltip(p.vulnerability_score, "vulnerability_score"), "", false),
+        _tooltipRowCols("resilience_score", "Resilience:", _fmtPanelTooltip(p.resilience_score, "resilience_score"), "", false),
+        _tooltipRowCols("eal_norm", "EL (eal_norm):", _fmtPanelTooltip(p.eal_norm, "eal_norm"), "", false),
     ].join("");
 
     const bigHtml = [
@@ -227,21 +301,21 @@ function buildTooltip(p) {
         }
 
         const hazardDebug = [
-            rowFromFormatted("hazard_score", "hazard_wildfire:", _formatValue(p, "hazard_wildfire", v => Number(v).toFixed(2)), false),
-            rowFromFormatted("hazard_score", "hazard_vegetation:", _formatValue(p, "hazard_vegetation", v => Number(v).toFixed(2)), false),
-            rowFromFormatted("hazard_score", "hazard_forest_distance:", _formatValue(p, "hazard_forest_distance", v => Number(v).toFixed(2)), false),
+            rowFromFormatted("hazard_score", "hazard_wildfire:", _formatValue(p, "hazard_wildfire", v => Number(v).toFixed(1)), false),
+            rowFromFormatted("hazard_score", "hazard_vegetation:", _formatValue(p, "hazard_vegetation", v => Number(v).toFixed(1)), false),
+            rowFromFormatted("hazard_score", "hazard_forest_distance:", _formatValue(p, "hazard_forest_distance", v => Number(v).toFixed(1)), false),
         ].join("");
 
         const vulnDebug = [
-            rowFromFormatted("vulnerability_score", "vuln_poverty:", _formatValue(p, "vuln_poverty", v => Number(v).toFixed(2)), false),
-            rowFromFormatted("vulnerability_score", "vuln_elderly:", _formatValue(p, "vuln_elderly", v => Number(v).toFixed(2)), false),
-            rowFromFormatted("vulnerability_score", "vuln_vehicle_access:", _formatValue(p, "vuln_vehicle_access", v => Number(v).toFixed(2)), false),
+            rowFromFormatted("vulnerability_score", "vuln_poverty:", _formatValue(p, "vuln_poverty", v => Number(v).toFixed(1)), false),
+            rowFromFormatted("vulnerability_score", "vuln_elderly:", _formatValue(p, "vuln_elderly", v => Number(v).toFixed(1)), false),
+            rowFromFormatted("vulnerability_score", "vuln_vehicle_access:", _formatValue(p, "vuln_vehicle_access", v => Number(v).toFixed(1)), false),
         ].join("");
 
         const resDebug = [
-            rowFromFormatted("resilience_score", "res_fire_station_dist:", _formatValue(p, "res_fire_station_dist", v => Number(v).toFixed(2)), false),
-            rowFromFormatted("resilience_score", "res_hospital_dist:", _formatValue(p, "res_hospital_dist", v => Number(v).toFixed(2)), false),
-            rowFromFormatted("resilience_score", "res_road_access:", _formatValue(p, "res_road_access", v => Number(v).toFixed(2)), false),
+            rowFromFormatted("resilience_score", "res_fire_station_dist:", _formatValue(p, "res_fire_station_dist", v => Number(v).toFixed(1)), false),
+            rowFromFormatted("resilience_score", "res_hospital_dist:", _formatValue(p, "res_hospital_dist", v => Number(v).toFixed(1)), false),
+            rowFromFormatted("resilience_score", "res_road_access:", _formatValue(p, "res_road_access", v => Number(v).toFixed(1)), false),
         ].join("");
 
         parts.push(
@@ -332,7 +406,9 @@ function renderAll() {
         mapSvg.selectAll("*").remove();
         if (!legendSvg.empty()) legendSvg.selectAll("*").remove();
 
-        mapSvg.selectAll("path")
+        const zoomLayer = mapSvg.append("g").attr("class", "map-zoom-layer");
+        zoomLayer
+            .selectAll("path")
             .data(features)
             .join("path")
             .attr("class", "block-feature")
@@ -377,14 +453,10 @@ function renderAll() {
             .domain(domain)
             .range([0, legendWidth]);
 
-        const tickFmt = (() => {
-            // For tiny risk ranges, show more precision; otherwise keep concise.
-            if (metric === "risk_score" && domain[1] <= 0.1) return d3.format(".3f");
-            return d3.format(".2f");
-        })();
+        const tickFmt = legendTickFormatForMetric(metric, domain);
 
         const axis = d3.axisBottom(scale)
-            .ticks(5)
+            .tickValues(legendTickValues(domain, 4))
             .tickFormat(tickFmt);
 
         const axisG = legendGroup.append("g")
@@ -398,6 +470,18 @@ function renderAll() {
         axisG.select(".domain")
             .attr("stroke", accent);
     }
+
+    d3.selectAll("svg.map-svg g.map-zoom-layer").attr("transform", mapZoomTransform);
+    if (!_mapZoomInstalled) {
+        d3.selectAll("svg.map-svg")
+            .call(mapZoom)
+            .on("dblclick.zoom", (event) => {
+                event.preventDefault();
+                resetMapView();
+            });
+        _mapZoomInstalled = true;
+    }
+    d3.selectAll("svg.map-svg").call(mapZoom.transform, mapZoomTransform);
 
     updateBlockHighlight();
 }
@@ -416,6 +500,7 @@ function loadCounty(id, manifest) {
     const msg = d3.select("#countyMessage");
     if (!url) {
         geoData = { type: "FeatureCollection", features: [] };
+        mapZoomTransform = d3.zoomIdentity;
         fitProjectionToGeo(getCellDimensions().width, getCellDimensions().height);
         msg.text(
             "No packaged block-level GeoJSON for this county yet. " +
@@ -426,9 +511,11 @@ function loadCounty(id, manifest) {
     }
     msg.text("");
     return d3.json(url).then(data => {
+        mapZoomTransform = d3.zoomIdentity;
         geoData = data;
         fitProjectionToGeo(getCellDimensions().width, getCellDimensions().height);
     }).catch(err => {
+        mapZoomTransform = d3.zoomIdentity;
         geoData = { type: "FeatureCollection", features: [] };
         fitProjectionToGeo(getCellDimensions().width, getCellDimensions().height);
         msg.text("Failed to load county GeoJSON: " + (err && err.message ? err.message : String(err)));

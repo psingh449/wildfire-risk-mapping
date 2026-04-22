@@ -1,6 +1,10 @@
-# Refreshing `data/real/*.csv` and geospatial inputs
+# Refreshing `data/real/*.csv`, `data/real_cache/…`, and geospatial inputs
 
 Run everything from the **repository root** with `PYTHONPATH` set so `import src` works.
+
+**Canonical store for reproducible per-county imports:** this repo standardizes on **`data/real_cache/counties/{state+county_fips}/<source_id>/<quantity_id>/`**, with a `data.csv` plus `manifest.json` and optional `response.json` (see [`calculations.csv`](calculations.csv) `cache_primary` / `code_locations`). The older flat files under `data/real/*.csv` remain **fallbacks** in some code paths. Use **`python scripts/real_import.py --county <5-digit FIPS> --all`** (or the prefetch script in the README) to fill `real_cache` from Census, ACS, OSM, HIFLD, and raster-side helpers.
+
+**ACS caveats:** for variables such as **poverty (B17001)** and **vehicle access (B08201)**, the API often returns all-nulls at *block group*; the importer then writes **tract** tables (`poverty_tract`, `vehicle_access_tract`) and the feature layer uses tract→block-group assignment with `ESTIMATED` provenance (`scripts/real_import.py`, `src/utils/real_data.py`).
 
 ## PowerShell (Windows)
 
@@ -131,7 +135,7 @@ Writes `data/real/road_length.csv` (uses OSMnx `features_from_bbox` / graph; may
 
 ## 6. Re-run the pipeline
 
-After refreshing caches:
+After refreshing caches and/or `data/real_cache` imports:
 
 ```bash
 python -m src.pipeline.run_pipeline
