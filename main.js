@@ -7,6 +7,54 @@ const MAP_PANELS = [
     { panelId: "map-panel-resilience", metric: "resilience_score" },
 ];
 
+// Human-facing panel descriptions derived from README/METHODS docs.
+// We embed them here so the static GitHub Pages build can show them without a server-side doc fetch.
+const PANEL_DOCS = {
+    eal_norm: {
+        plain: "EAL (expected annual loss) estimates the yearly dollar loss using Risk × Building Value. The map uses a normalized version (eal_norm) so differences are visible.",
+        code: "GeoJSON: `eal`, `eal_norm`, `exposure_building_value`. Main code: `src/models/risk_model.py` (EAL + normalization), `main.js` (EAL map uses `eal_norm`)."
+    },
+    risk_score: {
+        plain: "Risk combines Hazard, Exposure, Vulnerability, and Resilience as hazard × exposure × vulnerability × (1 − resilience). Higher resilience reduces risk.",
+        code: "GeoJSON: `risk_score`, plus component scores. Main code: `src/models/risk_model.py:compute_risk`. UI note: `main.js:_computeDomainForMetric` rescales colors within the selected county (values don’t change)."
+    },
+    hazard_score: {
+        plain: "Hazard represents how conducive the place is to wildfire (wildfire probability + fuel/vegetation + proximity to forest-like land), then blended into a 0–1 score.",
+        code: "GeoJSON: `hazard_wildfire`, `hazard_vegetation`, `hazard_forest_distance`, `hazard_score`. Data + fallbacks: `src/utils/real_data.py`. Composite weighting: `src/features/build_features.py`."
+    },
+    exposure_score: {
+        plain: "Exposure measures what is in harm’s way: people, housing, and an estimated total residential value, combined into a 0–1 score.",
+        code: "GeoJSON: `exposure_population`, `exposure_housing`, `exposure_building_value`, `exposure_score`. Census/ACS joins: `src/utils/real_data.py`. Composite weighting: `src/features/build_features.py`."
+    },
+    vulnerability_score: {
+        plain: "Vulnerability reflects social fragility: poverty, elderly share, and vehicle access (flipped so less access implies higher vulnerability), combined into a 0–1 score.",
+        code: "GeoJSON: `vuln_poverty`, `vuln_elderly`, `vuln_vehicle_access`, `vulnerability_score`. Tract fallback for sparse ACS: `scripts/real_import.py` + `src/utils/real_data.py`."
+    },
+    resilience_score: {
+        plain: "Resilience reflects how close help and connectivity are: proximity to fire stations, hospitals, and road access, combined into a 0–1 score.",
+        code: "GeoJSON: `res_fire_station_dist`, `res_hospital_dist`, `res_road_access`, `resilience_score`. Distance/access features: `src/utils/real_data.py`. Composite weighting: `src/features/build_features.py`."
+    }
+};
+
+function populatePanelText() {
+    document.querySelectorAll(".map-cell--text").forEach((cell) => {
+        const metric = cell.getAttribute("data-metric") || "";
+        const doc = PANEL_DOCS[metric];
+        const host = cell.querySelector(".map-text");
+        if (!host) return;
+        if (!doc) {
+            host.innerHTML = `<div class="doc-section"><b>No description configured for</b> <code>${metric}</code>.</div>`;
+            return;
+        }
+        host.innerHTML = [
+            `<div class="doc-section-title">Plain language</div>`,
+            `<div class="doc-section">${_escapeHtml(doc.plain)}</div>`,
+            `<div class="doc-section-title">Relevant code / fields</div>`,
+            `<div class="doc-section">${_escapeHtml(doc.code)}</div>`
+        ].join("");
+    });
+}
+
 const BASE_STROKE = 0.65;
 const HIGHLIGHT_STROKE = 3.25;
 
@@ -620,6 +668,7 @@ Promise.all([
     d3.json("data/county_manifest.json")
 ]).then(([list, manifest]) => {
     countyManifest = manifest;
+    populatePanelText();
     const startId = populateCountySelect(list, manifest);
     return loadCounty(startId, manifest).then(() => {
         prefetchPackagedCounties(manifest, startId);

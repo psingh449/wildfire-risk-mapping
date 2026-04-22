@@ -59,7 +59,7 @@ button {
 .map-grid {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
-    grid-template-rows: auto auto;
+    grid-auto-rows: 1fr;
     gap: 0;
     align-items: stretch;
     justify-items: stretch;
@@ -81,6 +81,34 @@ button {
     display: flex;
     flex-direction: column;
     min-height: 420px;
+}
+
+/* Text panels: match map panel size; scroll content if needed */
+.map-cell--text {
+    background: #fff;
+}
+.map-text {
+    padding: 10px 10px 12px;
+    font-size: 13px;
+    line-height: 1.4;
+    color: #222;
+    overflow: auto;
+    flex: 1;
+}
+.map-text .doc-section-title {
+    margin: 0 0 4px 0;
+    font-weight: 700;
+    color: #000;
+}
+.map-text .doc-section {
+    margin: 0 0 10px 0;
+}
+.map-text code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-size: 12px;
+    background: #f5f5f5;
+    padding: 1px 4px;
+    border-radius: 3px;
 }
 
 /* End-result maps (EL + Risk): bold frame */
@@ -271,13 +299,11 @@ button {
 @media (max-width: 1200px) {
     .map-grid {
         grid-template-columns: 1fr 1fr;
-        grid-template-rows: auto auto auto;
     }
 }
 
 @media (max-width: 800px) {
     .map-grid {
         grid-template-columns: 1fr;
-        grid-template-rows: auto auto auto auto auto auto;
     }
 }
