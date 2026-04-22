@@ -9,30 +9,253 @@ const MAP_PANELS = [
 
 // Human-facing panel descriptions derived from README/METHODS docs.
 // We embed them here so the static GitHub Pages build can show them without a server-side doc fetch.
+//
+// These strings are trusted (repo-authored) HTML snippets so we can use bullets, emphasis,
+// and metric-colored accents to keep the explainer engaging inside the UI.
 const PANEL_DOCS = {
     eal_norm: {
-        plain: "EAL (expected annual loss) estimates the yearly dollar loss using Risk × Building Value. The map uses a normalized version (eal_norm) so differences are visible.",
-        code: "GeoJSON: `eal`, `eal_norm`, `exposure_building_value`. Main code: `src/models/risk_model.py` (EAL + normalization), `main.js` (EAL map uses `eal_norm`)."
+        plainHtml: `
+            <p class="doc-lede">
+                <span class="doc-accent doc-accent-el"><b>EL / EAL</b></span> is our “economic consequence” view: <i>how much $ loss we expect in a typical year</i> for each block group.
+            </p>
+            <div class="doc-section">
+                <div class="doc-section-title">What you’re looking at</div>
+                <ul>
+                    <li><b>Two numbers exist:</b> <code>eal</code> (USD) and <code>eal_norm</code> (0–1).</li>
+                    <li><b>This panel maps</b> <code>eal_norm</code> so the choropleth has contrast even when dollar values span huge ranges.</li>
+                    <li><b>Interpretation:</b> darker = <i>higher expected annual loss</i> (relative within the run), not “guaranteed loss.”</li>
+                </ul>
+            </div>
+            <div class="doc-section">
+                <div class="doc-section-title">How EAL is built (math, not code)</div>
+                <ul>
+                    <li><b>Step A:</b> compute overall <span class="doc-accent doc-accent-risk"><b>Risk</b></span> on 0–1.</li>
+                    <li><b>Step B:</b> estimate “value at stake” (<code>exposure_building_value</code>).</li>
+                    <li><b>Step C:</b> multiply:</li>
+                    <li class="doc-formula"><code>eal = risk_score × exposure_building_value</code></li>
+                    <li><b>Then rescale for the map:</b></li>
+                    <li class="doc-formula"><code>eal_norm = (eal − min) / (max − min)</code></li>
+                </ul>
+                <p class="doc-note">
+                    <i>Why normalize?</i> Without it, almost every block group would look the same color when a few very-large-dollar areas dominate the scale.
+                </p>
+            </div>
+            <div class="doc-section">
+                <div class="doc-section-title">Quality / stars</div>
+                <ul>
+                    <li>If the building value uses an <b>estimate</b> (e.g., county-mean median value), the UI may show a <b>*</b>.</li>
+                    <li>Turn on <code>?debug=1</code> (or use the debug toggle) to see tags like <code>[src:acs]</code>, <code>[est:county-mean]</code>, <code>[missing]</code>.</li>
+                </ul>
+            </div>
+        `,
+        codeHtml: `
+            <ul>
+                <li><b>GeoJSON fields</b>: <code>eal</code>, <code>eal_norm</code>, <code>exposure_building_value</code>, <code>risk_score</code></li>
+                <li><b>Primary implementation</b>: <code>src/models/risk_model.py</code> (EAL + normalization)</li>
+                <li><b>Frontend metric key</b>: <code>eal_norm</code> (see <code>main.js</code> → <code>MAP_PANELS</code>)</li>
+                <li><b>Tooltip formatting</b>: <code>_formatValue</code>, <code>_debugTagEalFamily</code></li>
+            </ul>
+        `
     },
     risk_score: {
-        plain: "Risk combines Hazard, Exposure, Vulnerability, and Resilience as hazard × exposure × vulnerability × (1 − resilience). Higher resilience reduces risk.",
-        code: "GeoJSON: `risk_score`, plus component scores. Main code: `src/models/risk_model.py:compute_risk`. UI note: `main.js:_computeDomainForMetric` rescales colors within the selected county (values don’t change)."
+        plainHtml: `
+            <p class="doc-lede">
+                <span class="doc-accent doc-accent-risk"><b>Risk (RISC)</b></span> is the “overall ranking” score: <i>where is wildfire risk comparatively higher inside a county?</i>
+            </p>
+            <div class="doc-section">
+                <div class="doc-section-title">Conceptual model</div>
+                <ul>
+                    <li><b>Hazard</b> = how fire-prone the place is.</li>
+                    <li><b>Exposure</b> = how many people/structures are in the way.</li>
+                    <li><b>Vulnerability</b> = who may be less able to cope/evacuate.</li>
+                    <li><b>Resilience</b> = response/recovery capacity (help close by).</li>
+                </ul>
+            </div>
+            <div class="doc-section">
+                <div class="doc-section-title">The formula (why it behaves this way)</div>
+                <ul>
+                    <li class="doc-formula"><code>risk_score = hazard_score × exposure_score × vulnerability_score × (1 − resilience_score)</code></li>
+                    <li><b>Multiplication matters:</b> if any component is near 0, overall risk shrinks fast.</li>
+                    <li><b>Resilience reduces risk:</b> bigger resilience ⇒ bigger <code>(1 − resilience)</code> reduction.</li>
+                    <li><b>Practical consequence:</b> values can be <i>very small</i> (e.g., 0.003), especially when all components are fractions.</li>
+                </ul>
+            </div>
+            <div class="doc-section">
+                <div class="doc-section-title">How to read the colors</div>
+                <ul>
+                    <li><b>The number is always the same raw value</b> (<code>risk_score</code>).</li>
+                    <li><b>The colors are stretched within the selected county</b> so tiny-but-real differences remain visible.</li>
+                    <li>This is <i>visual scaling only</i> (no additional <code>risk_score_norm</code> column is created).</li>
+                </ul>
+                <p class="doc-note">
+                    If you switch counties, the Risk colors can shift because the min/max window changes — that’s expected.
+                </p>
+            </div>
+        `,
+        codeHtml: `
+            <ul>
+                <li><b>GeoJSON field</b>: <code>risk_score</code></li>
+                <li><b>Depends on</b>: <code>hazard_score</code>, <code>exposure_score</code>, <code>vulnerability_score</code>, <code>resilience_score</code></li>
+                <li><b>Primary implementation</b>: <code>src/models/risk_model.py:compute_risk</code></li>
+                <li><b>Visualization scaling</b>: <code>main.js:_computeDomainForMetric</code> (county-level min/max for colors)</li>
+            </ul>
+        `
     },
     hazard_score: {
-        plain: "Hazard represents how conducive the place is to wildfire (wildfire probability + fuel/vegetation + proximity to forest-like land), then blended into a 0–1 score.",
-        code: "GeoJSON: `hazard_wildfire`, `hazard_vegetation`, `hazard_forest_distance`, `hazard_score`. Data + fallbacks: `src/utils/real_data.py`. Composite weighting: `src/features/build_features.py`."
+        plainHtml: `
+            <p class="doc-lede">
+                <span class="doc-accent doc-accent-hazard"><b>Hazard</b></span> asks: <i>is this place physically conducive to wildfire?</i>
+            </p>
+            <div class="doc-section">
+                <div class="doc-section-title">Three building blocks</div>
+                <ul>
+                    <li><b>Wildfire probability</b> (<code>hazard_wildfire</code>)</li>
+                    <li><b>Fuel / vegetation proxy</b> (<code>hazard_vegetation</code>)</li>
+                    <li><b>Proximity to forest-like land</b> (<code>hazard_forest_distance</code>)</li>
+                </ul>
+            </div>
+            <div class="doc-section">
+                <div class="doc-section-title">Why there are “proxy” paths</div>
+                <ul>
+                    <li>Some counties may lack the “ideal” raster-derived inputs at build time.</li>
+                    <li>In that case we use a <b>proxy blend</b> so the panel stays informative, but it is flagged as <i>PROXY</i> in provenance.</li>
+                    <li>When both primary + proxy are missing, values become <b>missing</b> (shown as <code>—</code>).</li>
+                </ul>
+                <p class="doc-note">
+                    In debug mode you’ll see tags like <code>[src:whp]</code> vs <code>[px:osm]</code> indicating which path fed the number.
+                </p>
+            </div>
+            <div class="doc-section">
+                <div class="doc-section-title">Composite</div>
+                <ul>
+                    <li>Inputs are first rescaled to 0–1 <i>within the run</i> for comparability.</li>
+                    <li>Then weighted and combined:</li>
+                    <li class="doc-formula"><code>hazard_score = Σ wᵢ × inputᵢ_norm</code></li>
+                </ul>
+            </div>
+        `,
+        codeHtml: `
+            <ul>
+                <li><b>GeoJSON fields</b>: <code>hazard_wildfire</code>, <code>hazard_vegetation</code>, <code>hazard_forest_distance</code>, <code>hazard_score</code></li>
+                <li><b>Data + fallbacks</b>: <code>src/utils/real_data.py</code> (real/proxy/missing tiers)</li>
+                <li><b>Normalization + weighted sum</b>: <code>src/features/build_features.py</code></li>
+            </ul>
+        `
     },
     exposure_score: {
-        plain: "Exposure measures what is in harm’s way: people, housing, and an estimated total residential value, combined into a 0–1 score.",
-        code: "GeoJSON: `exposure_population`, `exposure_housing`, `exposure_building_value`, `exposure_score`. Census/ACS joins: `src/utils/real_data.py`. Composite weighting: `src/features/build_features.py`."
+        plainHtml: `
+            <p class="doc-lede">
+                <span class="doc-accent doc-accent-exposure"><b>Exposure</b></span> asks: <i>how much is in the way if a fire happens?</i>
+            </p>
+            <div class="doc-section">
+                <div class="doc-section-title">What counts as “exposed” here</div>
+                <ul>
+                    <li><b>People</b> (<code>exposure_population</code>)</li>
+                    <li><b>Homes</b> (<code>exposure_housing</code>)</li>
+                    <li><b>Residential value proxy</b> (<code>exposure_building_value</code>)</li>
+                </ul>
+            </div>
+            <div class="doc-section">
+                <div class="doc-section-title">Value proxy (why it’s reasonable)</div>
+                <ul>
+                    <li>We estimate “total residential value” as:</li>
+                    <li class="doc-formula"><code>exposure_building_value = housing_units × median_home_value</code></li>
+                    <li>If a local median is missing, we use a <b>county mean</b> so the map doesn’t collapse to zero.</li>
+                    <li>This is an <i>exposure ranking tool</i>, not a parcel-level appraisal.</li>
+                </ul>
+            </div>
+            <div class="doc-section">
+                <div class="doc-section-title">Composite</div>
+                <ul>
+                    <li>Population, housing, and value are normalized to 0–1 and combined with weights.</li>
+                    <li class="doc-formula"><code>exposure_score = Σ wᵢ × inputᵢ_norm</code></li>
+                </ul>
+            </div>
+        `,
+        codeHtml: `
+            <ul>
+                <li><b>GeoJSON fields</b>: <code>exposure_population</code>, <code>exposure_housing</code>, <code>exposure_building_value</code>, <code>exposure_score</code></li>
+                <li><b>Census + ACS joins</b>: <code>src/utils/real_data.py</code> (including county-mean imputation rules)</li>
+                <li><b>Normalization + weighted sum</b>: <code>src/features/build_features.py</code></li>
+            </ul>
+        `
     },
     vulnerability_score: {
-        plain: "Vulnerability reflects social fragility: poverty, elderly share, and vehicle access (flipped so less access implies higher vulnerability), combined into a 0–1 score.",
-        code: "GeoJSON: `vuln_poverty`, `vuln_elderly`, `vuln_vehicle_access`, `vulnerability_score`. Tract fallback for sparse ACS: `scripts/real_import.py` + `src/utils/real_data.py`."
+        plainHtml: `
+            <p class="doc-lede">
+                <span class="doc-accent doc-accent-vulnerability"><b>Vulnerability</b></span> asks: <i>if a fire happens, who might face a harder time responding?</i>
+            </p>
+            <div class="doc-section">
+                <div class="doc-section-title">The three signals</div>
+                <ul>
+                    <li><b>Poverty share</b> (<code>vuln_poverty</code>)</li>
+                    <li><b>Older adult share</b> (<code>vuln_elderly</code>)</li>
+                    <li><b>Vehicle access</b> (<code>vuln_vehicle_access</code>)</li>
+                </ul>
+            </div>
+            <div class="doc-section">
+                <div class="doc-section-title">Important direction rule (vehicle access)</div>
+                <ul>
+                    <li>The raw “vehicle access” concept means: <b>higher</b> = more households can evacuate by car.</li>
+                    <li>But vulnerability should increase when evacuation is harder, so we flip the normalized value:</li>
+                    <li class="doc-formula"><code>vehicle_vulnerability_component = 1 − norm(vehicle_access)</code></li>
+                    <li>This is why the model can treat vehicle access as a vulnerability signal without changing the meaning of the source data.</li>
+                </ul>
+            </div>
+            <div class="doc-section">
+                <div class="doc-section-title">Why you may see “ESTIMATED”</div>
+                <ul>
+                    <li>Some ACS tables come back as all-null at block group for a county.</li>
+                    <li>When that happens, we use <b>tract-level</b> values and assign them to block groups in that tract.</li>
+                    <li>The UI marks those as <b>*</b> and, in debug mode, tags like <code>[est:tract]</code>.</li>
+                </ul>
+            </div>
+        `,
+        codeHtml: `
+            <ul>
+                <li><b>GeoJSON fields</b>: <code>vuln_poverty</code>, <code>vuln_elderly</code>, <code>vuln_vehicle_access</code>, <code>vulnerability_score</code></li>
+                <li><b>ACS import + tract fallback</b>: <code>scripts/real_import.py</code> (writes <code>poverty_tract</code>, <code>vehicle_access_tract</code>)</li>
+                <li><b>Feature assembly</b>: <code>src/utils/real_data.py</code> (applies tract→block group assignment + provenance)</li>
+                <li><b>Normalization + combine</b>: <code>src/features/build_features.py</code> (including the vehicle inversion)</li>
+            </ul>
+        `
     },
     resilience_score: {
-        plain: "Resilience reflects how close help and connectivity are: proximity to fire stations, hospitals, and road access, combined into a 0–1 score.",
-        code: "GeoJSON: `res_fire_station_dist`, `res_hospital_dist`, `res_road_access`, `resilience_score`. Distance/access features: `src/utils/real_data.py`. Composite weighting: `src/features/build_features.py`."
+        plainHtml: `
+            <p class="doc-lede">
+                <span class="doc-accent doc-accent-resilience"><b>Resilience</b></span> asks: <i>how much response capacity is nearby, and how connected is the area?</i>
+            </p>
+            <div class="doc-section">
+                <div class="doc-section-title">Three pieces of “capacity”</div>
+                <ul>
+                    <li><b>Fire station access</b> (<code>res_fire_station_dist</code>)</li>
+                    <li><b>Hospital access</b> (<code>res_hospital_dist</code>)</li>
+                    <li><b>Road connectivity</b> (<code>res_road_access</code>)</li>
+                </ul>
+            </div>
+            <div class="doc-section">
+                <div class="doc-section-title">Distance is converted to a 0–1 “nearness” score</div>
+                <ul>
+                    <li>We turn distance into “closer is better” using an inverse transform:</li>
+                    <li class="doc-formula"><code>nearness = 1 / (1 + distance_km)</code></li>
+                    <li>That keeps values bounded and makes the metric comparable across counties.</li>
+                </ul>
+            </div>
+            <div class="doc-section">
+                <div class="doc-section-title">Why it reduces risk</div>
+                <ul>
+                    <li>In the Risk formula, resilience enters as <code>(1 − resilience_score)</code>.</li>
+                    <li><b>Higher resilience</b> ⇒ <b>smaller multiplier</b> ⇒ lower risk.</li>
+                </ul>
+            </div>
+        `,
+        codeHtml: `
+            <ul>
+                <li><b>GeoJSON fields</b>: <code>res_fire_station_dist</code>, <code>res_hospital_dist</code>, <code>res_road_access</code>, <code>resilience_score</code></li>
+                <li><b>Distance/access features</b>: <code>src/utils/real_data.py</code> (HIFLD + OSM cache readers)</li>
+                <li><b>Normalization + combine</b>: <code>src/features/build_features.py</code></li>
+            </ul>
+        `
     }
 };
 
@@ -48,9 +271,9 @@ function populatePanelText() {
         }
         host.innerHTML = [
             `<div class="doc-section-title">Plain language</div>`,
-            `<div class="doc-section">${_escapeHtml(doc.plain)}</div>`,
+            `<div class="doc-section">${doc.plainHtml || ""}</div>`,
             `<div class="doc-section-title">Relevant code / fields</div>`,
-            `<div class="doc-section">${_escapeHtml(doc.code)}</div>`
+            `<div class="doc-section">${doc.codeHtml || ""}</div>`
         ].join("");
     });
 }

@@ -95,6 +95,16 @@ button {
     overflow: auto;
     flex: 1;
 }
+.map-text p {
+    margin: 0 0 10px 0;
+}
+.map-text ul {
+    margin: 6px 0 10px 18px;
+    padding: 0;
+}
+.map-text li {
+    margin: 0 0 4px 0;
+}
 .map-text .doc-section-title {
     margin: 0 0 4px 0;
     font-weight: 700;
@@ -110,6 +120,29 @@ button {
     padding: 1px 4px;
     border-radius: 3px;
 }
+.map-text .doc-lede {
+    font-size: 13px;
+    line-height: 1.45;
+}
+.map-text .doc-note {
+    margin: 6px 0 0 0;
+    color: #333;
+}
+.map-text .doc-formula {
+    list-style: none;
+    margin-left: -18px;
+}
+
+/* Metric-colored accents inside doc text */
+.map-text .doc-accent {
+    font-weight: 700;
+}
+.map-text .doc-accent-el { color: #00695C; }
+.map-text .doc-accent-risk { color: #B71C1C; }
+.map-text .doc-accent-hazard { color: #E65100; }
+.map-text .doc-accent-exposure { color: #0369A1; }
+.map-text .doc-accent-vulnerability { color: #5B21B6; }
+.map-text .doc-accent-resilience { color: #047857; }
 
 /* End-result maps (EL + Risk): bold frame */
 .map-cell--result {
