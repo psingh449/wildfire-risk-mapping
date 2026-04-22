@@ -67,7 +67,7 @@ button {
     border-radius: 6px;
     overflow: hidden;
     position: relative;
-    padding-right: 34px; /* reserve strip for right-edge zoom slider */
+    padding-right: 0;
 }
 
 .map-cell {
@@ -80,7 +80,7 @@ button {
     border-bottom: 1px solid #ddd;
     display: flex;
     flex-direction: column;
-    min-height: 360px;
+    min-height: 420px;
 }
 
 /* End-result maps (EL + Risk): bold frame */
@@ -153,43 +153,30 @@ button {
     left: 0;
     right: 0;
     bottom: 0;
+    pointer-events: none; /* let wheel/drag interact with the map */
 }
 
-/* The map should cover most of the box; keep legend pinned to bottom. */
-.map-cell .map-svg {
-    padding-bottom: 46px; /* visual reserve so map doesn't hide legend overlay */
-    box-sizing: border-box;
-}
+/* The map should cover most of the box; fit logic reserves space for legend. */
 
-/* Right-edge zoom slider (single shared control) */
+/* Right-edge zoom slider (one per panel, synced) */
 .zoom-ui {
     position: absolute;
-    top: 6px;
-    right: 4px;
-    bottom: 6px;
-    width: 28px;
+    top: 8px;
+    right: 6px;
+    bottom: 54px; /* keep clear of bottom legend */
+    width: 26px;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    pointer-events: none; /* allow scroll/drag over maps; slider enables itself */
 }
-.zoom-ui .zoom-label {
-    font-size: 10px;
-    color: #333;
-    writing-mode: vertical-rl;
-    transform: rotate(180deg);
-    margin-bottom: 6px;
-    -webkit-user-select: none;
-    user-select: none;
-}
-.zoom-ui input[type="range"] {
-    pointer-events: auto;
+.zoom-ui input[type="range"].zoom-slider {
     writing-mode: bt-lr;
     -webkit-appearance: slider-vertical;
-    width: 28px;
+    width: 26px;
     height: 100%;
     max-height: 520px;
+    background: transparent;
 }
 
 .tooltip {

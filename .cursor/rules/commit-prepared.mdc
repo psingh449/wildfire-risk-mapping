@@ -1,0 +1,31 @@
+---
+description: End coding replies with git staging hint and proposed commit message
+alwaysApply: true
+---
+
+# Commit ready-out (staged list + message)
+
+At the **end** of every assistant reply in which **any** project file was created, modified, or deleted (or shell commands may have changed the tree), append a short section exactly like this so the user can copy, review, or ignore it.
+
+## Required closing section
+
+Use the heading **`--- Prepared commit`**, then:
+
+1. **Staged / to-stage files**  
+   - Prefer running: `git add -- <paths the assistant actually touched this turn>`, then show the equivalent of `git status --short` (or list paths if `git` was not used).  
+   - If the assistant cannot run git, list **exact paths** and tell the user to run `git add` on them.  
+   - Mention **A/M/D** style if obvious (added/modified/deleted).  
+   - If **no** file changes: write *No file changes in this turn.* and skip the rest.
+
+2. **Proposed message**  
+   - One-line subject, imperative mood (e.g. `docs: align README with calculations and UI`).  
+   - Optional body: 2–4 bullets: what changed and why, no fluff.  
+   - Do not run `git commit` unless the user asked.
+
+3. The user may **ignore** or **rewrite** the message; this block is a draft only.
+
+## Do not
+
+- Do not let this block replace normal explanations or code citations.  
+- Do not auto-commit.  
+- Do not stage unrelated files (e.g. `.vs/`, `cache/`, local artifacts); respect `.gitignore` and only include paths the work actually touched.

@@ -17,6 +17,7 @@ ENV/
 # IDE
 .idea/
 .vscode/
+.vs/
 
 # OS
 .DS_Store
@@ -25,3 +26,6 @@ Thumbs.db
 # Local data outputs (keep structure; ignore large generated artifacts if needed)
 # data/processed/*.geojson
 # data/real/*.csv
+
+# Local runtime caches (do not commit)
+cache/

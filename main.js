@@ -223,40 +223,53 @@ const path = d3.geoPath().projection(projection);
 
 /** Shared across all six maps; use identity after each county load. */
 let mapZoomTransform = d3.zoomIdentity;
-let _mapZoomSyncing = false;
+let _mapZoomPropagating = false;
+
+// Zoom policy:
+// - We treat the initial fit-to-panel view as the most zoomed-out useful view (k = 1).
+// - Users can zoom in to inspect individual polygons (k up to ZOOM_K_MAX).
+const ZOOM_K_MIN = 1.0;
+const ZOOM_K_MAX = 30.0;
+// ~5mm on a typical screen is ~18–20px; use 20px as a visible, consistent margin.
+const FIT_MARGIN_PX = 20;
+const LEGEND_H_PX = 46;
 
 const mapZoom = d3
     .zoom()
-    .scaleExtent([0.35, 48])
-    .on("zoom", (event) => {
-        if (_mapZoomSyncing) return;
+    .scaleExtent([ZOOM_K_MIN, ZOOM_K_MAX])
+    .on("zoom", function (event) {
         mapZoomTransform = event.transform;
         d3.selectAll("svg.map-svg g.map-zoom-layer").attr("transform", mapZoomTransform);
         updateZoomSliderFromTransform();
-        _mapZoomSyncing = true;
-        d3.selectAll("svg.map-svg").each(function () {
-            d3.select(this).call(mapZoom.transform, mapZoomTransform);
-        });
-        _mapZoomSyncing = false;
+
+        // Sync all six maps only when the zoom came from a user interaction on one of them.
+        // (Programmatic transforms from slider/reset don't have a sourceEvent.)
+        if (event.sourceEvent && !_mapZoomPropagating) {
+            _mapZoomPropagating = true;
+            d3.selectAll("svg.map-svg")
+                .filter(function () {
+                    return this !== event.currentTarget;
+                })
+                .call(mapZoom.transform, mapZoomTransform);
+            _mapZoomPropagating = false;
+        }
     });
 
 let _mapZoomInstalled = false;
 
 // --- Zoom slider (shared, flush right) ---
-const ZOOM_MIN = 0.35;
-const ZOOM_MAX = 48;
-const zoomKToSlider = d3.scaleLog().domain([ZOOM_MIN, ZOOM_MAX]).range([0, 100]).clamp(true);
-const sliderToZoomK = d3.scaleLog().domain([1, 100]).range([ZOOM_MIN, ZOOM_MAX]).clamp(true);
+const zoomKToSlider = d3.scaleLog().domain([ZOOM_K_MIN, ZOOM_K_MAX]).range([0, 100]).clamp(true);
+const sliderToZoomK = d3.scaleLog().domain([1, 100]).range([ZOOM_K_MIN, ZOOM_K_MAX]).clamp(true);
 let _zoomSliderSyncing = false;
 
 function updateZoomSliderFromTransform() {
-    const el = document.getElementById("zoomSlider");
-    if (!el) return;
     if (_zoomSliderSyncing) return;
     const k = mapZoomTransform && Number.isFinite(mapZoomTransform.k) ? mapZoomTransform.k : 1;
     const v = zoomKToSlider(k);
     _zoomSliderSyncing = true;
-    el.value = String(Math.round(v));
+    document.querySelectorAll("input.zoom-slider").forEach((el) => {
+        el.value = String(Math.round(v));
+    });
     _zoomSliderSyncing = false;
 }
 
@@ -265,33 +278,31 @@ function setZoomKFromSliderValue(rawValue) {
     if (!Number.isFinite(v)) return;
     const safe = Math.min(100, Math.max(1, v)); // avoid log(0)
     const newK = sliderToZoomK(safe);
+    // Scale about the visual center of each map.
     const { width: w, height: h } = getCellDimensions();
     const cx = w / 2;
     const cy = h / 2;
-    // Keep the current screen center stable while changing scale.
-    const cur = mapZoomTransform || d3.zoomIdentity;
-    const next = d3.zoomIdentity
-        .translate(cx, cy)
-        .scale(newK)
-        .translate(-cx, -cy)
-        .translate(cur.x, cur.y);
-
-    mapZoomTransform = next;
-    d3.selectAll("svg.map-svg g.map-zoom-layer").attr("transform", mapZoomTransform);
-    _mapZoomSyncing = true;
-    d3.selectAll("svg.map-svg").call(mapZoom.transform, mapZoomTransform);
-    _mapZoomSyncing = false;
+    // Apply to one map; zoom handler updates global transform.
+    const first = d3.select("svg.map-svg");
+    if (first.empty()) return;
+    first.call(mapZoom.scaleTo, newK, [cx, cy]);
+    // Now propagate to all maps (programmatic, so the handler won't auto-propagate).
+    _mapZoomPropagating = true;
+    d3.selectAll("svg.map-svg")
+        .filter(function () {
+            return this !== first.node();
+        })
+        .call(mapZoom.transform, mapZoomTransform);
+    _mapZoomPropagating = false;
 }
 
 function resetMapView() {
     mapZoomTransform = d3.zoomIdentity;
     d3.selectAll("svg.map-svg g.map-zoom-layer").attr("transform", mapZoomTransform);
     updateZoomSliderFromTransform();
-    _mapZoomSyncing = true;
-    d3.selectAll("svg.map-svg").each(function () {
-        d3.select(this).call(mapZoom.transform, mapZoomTransform);
-    });
-    _mapZoomSyncing = false;
+    _mapZoomPropagating = true;
+    d3.selectAll("svg.map-svg").call(mapZoom.transform, mapZoomTransform);
+    _mapZoomPropagating = false;
 }
 
 let geoData;
@@ -410,22 +421,29 @@ function attachTooltipHandlers(selection) {
 }
 
 function fitProjectionToGeo(mapWidth, mapHeight) {
+    const effH = Math.max(20, mapHeight - LEGEND_H_PX);
+    const extent = [
+        [FIT_MARGIN_PX, FIT_MARGIN_PX],
+        [Math.max(FIT_MARGIN_PX + 1, mapWidth - FIT_MARGIN_PX), Math.max(FIT_MARGIN_PX + 1, effH - FIT_MARGIN_PX)],
+    ];
     if (geoData && geoData.features && geoData.features.length > 0) {
-        projection.fitSize([mapWidth, mapHeight], geoData);
+        projection.fitExtent(extent, geoData);
     } else {
         projection
             .scale(1)
             .translate([mapWidth / 2, mapHeight / 2]);
         const outline = { type: "Feature", geometry: { type: "Polygon", coordinates: [[[-125, 24], [-66, 24], [-66, 50], [-125, 50], [-125, 24]]] } };
-        projection.fitSize([mapWidth, mapHeight], outline);
+        projection.fitExtent(extent, outline);
     }
 }
 
 function getCellDimensions() {
     const first = document.querySelector("#map-panel-eal svg.map-svg");
     if (first) {
-        const w = +first.getAttribute("width") || 320;
-        const h = +first.getAttribute("height") || 220;
+        // Prefer the rendered box (CSS-scaled), not the static attributes.
+        const r = first.getBoundingClientRect();
+        const w = Number.isFinite(r.width) && r.width > 0 ? r.width : (+first.getAttribute("width") || 320);
+        const h = Number.isFinite(r.height) && r.height > 0 ? r.height : (+first.getAttribute("height") || 220);
         return { width: w, height: h };
     }
     return { width: 320, height: 220 };
@@ -467,10 +485,13 @@ function renderAll() {
 
         if (legendSvg.empty()) continue;
 
-        const legendWidth = 250;
+        const sideMargin = 6;
+        const legendNode = legendSvg.node();
+        const rr = legendNode && legendNode.getBoundingClientRect ? legendNode.getBoundingClientRect() : null;
+        const svgW = rr && Number.isFinite(rr.width) && rr.width > 0 ? rr.width : (+legendSvg.attr("width") || 440);
+        const legendWidth = Math.max(140, svgW - sideMargin * 2);
         const legendBarH = 12;
-        const svgW = +legendSvg.attr("width") || 440;
-        const gx = (svgW - legendWidth) / 2;
+        const gx = sideMargin;
         const accent = darkestColor(metric);
 
         const defs = legendSvg.append("defs");
@@ -630,15 +651,13 @@ try {
     if (t) t.checked = DEBUG_MODE;
 } catch (e) {}
 
-// Shared zoom slider
+// Synced zoom sliders (one per panel)
 try {
-    const s = document.getElementById("zoomSlider");
-    if (s) {
+    document.querySelectorAll("input.zoom-slider").forEach((s) => {
         s.addEventListener("input", () => {
             if (_zoomSliderSyncing) return;
             setZoomKFromSliderValue(s.value);
         });
-        // Initialize from identity
-        updateZoomSliderFromTransform();
-    }
+    });
+    updateZoomSliderFromTransform();
 } catch (e) {}

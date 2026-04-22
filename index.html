@@ -38,50 +38,64 @@
         </p>
 
         <div class="map-grid" id="mapGrid">
-            <div class="zoom-ui" aria-label="Zoom control">
-                <div class="zoom-label">Zoom</div>
-                <input id="zoomSlider" type="range" min="0" max="100" value="0" step="1" aria-label="Zoom slider" />
-            </div>
             <div class="map-cell map-cell--result" id="map-panel-eal">
                 <h3 class="map-title metric-accent metric-accent-el">EAL (EL)</h3>
                 <div class="map-stack">
-                    <svg class="map-svg" width="420" height="300" aria-label="EAL EL map"></svg>
-                    <svg class="legend-svg" width="420" height="46" overflow="visible" aria-hidden="true"></svg>
+                    <div class="zoom-ui" aria-label="Zoom control for EAL">
+                        <input class="zoom-slider" type="range" min="0" max="100" value="0" step="1" aria-label="Zoom slider (EAL)" />
+                    </div>
+                    <svg class="map-svg" width="520" height="360" aria-label="EAL EL map"></svg>
+                    <svg class="legend-svg" width="520" height="46" overflow="visible" aria-hidden="true"></svg>
                 </div>
             </div>
             <div class="map-cell map-cell--result" id="map-panel-risk">
                 <h3 class="map-title metric-accent metric-accent-risk">Risk (RISC)</h3>
                 <div class="map-stack">
-                    <svg class="map-svg" width="420" height="300" aria-label="Risk RISC map"></svg>
-                    <svg class="legend-svg" width="420" height="46" overflow="visible" aria-hidden="true"></svg>
+                    <div class="zoom-ui" aria-label="Zoom control for Risk">
+                        <input class="zoom-slider" type="range" min="0" max="100" value="0" step="1" aria-label="Zoom slider (Risk)" />
+                    </div>
+                    <svg class="map-svg" width="520" height="360" aria-label="Risk RISC map"></svg>
+                    <svg class="legend-svg" width="520" height="46" overflow="visible" aria-hidden="true"></svg>
                 </div>
             </div>
             <div class="map-cell map-cell--component" id="map-panel-hazard">
                 <h3 class="map-title metric-accent metric-accent-hazard">Hazard</h3>
                 <div class="map-stack">
-                    <svg class="map-svg" width="420" height="300" aria-label="Hazard map"></svg>
-                    <svg class="legend-svg" width="420" height="46" overflow="visible" aria-hidden="true"></svg>
+                    <div class="zoom-ui" aria-label="Zoom control for Hazard">
+                        <input class="zoom-slider" type="range" min="0" max="100" value="0" step="1" aria-label="Zoom slider (Hazard)" />
+                    </div>
+                    <svg class="map-svg" width="520" height="360" aria-label="Hazard map"></svg>
+                    <svg class="legend-svg" width="520" height="46" overflow="visible" aria-hidden="true"></svg>
                 </div>
             </div>
             <div class="map-cell map-cell--component" id="map-panel-exposure">
                 <h3 class="map-title metric-accent metric-accent-exposure">Exposure</h3>
                 <div class="map-stack">
-                    <svg class="map-svg" width="420" height="300" aria-label="Exposure map"></svg>
-                    <svg class="legend-svg" width="420" height="46" overflow="visible" aria-hidden="true"></svg>
+                    <div class="zoom-ui" aria-label="Zoom control for Exposure">
+                        <input class="zoom-slider" type="range" min="0" max="100" value="0" step="1" aria-label="Zoom slider (Exposure)" />
+                    </div>
+                    <svg class="map-svg" width="520" height="360" aria-label="Exposure map"></svg>
+                    <svg class="legend-svg" width="520" height="46" overflow="visible" aria-hidden="true"></svg>
                 </div>
             </div>
             <div class="map-cell map-cell--component" id="map-panel-vulnerability">
                 <h3 class="map-title metric-accent metric-accent-vulnerability">Vulnerability</h3>
                 <div class="map-stack">
-                    <svg class="map-svg" width="420" height="300" aria-label="Vulnerability map"></svg>
-                    <svg class="legend-svg" width="420" height="46" overflow="visible" aria-hidden="true"></svg>
+                    <div class="zoom-ui" aria-label="Zoom control for Vulnerability">
+                        <input class="zoom-slider" type="range" min="0" max="100" value="0" step="1" aria-label="Zoom slider (Vulnerability)" />
+                    </div>
+                    <svg class="map-svg" width="520" height="360" aria-label="Vulnerability map"></svg>
+                    <svg class="legend-svg" width="520" height="46" overflow="visible" aria-hidden="true"></svg>
                 </div>
             </div>
             <div class="map-cell map-cell--component" id="map-panel-resilience">
                 <h3 class="map-title metric-accent metric-accent-resilience">Resilience</h3>
                 <div class="map-stack">
-                    <svg class="map-svg" width="420" height="300" aria-label="Resilience map"></svg>
-                    <svg class="legend-svg" width="420" height="46" overflow="visible" aria-hidden="true"></svg>
+                    <div class="zoom-ui" aria-label="Zoom control for Resilience">
+                        <input class="zoom-slider" type="range" min="0" max="100" value="0" step="1" aria-label="Zoom slider (Resilience)" />
+                    </div>
+                    <svg class="map-svg" width="520" height="360" aria-label="Resilience map"></svg>
+                    <svg class="legend-svg" width="520" height="46" overflow="visible" aria-hidden="true"></svg>
                 </div>
             </div>
         </div>

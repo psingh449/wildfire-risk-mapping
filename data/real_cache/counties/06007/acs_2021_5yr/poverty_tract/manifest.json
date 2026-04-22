@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "county_fips": "06007",
+  "source_id": "acs_2021_5yr",
+  "quantity_id": "poverty_tract",
+  "retrieved_at_utc": "2026-04-22T02:09:27.264399+00:00",
+  "files": {
+    "data": "data/real_cache/counties/06007/acs_2021_5yr/poverty_tract/data.csv",
+    "response": "data/real_cache/counties/06007/acs_2021_5yr/poverty_tract/response.json"
+  },
+  "request": {
+    "api": "https://api.census.gov/data/2021/acs/acs5",
+    "params": {
+      "get": "B17001_002E,B17001_001E",
+      "for": "tract:*",
+      "in": "state:06 county:007"
+    }
+  },
+  "schema": {
+    "columns": [
+      "B17001_002E",
+      "B17001_001E",
+      "state",
+      "county",
+      "tract",
+      "GEOID"
+    ],
+    "join_key": "GEOID"
+  },
+  "row_count": 54,
+  "sha256": {
+    "data": "9ea46163bad3220f7e6a2fb2a9d9858c91648b553f0210eb84d2c09a2f0b00fc"
+  },
+  "notes": null
+}
