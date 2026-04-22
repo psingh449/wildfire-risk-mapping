@@ -50,9 +50,24 @@ function _fmtScore2(v) {
     return n.toFixed(2);
 }
 
-function _tooltipRow(metric, label, valueHtml) {
-    const c = darkestColor(metric);
-    return `<span class="tooltip-label" style="color:${c}"><b>${label}</b></span><span class="tooltip-value">${valueHtml}</span>`;
+function _tooltipRowCols(metric, label, valueInner, qualInner, labelBlack) {
+    const c = labelBlack ? "#000" : darkestColor(metric);
+    const q = qualInner
+        ? `<span class="tooltip-qual">${qualInner}</span>`
+        : `<span class="tooltip-qual tooltip-qual--empty"></span>`;
+    return (
+        `<span class="tooltip-label" style="color:${c}"><b>${label}</b></span>` +
+        `<span class="tooltip-value">${valueInner}</span>` +
+        q
+    );
+}
+
+function _escapeHtml(s) {
+    return String(s)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
 }
 
 function _splitValueAndQualifier(formatted) {
@@ -66,15 +81,6 @@ function _splitValueAndQualifier(formatted) {
     return { value, qual };
 }
 
-function _tooltipRow3(metric, label, formattedValueWithQual) {
-    const c = darkestColor(metric);
-    const parts = _splitValueAndQualifier(formattedValueWithQual);
-    return (
-        `<span class="tooltip-label" style="color:${c}"><b>${label}</b></span>` +
-        `<span class="tooltip-value">${parts.value}</span>` +
-        `<span class="tooltip-qual">${parts.qual}</span>`
-    );
-}
 
 function colorScaleForMetric(metric) {
     const stops = METRIC_COLOR_RAMPS[metric] || METRIC_COLOR_RAMPS.risk_score;
@@ -157,75 +163,76 @@ const tooltip = d3.select("body")
     .style("opacity", 0);
 
 function buildTooltip(p) {
+    const rowFromFormatted = (metric, label, formatted, labelBlack) => {
+        const parts = _splitValueAndQualifier(formatted);
+        return _tooltipRowCols(metric, label, parts.value, parts.qual, labelBlack);
+    };
+
     const scoresHtml = [
-        _tooltipRow("risk_score", "Risk:", _fmtScore2(p.risk_score)),
-        _tooltipRow("hazard_score", "Hazard:", _fmtScore2(p.hazard_score)),
-        _tooltipRow("exposure_score", "Exposure:", _fmtScore2(p.exposure_score)),
-        _tooltipRow("vulnerability_score", "Vulnerability:", _fmtScore2(p.vulnerability_score)),
-        _tooltipRow("resilience_score", "Resilience:", _fmtScore2(p.resilience_score)),
-        _tooltipRow("eal_norm", "EL (eal_norm):", _fmtScore2(p.eal_norm)),
+        _tooltipRowCols("risk_score", "Risk:", _fmtScore2(p.risk_score), "", false),
+        _tooltipRowCols("hazard_score", "Hazard:", _fmtScore2(p.hazard_score), "", false),
+        _tooltipRowCols("exposure_score", "Exposure:", _fmtScore2(p.exposure_score), "", false),
+        _tooltipRowCols("vulnerability_score", "Vulnerability:", _fmtScore2(p.vulnerability_score), "", false),
+        _tooltipRowCols("resilience_score", "Resilience:", _fmtScore2(p.resilience_score), "", false),
+        _tooltipRowCols("eal_norm", "EL (eal_norm):", _fmtScore2(p.eal_norm), "", false),
     ].join("");
 
     const bigHtml = [
-        _tooltipRow("exposure_score", "Population:", _formatValue(p, "exposure_population", v => Number(v).toLocaleString())),
-        _tooltipRow("exposure_score", "Housing units:", _formatValue(p, "exposure_housing", v => Math.round(v).toLocaleString())),
-        _tooltipRow("exposure_score", "Building value:", _formatValue(p, "exposure_building_value", v => "$" + Math.round(v).toLocaleString())),
-        _tooltipRow("eal_norm", "EAL (USD):", _formatValue(p, "eal", v => "$" + Math.round(v).toLocaleString())),
+        rowFromFormatted("exposure_score", "Population:", _formatValue(p, "exposure_population", v => Number(v).toLocaleString()), true),
+        rowFromFormatted("exposure_score", "Housing units:", _formatValue(p, "exposure_housing", v => Math.round(v).toLocaleString()), true),
+        rowFromFormatted("exposure_score", "Building value:", _formatValue(p, "exposure_building_value", v => "$" + Math.round(v).toLocaleString()), true),
+        rowFromFormatted("eal_norm", "EAL (USD):", _formatValue(p, "eal", v => "$" + Math.round(v).toLocaleString()), false),
     ].join("");
 
-    let html =
-        `<div class="tooltip-grid tooltip-scores">${scoresHtml}</div>` +
-        `<hr/>` +
-        `<div class="tooltip-grid tooltip-big">${bigHtml}</div>`;
+    const parts = [scoresHtml, `<hr class="tooltip-hr"/>`, bigHtml];
 
     if (DEBUG_MODE) {
-        const ch = darkestColor("hazard_score");
-        const cv = darkestColor("vulnerability_score");
-        const cr = darkestColor("resilience_score");
-        html += `
-<hr/>
-<b>Diagnostics:</b><br/>`;
         let diag = p.diagnostics;
         if (typeof diag === "string") {
             try { diag = JSON.parse(diag); } catch (e) { diag = {}; }
         }
+        let diagText = "No validation issues.";
         if (diag && typeof diag === "object" && Object.keys(diag).length > 0) {
-            for (const [field, issues] of Object.entries(diag)) {
-                const arr = Array.isArray(issues) ? issues : [issues];
-                html += `<b>${field}:</b> ${arr.join("; ")}<br/>`;
-            }
-        } else {
-            html += "No validation issues.<br/>";
+            diagText = Object.entries(diag)
+                .map(([field, issues]) => {
+                    const arr = Array.isArray(issues) ? issues : [issues];
+                    return `${field}: ${arr.join("; ")}`;
+                })
+                .join("; ");
         }
+
         const hazardDebug = [
-            _tooltipRow3("hazard_score", "hazard_wildfire:", _formatValue(p, "hazard_wildfire", v => Number(v).toFixed(2))),
-            _tooltipRow3("hazard_score", "hazard_vegetation:", _formatValue(p, "hazard_vegetation", v => Number(v).toFixed(2))),
-            _tooltipRow3("hazard_score", "hazard_forest_distance:", _formatValue(p, "hazard_forest_distance", v => Number(v).toFixed(2))),
+            rowFromFormatted("hazard_score", "hazard_wildfire:", _formatValue(p, "hazard_wildfire", v => Number(v).toFixed(2)), false),
+            rowFromFormatted("hazard_score", "hazard_vegetation:", _formatValue(p, "hazard_vegetation", v => Number(v).toFixed(2)), false),
+            rowFromFormatted("hazard_score", "hazard_forest_distance:", _formatValue(p, "hazard_forest_distance", v => Number(v).toFixed(2)), false),
         ].join("");
 
         const vulnDebug = [
-            _tooltipRow3("vulnerability_score", "vuln_poverty:", _formatValue(p, "vuln_poverty", v => Number(v).toFixed(2))),
-            _tooltipRow3("vulnerability_score", "vuln_elderly:", _formatValue(p, "vuln_elderly", v => Number(v).toFixed(2))),
-            _tooltipRow3("vulnerability_score", "vuln_vehicle_access:", _formatValue(p, "vuln_vehicle_access", v => Number(v).toFixed(2))),
+            rowFromFormatted("vulnerability_score", "vuln_poverty:", _formatValue(p, "vuln_poverty", v => Number(v).toFixed(2)), false),
+            rowFromFormatted("vulnerability_score", "vuln_elderly:", _formatValue(p, "vuln_elderly", v => Number(v).toFixed(2)), false),
+            rowFromFormatted("vulnerability_score", "vuln_vehicle_access:", _formatValue(p, "vuln_vehicle_access", v => Number(v).toFixed(2)), false),
         ].join("");
 
         const resDebug = [
-            _tooltipRow3("resilience_score", "res_fire_station_dist:", _formatValue(p, "res_fire_station_dist", v => Number(v).toFixed(2))),
-            _tooltipRow3("resilience_score", "res_hospital_dist:", _formatValue(p, "res_hospital_dist", v => Number(v).toFixed(2))),
-            _tooltipRow3("resilience_score", "res_road_access:", _formatValue(p, "res_road_access", v => Number(v).toFixed(2))),
+            rowFromFormatted("resilience_score", "res_fire_station_dist:", _formatValue(p, "res_fire_station_dist", v => Number(v).toFixed(2)), false),
+            rowFromFormatted("resilience_score", "res_hospital_dist:", _formatValue(p, "res_hospital_dist", v => Number(v).toFixed(2)), false),
+            rowFromFormatted("resilience_score", "res_road_access:", _formatValue(p, "res_road_access", v => Number(v).toFixed(2)), false),
         ].join("");
 
-        html +=
-            `<hr/>` +
-            `<div class="tooltip-section-title" style="color:${ch}">Feature values (hazard inputs)</div>` +
-            `<div class="tooltip-grid3">${hazardDebug}</div>` +
-            `<div class="tooltip-section-title" style="color:${cv}">Vulnerability inputs</div>` +
-            `<div class="tooltip-grid3">${vulnDebug}</div>` +
-            `<div class="tooltip-section-title" style="color:${cr}">Resilience inputs</div>` +
-            `<div class="tooltip-grid3">${resDebug}</div>`;
+        parts.push(
+            `<hr class="tooltip-hr"/>`,
+            `<div class="tooltip-diag"><b>Diagnostics:</b> ${_escapeHtml(diagText)}</div>`,
+            `<hr class="tooltip-hr"/>`,
+            `<div class="tooltip-section-title">Hazard inputs</div>`,
+            hazardDebug,
+            `<div class="tooltip-section-title">Vulnerability inputs</div>`,
+            vulnDebug,
+            `<div class="tooltip-section-title">Resilience inputs</div>`,
+            resDebug
+        );
     }
 
-    return html;
+    return `<div class="tooltip-body">${parts.join("")}</div>`;
 }
 
 function attachTooltipHandlers(selection) {
