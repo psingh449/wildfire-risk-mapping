@@ -232,6 +232,7 @@ const mapZoom = d3
         if (_mapZoomSyncing) return;
         mapZoomTransform = event.transform;
         d3.selectAll("svg.map-svg g.map-zoom-layer").attr("transform", mapZoomTransform);
+        updateZoomSliderFromTransform();
         _mapZoomSyncing = true;
         d3.selectAll("svg.map-svg").each(function () {
             d3.select(this).call(mapZoom.transform, mapZoomTransform);
@@ -241,9 +242,51 @@ const mapZoom = d3
 
 let _mapZoomInstalled = false;
 
+// --- Zoom slider (shared, flush right) ---
+const ZOOM_MIN = 0.35;
+const ZOOM_MAX = 48;
+const zoomKToSlider = d3.scaleLog().domain([ZOOM_MIN, ZOOM_MAX]).range([0, 100]).clamp(true);
+const sliderToZoomK = d3.scaleLog().domain([1, 100]).range([ZOOM_MIN, ZOOM_MAX]).clamp(true);
+let _zoomSliderSyncing = false;
+
+function updateZoomSliderFromTransform() {
+    const el = document.getElementById("zoomSlider");
+    if (!el) return;
+    if (_zoomSliderSyncing) return;
+    const k = mapZoomTransform && Number.isFinite(mapZoomTransform.k) ? mapZoomTransform.k : 1;
+    const v = zoomKToSlider(k);
+    _zoomSliderSyncing = true;
+    el.value = String(Math.round(v));
+    _zoomSliderSyncing = false;
+}
+
+function setZoomKFromSliderValue(rawValue) {
+    const v = Number(rawValue);
+    if (!Number.isFinite(v)) return;
+    const safe = Math.min(100, Math.max(1, v)); // avoid log(0)
+    const newK = sliderToZoomK(safe);
+    const { width: w, height: h } = getCellDimensions();
+    const cx = w / 2;
+    const cy = h / 2;
+    // Keep the current screen center stable while changing scale.
+    const cur = mapZoomTransform || d3.zoomIdentity;
+    const next = d3.zoomIdentity
+        .translate(cx, cy)
+        .scale(newK)
+        .translate(-cx, -cy)
+        .translate(cur.x, cur.y);
+
+    mapZoomTransform = next;
+    d3.selectAll("svg.map-svg g.map-zoom-layer").attr("transform", mapZoomTransform);
+    _mapZoomSyncing = true;
+    d3.selectAll("svg.map-svg").call(mapZoom.transform, mapZoomTransform);
+    _mapZoomSyncing = false;
+}
+
 function resetMapView() {
     mapZoomTransform = d3.zoomIdentity;
     d3.selectAll("svg.map-svg g.map-zoom-layer").attr("transform", mapZoomTransform);
+    updateZoomSliderFromTransform();
     _mapZoomSyncing = true;
     d3.selectAll("svg.map-svg").each(function () {
         d3.select(this).call(mapZoom.transform, mapZoomTransform);
@@ -482,6 +525,7 @@ function renderAll() {
         _mapZoomInstalled = true;
     }
     d3.selectAll("svg.map-svg").call(mapZoom.transform, mapZoomTransform);
+    updateZoomSliderFromTransform();
 
     updateBlockHighlight();
 }
@@ -584,4 +628,17 @@ d3.select("#debugToggle").on("change", function () {
 try {
     const t = document.getElementById("debugToggle");
     if (t) t.checked = DEBUG_MODE;
+} catch (e) {}
+
+// Shared zoom slider
+try {
+    const s = document.getElementById("zoomSlider");
+    if (s) {
+        s.addEventListener("input", () => {
+            if (_zoomSliderSyncing) return;
+            setZoomKFromSliderValue(s.value);
+        });
+        // Initialize from identity
+        updateZoomSliderFromTransform();
+    }
 } catch (e) {}
