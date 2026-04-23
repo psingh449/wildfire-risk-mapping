@@ -53,6 +53,13 @@ def _extract_scalar_metrics(gdf: pd.DataFrame) -> Dict[str, Any]:
         return s.iloc[0] if len(s) else default
 
     fema = _parse_json_cell(first_value("fema_nri_comparison", "{}"))
+    burned_src = str(first_value("_burned_label_source", "UNKNOWN") or "UNKNOWN")
+    burned_pos = None
+    burned_neg = None
+    if "_burned_label" in gdf.columns and len(gdf) > 0:
+        s = pd.to_numeric(gdf["_burned_label"], errors="coerce").fillna(0).astype(int)
+        burned_pos = int((s == 1).sum())
+        burned_neg = int((s == 0).sum())
 
     return {
         "block_rows": int(len(gdf)),
@@ -63,6 +70,9 @@ def _extract_scalar_metrics(gdf: pd.DataFrame) -> Dict[str, Any]:
         "fema_nri_comparison": fema,
         "external_sources": {
             "fema_nri": str(fema.get("source", "UNKNOWN")),
+            "burned_labels": burned_src,
+            "burned_pos": burned_pos,
+            "burned_neg": burned_neg,
         },
     }
 
@@ -77,23 +87,35 @@ def _apply_external_thresholds(metrics: Dict[str, Any], thresholds: Dict[str, An
     ext = (thresholds or {}).get("external", {})
 
     fema = metrics.get("fema_nri_comparison", {}) or {}
-    # Enforce FEMA thresholds only when the normalized FEMA extract exists and we used REAL.
+    # Enforce FEMA thresholds only when:
+    # - normalized FEMA extract exists
+    # - we used REAL
+    # - correlation is defined (requires >=2 counties in the comparison join)
     fema_path = _resolve_repo_file("data/external/fema_nri_county.csv")
-    if fema_path.exists() and str(fema.get("source", "")).upper() == "REAL":
+    if fema_path.exists() and str(fema.get("source", "")).upper() == "REAL" and fema.get("corr_risk") is not None:
         fema_thr = ext.get("fema_nri", {})
         min_corr_risk = fema_thr.get("min_corr_risk")
         min_corr_eal = fema_thr.get("min_corr_eal")
         if min_corr_risk is not None and float(fema.get("corr_risk", 0.0) or 0.0) < float(min_corr_risk):
             ok = False
             failures["fema_nri.corr_risk"] = {"value": fema.get("corr_risk"), "min": min_corr_risk}
-        if min_corr_eal is not None and float(fema.get("corr_eal", 0.0) or 0.0) < float(min_corr_eal):
+        if min_corr_eal is not None and fema.get("corr_eal") is not None and float(fema.get("corr_eal", 0.0) or 0.0) < float(min_corr_eal):
             ok = False
             failures["fema_nri.corr_eal"] = {"value": fema.get("corr_eal"), "min": min_corr_eal}
 
-    # Enforce MTBS thresholds only when MTBS perimeters are present.
+    # Enforce MTBS thresholds only when MTBS perimeters are present AND labels came from MTBS.
     mtbs_path = _resolve_repo_file("data/external/mtbs_fire_perimeters.geojson")
     mtbs_thr = ext.get("mtbs", {})
-    if mtbs_path.exists() and mtbs_thr:
+    labels_src = str((metrics.get("external_sources", {}) or {}).get("burned_labels", "UNKNOWN")).upper()
+    burned_pos = (metrics.get("external_sources", {}) or {}).get("burned_pos")
+    burned_neg = (metrics.get("external_sources", {}) or {}).get("burned_neg")
+    has_both_classes = (
+        isinstance(burned_pos, int)
+        and isinstance(burned_neg, int)
+        and burned_pos > 0
+        and burned_neg > 0
+    )
+    if mtbs_path.exists() and mtbs_thr and labels_src == "MTBS" and has_both_classes:
         min_auc = mtbs_thr.get("min_auc")
         if min_auc is not None and float(metrics.get("auc_score", 0.5) or 0.5) < float(min_auc):
             ok = False

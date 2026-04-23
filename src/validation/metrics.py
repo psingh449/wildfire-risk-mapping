@@ -103,7 +103,9 @@ def compare_with_fema_nri(gdf: pd.DataFrame, fema_path: str = "data/external/fem
     return gdf
 
 
-def _compute_burned_labels(gdf: pd.DataFrame, fire_path: str = "data/external/mtbs_fire_perimeters.geojson") -> pd.Series:
+def _compute_burned_labels_with_source(
+    gdf: pd.DataFrame, fire_path: str = "data/external/mtbs_fire_perimeters.geojson"
+) -> tuple[pd.Series, str]:
     if os.path.exists(fire_path) and "geometry" in gdf.columns:
         try:
             import geopandas as gpd
@@ -113,23 +115,30 @@ def _compute_burned_labels(gdf: pd.DataFrame, fire_path: str = "data/external/mt
             if hasattr(gdf, "crs") and hasattr(fire, "crs") and getattr(gdf, "crs", None) is not None and getattr(fire, "crs", None) is not None:
                 fire = fire.to_crs(gdf.crs)
             fire_union = fire.geometry.unary_union
-            return gdf["geometry"].apply(lambda geom: int(geom is not None and not geom.is_empty and geom.intersects(fire_union)))
+            labels = gdf["geometry"].apply(lambda geom: int(geom is not None and not geom.is_empty and geom.intersects(fire_union)))
+            return labels, "MTBS"
         except Exception:
             pass
 
     risk = _safe_series(gdf, "risk_score", 0.0)
     threshold = float(risk.quantile(0.75)) if len(risk) else 0.0
-    return (risk >= threshold).astype(int)
+    return (risk >= threshold).astype(int), "PROXY"
+
+
+def _compute_burned_labels(gdf: pd.DataFrame, fire_path: str = "data/external/mtbs_fire_perimeters.geojson") -> pd.Series:
+    labels, _ = _compute_burned_labels_with_source(gdf, fire_path)
+    return labels
 
 
 def compute_historical_fire_overlap(gdf: pd.DataFrame, fire_path: str = "data/external/mtbs_fire_perimeters.geojson") -> pd.DataFrame:
     gdf = gdf.copy()
     risk = _safe_series(gdf, "risk_score", 0.0)
-    burned = _compute_burned_labels(gdf, fire_path)
+    burned, burned_source = _compute_burned_labels_with_source(gdf, fire_path)
 
     if len(gdf) == 0:
         gdf["fire_overlap_ratio"] = []
         gdf["_burned_label"] = []
+        gdf["_burned_label_source"] = []
         return gdf
 
     threshold = float(risk.quantile(0.9)) if len(risk) else 0.0
@@ -140,6 +149,7 @@ def compute_historical_fire_overlap(gdf: pd.DataFrame, fire_path: str = "data/ex
 
     gdf["fire_overlap_ratio"] = np.clip(ratio, 0.0, 1.0)
     gdf["_burned_label"] = burned
+    gdf["_burned_label_source"] = burned_source
     return gdf
 
 
@@ -161,7 +171,12 @@ def _roc_auc_from_scores(y_true: pd.Series, y_score: pd.Series) -> float:
 def compute_auc_fire_prediction(gdf: pd.DataFrame) -> pd.DataFrame:
     gdf = gdf.copy()
     if "_burned_label" not in gdf.columns:
-        gdf["_burned_label"] = _compute_burned_labels(gdf)
+        labels, src = _compute_burned_labels_with_source(gdf)
+        gdf["_burned_label"] = labels
+        gdf["_burned_label_source"] = src
+    elif "_burned_label_source" not in gdf.columns:
+        # Best-effort source inference for older frames.
+        gdf["_burned_label_source"] = "UNKNOWN"
 
     auc = _roc_auc_from_scores(gdf["_burned_label"], _safe_series(gdf, "risk_score", 0.0)) if len(gdf) else 0.5
     gdf["auc_score"] = np.clip(float(auc), 0.0, 1.0)
