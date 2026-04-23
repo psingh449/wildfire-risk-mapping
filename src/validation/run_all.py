@@ -69,7 +69,7 @@ def _extract_scalar_metrics(gdf: pd.DataFrame) -> Dict[str, Any]:
 
 def _apply_external_thresholds(metrics: Dict[str, Any], thresholds: Dict[str, Any]) -> Tuple[bool, Dict[str, Any]]:
     """
-    Only enforce thresholds when the upstream data source is REAL.
+    Only enforce thresholds when the required external inputs are present.
     """
     failures: Dict[str, Any] = {}
     ok = True
@@ -77,7 +77,9 @@ def _apply_external_thresholds(metrics: Dict[str, Any], thresholds: Dict[str, An
     ext = (thresholds or {}).get("external", {})
 
     fema = metrics.get("fema_nri_comparison", {}) or {}
-    if str(fema.get("source", "")).upper() == "REAL":
+    # Enforce FEMA thresholds only when the normalized FEMA extract exists and we used REAL.
+    fema_path = _resolve_repo_file("data/external/fema_nri_county.csv")
+    if fema_path.exists() and str(fema.get("source", "")).upper() == "REAL":
         fema_thr = ext.get("fema_nri", {})
         min_corr_risk = fema_thr.get("min_corr_risk")
         min_corr_eal = fema_thr.get("min_corr_eal")
@@ -88,9 +90,10 @@ def _apply_external_thresholds(metrics: Dict[str, Any], thresholds: Dict[str, An
             ok = False
             failures["fema_nri.corr_eal"] = {"value": fema.get("corr_eal"), "min": min_corr_eal}
 
-    # MTBS thresholds: infer REAL if mtbs file exists AND we have geometry (labels likely real)
+    # Enforce MTBS thresholds only when MTBS perimeters are present.
+    mtbs_path = _resolve_repo_file("data/external/mtbs_fire_perimeters.geojson")
     mtbs_thr = ext.get("mtbs", {})
-    if mtbs_thr:
+    if mtbs_path.exists() and mtbs_thr:
         min_auc = mtbs_thr.get("min_auc")
         if min_auc is not None and float(metrics.get("auc_score", 0.5) or 0.5) < float(min_auc):
             ok = False
