@@ -27,3 +27,6 @@ jobs:
     - name: Run tests
       run: |
         pytest tests/
+    - name: Validation runner (smoke)
+      run: |
+        python -m src.validation.run_all --no-write
