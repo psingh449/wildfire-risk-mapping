@@ -265,9 +265,17 @@ def main(argv: Optional[list[str]] = None) -> int:
     parser.add_argument("--no-write", action="store_true", help="Do not write reports to disk.")
     parser.add_argument("--reports-dir", default="reports", help="Where to write reports.")
     parser.add_argument("--thresholds", default="validation_thresholds.json", help="Thresholds JSON path.")
+    parser.add_argument(
+        "--export-ui",
+        default="",
+        help=(
+            "After validation, write a small JSON file for the static map UI. "
+            "Use with e.g. --counties 06007,06073 --export-ui data/validation/merged_06007_06073.json"
+        ),
+    )
     args = parser.parse_args(argv)
 
-    counties = [c.strip() for c in str(args.counties).split(",") if c.strip()]
+    counties = [str(c.strip()).zfill(5) for c in str(args.counties).split(",") if c.strip()]
     report = run_validation_runner(
         use_real_data=bool(args.use_real_data),
         counties=counties or None,
@@ -275,6 +283,18 @@ def main(argv: Optional[list[str]] = None) -> int:
         write_reports=not bool(args.no_write),
         reports_dir=str(args.reports_dir),
     )
+    export_ui = str(getattr(args, "export_ui", "") or "").strip()
+    if export_ui:
+        out = _resolve_repo_file(export_ui)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        ui_doc: Dict[str, Any] = {
+            "schema_version": 1,
+            "county_fips": counties,
+            "passed": bool(report.get("passed", False)),
+            "threshold_failures": report.get("threshold_failures") or {},
+            "metrics": report.get("metrics") or {},
+        }
+        out.write_text(json.dumps(ui_doc, indent=2, sort_keys=True), encoding="utf-8")
     return 0 if report.get("passed", False) else 2
 
 

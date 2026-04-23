@@ -1,0 +1,30 @@
+{
+  "county_fips": [
+    "06007",
+    "06073"
+  ],
+  "metrics": {
+    "auc_score": 0.5726529709413709,
+    "block_rows": 2258,
+    "external_sources": {
+      "burned_labels": "MTBS",
+      "burned_neg": 1982,
+      "burned_pos": 276,
+      "fema_nri": "REAL"
+    },
+    "fema_nri_comparison": {
+      "corr_eal": 1.0,
+      "corr_risk": -1.0,
+      "n_counties": 2,
+      "rmse_eal": 894994863.6042987,
+      "rmse_risk": 96.85561320855702,
+      "source": "REAL"
+    },
+    "fire_overlap_ratio": 0.15579710144927536,
+    "gini_risk": 0.5384724050933922,
+    "risk_concentration": 0.4236600144815431
+  },
+  "passed": true,
+  "schema_version": 1,
+  "threshold_failures": {}
+}

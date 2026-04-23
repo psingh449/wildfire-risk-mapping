@@ -851,95 +851,254 @@ function _pillClassForSource(source) {
     return "validation-pill--unknown";
 }
 
-function renderValidationSummary(features) {
-    const host = document.getElementById("validationKpis");
-    const chart = d3.select("#validationChart");
-    if (!host || chart.empty()) return;
+function _pillClassForBurnedSource(source) {
+    const s = String(source || "").toUpperCase();
+    if (s === "MTBS") return "validation-pill--mtbs";
+    if (s === "PROXY") return "validation-pill--burned-proxy";
+    return "validation-pill--unknown";
+}
 
-    if (!features || features.length === 0) {
-        host.innerHTML = `<div class="validation-kpi"><span class="validation-kpi__label">Validation</span><span class="validation-kpi__meta">No county GeoJSON loaded.</span></div>`;
-        chart.selectAll("*").remove();
-        return;
+function _formatMetricValue(v) {
+    if (v == null || v === "") return "—";
+    const n = Number(v);
+    if (!Number.isFinite(n)) return "—";
+    if (n !== 0 && (Math.abs(n) >= 1e5 || Math.abs(n) < 1e-4)) {
+        return n.toExponential(3);
+    }
+    return n.toFixed(3);
+}
+
+function _countBurnedLabels(features) {
+    let pos = 0;
+    let neg = 0;
+    let unk = 0;
+    for (const f of features) {
+        const p = f && f.properties;
+        if (!p) {
+            unk++;
+            continue;
+        }
+        const v = p._burned_label;
+        if (v == null) {
+            unk++;
+            continue;
+        }
+        const n = Number(v);
+        if (n === 1) pos++;
+        else if (n === 0) neg++;
+        else unk++;
+    }
+    return { pos, neg, unk, total: features.length };
+}
+
+function buildValidationMetricsFromFeatures(features) {
+    const p0 = (features[0] && features[0].properties) || {};
+    const fema = _parseJsonMaybe(p0.fema_nri_comparison) || {};
+    const burned = _countBurnedLabels(features);
+    return {
+        block_rows: features.length,
+        fire_overlap_ratio: _safeNumber(p0.fire_overlap_ratio, null),
+        auc_score: _safeNumber(p0.auc_score, null),
+        risk_concentration: _safeNumber(p0.risk_concentration, null),
+        gini_risk: _safeNumber(p0.gini_risk, null),
+        fema_nri_comparison: fema,
+        county_risk: _safeNumber(p0.county_risk, null),
+        county_eal: p0.county_eal != null && p0.county_eal !== "" ? Number(p0.county_eal) : null,
+        block_to_county_mapping: p0.block_to_county_mapping,
+        external_sources: {
+            fema_nri: String(fema.source != null ? fema.source : "UNKNOWN"),
+            burned_labels: String(p0._burned_label_source != null ? p0._burned_label_source : "UNKNOWN"),
+            burned_pos: burned.pos,
+            burned_neg: burned.neg
+        }
+    };
+}
+
+function validationMetricsToChartData(m) {
+    const fema = m.fema_nri_comparison || {};
+    const out = [
+        { key: "fire_overlap_ratio", label: "Overlap", value: _safeNumber(m.fire_overlap_ratio, null), domain: [0, 1], color: "#E65100" },
+        { key: "auc_score", label: "AUC", value: _safeNumber(m.auc_score, null), domain: [0, 1], color: "#B71C1C" },
+        { key: "risk_concentration", label: "Top 10%", value: _safeNumber(m.risk_concentration, null), domain: [0, 1], color: "#0369A1" },
+        { key: "gini_risk", label: "Gini", value: _safeNumber(m.gini_risk, null), domain: [0, 1], color: "#5B21B6" }
+    ];
+    const cr = _safeNumber(fema.corr_risk, null);
+    out.push({ key: "fema_corr_risk", label: "FEMA ρ (risk)", value: cr, domain: [-1, 1], color: "#166534" });
+    const ce = _safeNumber(fema.corr_eal, null);
+    if (ce != null) {
+        out.push({ key: "fema_corr_eal", label: "FEMA ρ (EAL)", value: ce, domain: [-1, 1], color: "#15803d" });
+    }
+    return out;
+}
+
+function kpiHtmlFromMetrics(m, opts) {
+    const options = opts || {};
+    const joint = !!options.joint;
+    const fema = m.fema_nri_comparison || {};
+    const ext = m.external_sources || {};
+    const femaSource = String(fema.source != null ? fema.source : ext.fema_nri || "UNKNOWN");
+    const burnSrc = String(ext.burned_labels != null ? ext.burned_labels : "UNKNOWN");
+    const fail = options.threshold_failures || {};
+    const failKeys = fail && typeof fail === "object" ? Object.keys(fail) : [];
+
+    const parts = [];
+
+    if (joint) {
+        const ok = options.passed;
+        const passClass = ok ? "validation-pill--pass" : "validation-pill--fail";
+        const passText = ok ? "thresholds OK" : "thresholds fail";
+        parts.push(
+            `<div class="validation-kpi">
+                <span class="validation-kpi__label">Run status</span>
+                <span class="validation-pill ${passClass}">${_escapeHtml(passText)}</span>
+                <span class="validation-kpi__meta">validation_thresholds.json</span>
+            </div>`
+        );
+        if (options.county_fips && options.county_fips.length) {
+            parts.push(
+                `<div class="validation-kpi">
+                    <span class="validation-kpi__label">Counties in join</span>
+                    <span class="validation-kpi__value">${_escapeHtml(options.county_fips.join(", "))}</span>
+                    <span class="validation-kpi__meta">county_fips</span>
+                </div>`
+            );
+        }
     }
 
-    const fireOverlap = _safeNumber(_firstScalar(features, "fire_overlap_ratio", null), null);
-    const auc = _safeNumber(_firstScalar(features, "auc_score", null), null);
-    const conc = _safeNumber(_firstScalar(features, "risk_concentration", null), null);
-    const gini = _safeNumber(_firstScalar(features, "gini_risk", null), null);
-    const femaRaw = _firstScalar(features, "fema_nri_comparison", null);
-    const fema = _parseJsonMaybe(femaRaw) || {};
-    const femaSource = fema.source || "UNKNOWN";
+    parts.push(
+        `<div class="validation-kpi">
+            <span class="validation-kpi__label">Block rows</span>
+            <span class="validation-kpi__value">${m.block_rows != null ? String(m.block_rows) : "—"}</span>
+            <span class="validation-kpi__meta">block_rows</span>
+        </div>`
+    );
 
-    const corrRisk = _safeNumber(fema.corr_risk, null);
-    const rmseRisk = _safeNumber(fema.rmse_risk, null);
-    const corrEal = _safeNumber(fema.corr_eal, null);
-    const rmseEal = _safeNumber(fema.rmse_eal, null);
+    if (m.county_risk != null && Number.isFinite(Number(m.county_risk))) {
+        parts.push(
+            `<div class="validation-kpi">
+                <span class="validation-kpi__label">County mean risk</span>
+                <span class="validation-kpi__value">${Number(m.county_risk).toFixed(3)}</span>
+                <span class="validation-kpi__meta">county_risk (aggregated)</span>
+            </div>`
+        );
+    }
+    if (m.county_eal != null && Number.isFinite(Number(m.county_eal))) {
+        parts.push(
+            `<div class="validation-kpi">
+                <span class="validation-kpi__label">County EAL (sum)</span>
+                <span class="validation-kpi__value">${_formatMetricValue(m.county_eal)}</span>
+                <span class="validation-kpi__meta">county_eal</span>
+            </div>`
+        );
+    }
+    if (m.block_to_county_mapping != null && m.block_to_county_mapping !== "") {
+        parts.push(
+            `<div class="validation-kpi">
+                <span class="validation-kpi__label">Block FIPS (sample)</span>
+                <span class="validation-kpi__value">${_escapeHtml(String(m.block_to_county_mapping))}</span>
+                <span class="validation-kpi__meta">block_to_county_mapping</span>
+            </div>`
+        );
+    }
 
-    const fmt01 = (v) => (v == null ? "—" : v.toFixed(3));
-    const fmtPos = (v) => (v == null ? "—" : Number(v).toFixed(3));
-
-    host.innerHTML = [
+    parts.push(
         `<div class="validation-kpi">
             <span class="validation-kpi__label">MTBS overlap</span>
-            <span class="validation-kpi__value">${fmt01(fireOverlap)}</span>
+            <span class="validation-kpi__value">${_formatMetricValue(m.fire_overlap_ratio)}</span>
             <span class="validation-kpi__meta">fire_overlap_ratio</span>
         </div>`,
         `<div class="validation-kpi">
             <span class="validation-kpi__label">AUC</span>
-            <span class="validation-kpi__value">${fmt01(auc)}</span>
+            <span class="validation-kpi__value">${_formatMetricValue(m.auc_score)}</span>
             <span class="validation-kpi__meta">auc_score</span>
         </div>`,
         `<div class="validation-kpi">
             <span class="validation-kpi__label">Concentration (top 10%)</span>
-            <span class="validation-kpi__value">${fmt01(conc)}</span>
+            <span class="validation-kpi__value">${_formatMetricValue(m.risk_concentration)}</span>
             <span class="validation-kpi__meta">risk_concentration</span>
         </div>`,
         `<div class="validation-kpi">
-            <span class="validation-kpi__label">Gini</span>
-            <span class="validation-kpi__value">${fmt01(gini)}</span>
+            <span class="validation-kpi__label">Gini (risk)</span>
+            <span class="validation-kpi__value">${_formatMetricValue(m.gini_risk)}</span>
             <span class="validation-kpi__meta">gini_risk</span>
         </div>`,
         `<div class="validation-kpi">
-            <span class="validation-kpi__label">FEMA NRI</span>
-            <span class="validation-kpi__value">${fmtPos(corrRisk)}</span>
+            <span class="validation-kpi__label">Burned labels</span>
+            <span class="validation-kpi__value">pos ${ext.burned_pos != null ? ext.burned_pos : "—"} / neg ${ext.burned_neg != null ? ext.burned_neg : "—"}</span>
+            <span class="validation-kpi__meta">_burned_label</span>
+            <span class="validation-pill ${_pillClassForBurnedSource(burnSrc)}">${_escapeHtml(burnSrc)}</span>
+        </div>`,
+        `<div class="validation-kpi">
+            <span class="validation-kpi__label">FEMA n_counties</span>
+            <span class="validation-kpi__value">${fema.n_counties != null ? String(fema.n_counties) : "—"}</span>
+            <span class="validation-kpi__meta">join width for corr</span>
+        </div>`,
+        `<div class="validation-kpi">
+            <span class="validation-kpi__label">FEMA corr (risk)</span>
+            <span class="validation-kpi__value">${_formatMetricValue(fema.corr_risk)}</span>
             <span class="validation-kpi__meta">corr_risk</span>
-            <span class="validation-pill ${_pillClassForSource(femaSource)}">${_escapeHtml(String(femaSource))}</span>
+            <span class="validation-pill ${_pillClassForSource(femaSource)}">${_escapeHtml(femaSource)}</span>
+        </div>`,
+        `<div class="validation-kpi">
+            <span class="validation-kpi__label">FEMA RMSE (risk)</span>
+            <span class="validation-kpi__value">${_formatMetricValue(fema.rmse_risk)}</span>
+            <span class="validation-kpi__meta">rmse_risk</span>
+        </div>`,
+        `<div class="validation-kpi">
+            <span class="validation-kpi__label">FEMA corr (EAL)</span>
+            <span class="validation-kpi__value">${_formatMetricValue(fema.corr_eal)}</span>
+            <span class="validation-kpi__meta">corr_eal</span>
+        </div>`,
+        `<div class="validation-kpi">
+            <span class="validation-kpi__label">FEMA RMSE (EAL)</span>
+            <span class="validation-kpi__value">${_formatMetricValue(fema.rmse_eal)}</span>
+            <span class="validation-kpi__meta">rmse_eal</span>
         </div>`
-    ].join("");
+    );
 
-    // --- Mini chart: 0..1 bars (overlap, AUC, concentration, gini), plus FEMA corr bars (-1..1) ---
-    const data = [
-        { key: "fire_overlap_ratio", label: "Overlap", value: fireOverlap, domain: [0, 1], color: "#E65100" },
-        { key: "auc_score", label: "AUC", value: auc, domain: [0, 1], color: "#B71C1C" },
-        { key: "risk_concentration", label: "Top10%", value: conc, domain: [0, 1], color: "#0369A1" },
-        { key: "gini_risk", label: "Gini", value: gini, domain: [0, 1], color: "#5B21B6" },
-        { key: "fema_corr_risk", label: "FEMA corr", value: corrRisk, domain: [-1, 1], color: "#166534" },
-    ];
+    if (joint && failKeys.length) {
+        const brief = failKeys.map((k) => `${k}`).join(", ");
+        parts.push(
+            `<div class="validation-kpi" style="min-width:min(100%, 520px)">
+                <span class="validation-kpi__label">Threshold failures</span>
+                <span class="validation-kpi__meta">${_escapeHtml(brief)}</span>
+            </div>`
+        );
+    }
 
+    return parts.join("");
+}
+
+function renderValidationBarChart(chart, data, heightPx) {
+    if (!data || !data.length) {
+        chart.selectAll("*").remove();
+        return;
+    }
+    const hTotal = heightPx != null ? heightPx : 200;
     const svgNode = chart.node();
     const w = (svgNode && svgNode.getBoundingClientRect && svgNode.getBoundingClientRect().width) ? svgNode.getBoundingClientRect().width : (+chart.attr("width") || 900);
-    const h = (+chart.attr("height") || 120);
-    chart.attr("viewBox", `0 0 ${Math.max(320, w)} ${h}`);
+    chart.attr("height", hTotal);
+    chart.attr("viewBox", `0 0 ${Math.max(320, w)} ${hTotal}`);
     chart.selectAll("*").remove();
 
     const pad = { l: 14, r: 14, t: 12, b: 12 };
     const innerW = Math.max(200, w - pad.l - pad.r);
-    const innerH = Math.max(60, h - pad.t - pad.b);
+    const innerH = Math.max(60, hTotal - pad.t - pad.b);
     const g = chart.append("g").attr("transform", `translate(${pad.l},${pad.t})`);
 
     const rowH = innerH / data.length;
-    const barH = Math.max(10, rowH * 0.52);
-    const labelW = Math.min(120, innerW * 0.2);
+    const barH = Math.max(8, rowH * 0.5);
+    const labelW = Math.min(120, innerW * 0.22);
     const barW = innerW - labelW - 10;
 
     const rows = g.selectAll("g.row").data(data).join("g").attr("class", "row").attr("transform", (_, i) => `translate(0,${i * rowH})`);
 
     rows.append("text")
         .attr("x", 0)
-        .attr("y", rowH * 0.6)
+        .attr("y", rowH * 0.62)
         .attr("font-size", 11)
         .attr("fill", "#111827")
-        .text(d => d.label);
+        .text((d) => d.label);
 
     rows.append("rect")
         .attr("x", labelW)
@@ -951,7 +1110,7 @@ function renderValidationSummary(features) {
         .attr("stroke", "#e5e7eb");
 
     rows.append("rect")
-        .attr("x", d => {
+        .attr("x", (d) => {
             if (d.domain[0] < 0) {
                 const x0 = labelW + barW * (0 - d.domain[0]) / (d.domain[1] - d.domain[0]);
                 const v = d.value;
@@ -962,7 +1121,7 @@ function renderValidationSummary(features) {
             return labelW;
         })
         .attr("y", (rowH - barH) / 2)
-        .attr("width", d => {
+        .attr("width", (d) => {
             if (d.value == null) return 0;
             if (d.domain[0] < 0) {
                 const x0 = barW * (0 - d.domain[0]) / (d.domain[1] - d.domain[0]);
@@ -973,13 +1132,20 @@ function renderValidationSummary(features) {
         })
         .attr("height", barH)
         .attr("rx", 6)
-        .attr("fill", d => d.color)
-        .attr("opacity", d => (d.value == null ? 0.2 : 0.85));
+        .attr("fill", (d) => d.color)
+        .attr("opacity", (d) => (d.value == null ? 0.2 : 0.85));
 
-    // Zero line for signed metrics (FEMA corr).
-    rows.filter(d => d.domain[0] < 0).append("line")
-        .attr("x1", labelW + barW * (0 - (-1)) / (2))
-        .attr("x2", labelW + barW * (0 - (-1)) / (2))
+    rows
+        .filter((d) => d.domain[0] < 0)
+        .append("line")
+        .attr("x1", (d) => {
+            const dom = d.domain;
+            return labelW + barW * (0 - dom[0]) / (dom[1] - dom[0]);
+        })
+        .attr("x2", (d) => {
+            const dom = d.domain;
+            return labelW + barW * (0 - dom[0]) / (dom[1] - dom[0]);
+        })
         .attr("y1", (rowH - barH) / 2 - 2)
         .attr("y2", (rowH + barH) / 2 + 2)
         .attr("stroke", "#9ca3af")
@@ -987,10 +1153,46 @@ function renderValidationSummary(features) {
 
     rows.append("text")
         .attr("x", labelW + barW + 6)
-        .attr("y", rowH * 0.6)
+        .attr("y", rowH * 0.62)
         .attr("font-size", 11)
         .attr("fill", "#374151")
-        .text(d => (d.value == null ? "—" : (Number(d.value).toFixed(3))));
+        .text((d) => (d.value == null ? "—" : Number(d.value).toFixed(3)));
+}
+
+function renderValidationSummary(features) {
+    const host = document.getElementById("validationKpis");
+    const chart = d3.select("#validationChart");
+    if (!host || chart.empty()) return;
+
+    if (!features || features.length === 0) {
+        host.innerHTML = `<div class="validation-kpi"><span class="validation-kpi__label">Validation</span><span class="validation-kpi__meta">No county GeoJSON loaded.</span></div>`;
+        chart.selectAll("*").remove();
+        return;
+    }
+
+    const m = buildValidationMetricsFromFeatures(features);
+    host.innerHTML = kpiHtmlFromMetrics(m, { joint: false });
+    renderValidationBarChart(chart, validationMetricsToChartData(m), 200);
+}
+
+function renderJointValidationSummary(uiDoc) {
+    const host = document.getElementById("validationKpisPair");
+    const chart = d3.select("#validationChartPair");
+    if (!host || chart.empty() || !uiDoc || !uiDoc.metrics) {
+        if (host) {
+            host.innerHTML = `<div class="validation-kpi"><span class="validation-kpi__label">Joint run</span><span class="validation-kpi__meta">No metrics in bundle.</span></div>`;
+        }
+        if (!chart.empty()) chart.selectAll("*").remove();
+        return;
+    }
+    const m = uiDoc.metrics;
+    host.innerHTML = kpiHtmlFromMetrics(m, {
+        joint: true,
+        passed: !!uiDoc.passed,
+        threshold_failures: uiDoc.threshold_failures,
+        county_fips: uiDoc.county_fips
+    });
+    renderValidationBarChart(chart, validationMetricsToChartData(m), 200);
 }
 
 function prefetchPackagedCounties(manifest, currentId) {
@@ -1059,14 +1261,29 @@ function populateCountySelect(list, manifest) {
 
 Promise.all([
     d3.json("data/county_list.json"),
-    d3.json("data/county_manifest.json")
-]).then(([list, manifest]) => {
+    d3.json("data/county_manifest.json"),
+    d3.json("data/validation/merged_06007_06073.json").catch(() => null)
+]).then(([list, manifest, mergedUi]) => {
     countyManifest = manifest;
     populatePanelText();
     const startId = populateCountySelect(list, manifest);
     return loadCounty(startId, manifest).then(() => {
         prefetchPackagedCounties(manifest, startId);
         renderAll();
+        const pairSec = document.getElementById("validationPairSection");
+        const pairMsg = document.getElementById("validationPairMessage");
+        if (mergedUi) {
+            if (pairSec) pairSec.hidden = false;
+            if (pairMsg) pairMsg.textContent = "";
+            renderJointValidationSummary(mergedUi);
+        } else {
+            if (pairSec) pairSec.hidden = true;
+            if (pairMsg) {
+                pairMsg.textContent =
+                    "Joint validation file missing. Run: " +
+                    "python -m src.validation.run_all --counties 06007,06073 --no-write --export-ui data/validation/merged_06007_06073.json";
+            }
+        }
     });
 }).catch(err => {
     const msg = document.getElementById("countyMessage");

@@ -45,10 +45,20 @@
                 </div>
             </div>
             <div class="validation-panel__body">
+                <h3 class="validation-subhead">Current county (packaged GeoJSON)</h3>
                 <div class="validation-kpis" id="validationKpis" aria-live="polite"></div>
-                <svg class="validation-chart" id="validationChart" width="1200" height="120" aria-label="Validation bar chart"></svg>
+                <svg class="validation-chart" id="validationChart" width="1200" height="200" aria-label="Validation bar chart (current county)"></svg>
+                <h3 class="validation-subhead">Butte + San Diego (joint <code>run_all --counties</code>)</h3>
+                <p class="validation-panel__subtext">
+                    FEMA <code>corr_*</code> / <code>rmse_*</code> and <code>n_counties</code> are computed on the combined blocks from the manifest. Single-county files repeat the same block-level FEMA object with <code>n_counties: 1</code>.
+                </p>
+                <div id="validationPairSection" class="validation-pair" hidden>
+                    <div class="validation-kpis" id="validationKpisPair" aria-live="polite"></div>
+                    <svg class="validation-chart" id="validationChartPair" width="1200" height="200" aria-label="Validation bar chart (joint run)"></svg>
+                </div>
+                <p class="validation-panel__subtext" id="validationPairMessage"></p>
                 <div class="validation-panel__note">
-                    External comparisons (FEMA NRI, MTBS) only become “real” when the corresponding external datasets are present at build time.
+                    External comparisons (FEMA NRI, MTBS) only become “real” when the corresponding external datasets are present at build time. Refresh <code>data/validation/merged_06007_06073.json</code> after re-running validation.
                 </div>
             </div>
         </section>
