@@ -172,6 +172,19 @@ Each row lists the **GeoJSON property** name, the **calculation** (as implemente
    $env:PYTHONPATH='.'; pytest tests/ -v
    ```
 
+7. **Run the validation report runner (recommended):**
+   ```bash
+   # Smoke run (no files written)
+   python -m src.validation.run_all --no-write
+
+   # Write reports to ./reports/
+   python -m src.validation.run_all
+   ```
+   Outputs:
+   - `reports/validation_report.json` and `reports/validation_report.md`
+   - `reports/lineage_report.json` (spec-driven registry from `calculations.csv`)
+   - Contract/spec: `docs/validation_contract.md`
+
 ### 1.3 Running the Pipeline
 
 **The pipeline executes in 5 stages:**

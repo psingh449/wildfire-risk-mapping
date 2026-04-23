@@ -1,0 +1,225 @@
+{
+  "counts": {
+    "properties": 27
+  },
+  "items": {
+    "auc_score": {
+      "code_locations": "src/validation/metrics.py; src/validation/run_all.py",
+      "dependencies": "risk_score + labels",
+      "exists_in_code": "No",
+      "function_name": "compute_auc_fire_prediction",
+      "geojson_property": "auc_score",
+      "used_in_validation": "Yes"
+    },
+    "block_to_county_mapping": {
+      "code_locations": "src/validation/metrics.py; src/validation/run_all.py",
+      "dependencies": "block,county geometries",
+      "exists_in_code": "No",
+      "function_name": "aggregate_block_to_county",
+      "geojson_property": "block_to_county_mapping",
+      "used_in_validation": "Yes"
+    },
+    "county_eal": {
+      "code_locations": "src/validation/metrics.py; src/validation/run_all.py",
+      "dependencies": "eal",
+      "exists_in_code": "No",
+      "function_name": "compute_county_eal_from_blocks",
+      "geojson_property": "county_eal",
+      "used_in_validation": "Yes"
+    },
+    "county_risk": {
+      "code_locations": "src/validation/metrics.py; src/validation/run_all.py",
+      "dependencies": "risk_score",
+      "exists_in_code": "No",
+      "function_name": "compute_county_risk_from_blocks",
+      "geojson_property": "county_risk",
+      "used_in_validation": "Yes"
+    },
+    "eal": {
+      "code_locations": "src/models/risk_model.py:eal; main.js:_formatValue/_debugTag",
+      "dependencies": "risk_score,exposure_building_value",
+      "exists_in_code": "Yes",
+      "function_name": "compute_eal",
+      "geojson_property": "eal",
+      "used_in_validation": "Yes"
+    },
+    "eal_norm": {
+      "code_locations": "src/models/risk_model.py:eal_norm; main.js:_formatValue/_debugTag",
+      "dependencies": "eal",
+      "exists_in_code": "Yes",
+      "function_name": "normalize_eal",
+      "geojson_property": "eal_norm",
+      "used_in_validation": "No"
+    },
+    "exposure_building_value": {
+      "code_locations": "src/utils/real_data.py:compute_exposure_building_value_real; main.js:_formatValue/_debugTag",
+      "dependencies": "requires exposure_housing",
+      "exists_in_code": "Yes",
+      "function_name": "compute_exposure_building_value",
+      "geojson_property": "exposure_building_value",
+      "used_in_validation": "Yes"
+    },
+    "exposure_housing": {
+      "code_locations": "src/utils/real_data.py:compute_exposure_housing_real; main.js:_formatValue/_debugTag",
+      "dependencies": "Census API",
+      "exists_in_code": "Yes",
+      "function_name": "compute_exposure_housing",
+      "geojson_property": "exposure_housing",
+      "used_in_validation": "Yes"
+    },
+    "exposure_population": {
+      "code_locations": "src/utils/real_data.py:compute_exposure_population_real; main.js:_formatValue/_debugTag",
+      "dependencies": "Census API",
+      "exists_in_code": "Yes",
+      "function_name": "compute_exposure_population",
+      "geojson_property": "exposure_population",
+      "used_in_validation": "Yes"
+    },
+    "exposure_score": {
+      "code_locations": "src/features/build_features.py:weighted_sum",
+      "dependencies": "exposure_population,exposure_housing,exposure_building_value",
+      "exists_in_code": "Yes",
+      "function_name": "compute_exposure_score",
+      "geojson_property": "exposure_score",
+      "used_in_validation": "Yes"
+    },
+    "fema_nri_comparison": {
+      "code_locations": "src/validation/metrics.py; src/validation/run_all.py",
+      "dependencies": "county_risk,county_eal + NRI",
+      "exists_in_code": "No",
+      "function_name": "compare_with_fema_nri",
+      "geojson_property": "fema_nri_comparison",
+      "used_in_validation": "Yes"
+    },
+    "fire_overlap_ratio": {
+      "code_locations": "src/validation/metrics.py; src/validation/run_all.py",
+      "dependencies": "risk_score + fire perimeters",
+      "exists_in_code": "No",
+      "function_name": "compute_historical_fire_overlap",
+      "geojson_property": "fire_overlap_ratio",
+      "used_in_validation": "Yes"
+    },
+    "gini_risk": {
+      "code_locations": "src/validation/metrics.py; src/validation/run_all.py",
+      "dependencies": "risk_score",
+      "exists_in_code": "No",
+      "function_name": "compute_lorenz_curve",
+      "geojson_property": "gini_risk",
+      "used_in_validation": "Yes"
+    },
+    "hazard_forest_distance": {
+      "code_locations": "src/utils/real_data.py:compute_hazard_forest_distance_real; scripts/process_nlcd_forest_distance.py; main.js:_formatValue/_debugTag",
+      "dependencies": "OSM features; generated CSV",
+      "exists_in_code": "Yes",
+      "function_name": "compute_hazard_forest_distance",
+      "geojson_property": "hazard_forest_distance",
+      "used_in_validation": "No"
+    },
+    "hazard_score": {
+      "code_locations": "src/features/build_features.py:weighted_sum; src/models/risk_model.py",
+      "dependencies": "hazard_wildfire,hazard_vegetation,hazard_forest_distance",
+      "exists_in_code": "Yes",
+      "function_name": "compute_hazard_score",
+      "geojson_property": "hazard_score",
+      "used_in_validation": "Yes"
+    },
+    "hazard_vegetation": {
+      "code_locations": "src/utils/real_data.py:compute_hazard_vegetation_real; scripts/process_nlcd_vegetation.py; main.js:_formatValue/_debugTag",
+      "dependencies": "OSM features; generated CSV",
+      "exists_in_code": "Yes",
+      "function_name": "compute_hazard_vegetation",
+      "geojson_property": "hazard_vegetation",
+      "used_in_validation": "No"
+    },
+    "hazard_wildfire": {
+      "code_locations": "src/utils/real_data.py:compute_hazard_wildfire_real; main.js:_formatValue/_debugTag",
+      "dependencies": "WHP raster",
+      "exists_in_code": "Yes",
+      "function_name": "compute_hazard_wildfire",
+      "geojson_property": "hazard_wildfire",
+      "used_in_validation": "Yes"
+    },
+    "res_fire_station_dist": {
+      "code_locations": "src/utils/real_data.py:compute_res_fire_station_dist_real; main.js:_formatValue/_debugTag",
+      "dependencies": "fire stations + centroids",
+      "exists_in_code": "Yes",
+      "function_name": "compute_res_fire_station_dist",
+      "geojson_property": "res_fire_station_dist",
+      "used_in_validation": "Yes"
+    },
+    "res_hospital_dist": {
+      "code_locations": "src/utils/real_data.py:compute_res_hospital_dist_real; main.js:_formatValue/_debugTag",
+      "dependencies": "hospitals + centroids",
+      "exists_in_code": "Yes",
+      "function_name": "compute_res_hospital_dist",
+      "geojson_property": "res_hospital_dist",
+      "used_in_validation": "No"
+    },
+    "res_road_access": {
+      "code_locations": "src/utils/real_data.py:compute_res_road_access_real; main.js:_formatValue/_debugTag",
+      "dependencies": "OSM roads",
+      "exists_in_code": "Yes",
+      "function_name": "compute_res_road_access",
+      "geojson_property": "res_road_access",
+      "used_in_validation": "Yes"
+    },
+    "resilience_score": {
+      "code_locations": "src/features/build_features.py:weighted_sum",
+      "dependencies": "res_fire_station_dist,res_hospital_dist,res_road_access",
+      "exists_in_code": "Yes",
+      "function_name": "compute_resilience_score",
+      "geojson_property": "resilience_score",
+      "used_in_validation": "Yes"
+    },
+    "risk_concentration": {
+      "code_locations": "src/validation/metrics.py; src/validation/run_all.py",
+      "dependencies": "risk_score",
+      "exists_in_code": "No",
+      "function_name": "compute_risk_concentration",
+      "geojson_property": "risk_concentration",
+      "used_in_validation": "Yes"
+    },
+    "risk_score": {
+      "code_locations": "src/models/risk_model.py:compute_risk; src/features/build_features.py",
+      "dependencies": "hazard_score,exposure_score,vulnerability_score,resilience_score",
+      "exists_in_code": "Yes",
+      "function_name": "compute_risk_score",
+      "geojson_property": "risk_score",
+      "used_in_validation": "Yes"
+    },
+    "vuln_elderly": {
+      "code_locations": "src/utils/real_data.py:compute_vuln_elderly_real",
+      "dependencies": "ACS age",
+      "exists_in_code": "Yes",
+      "function_name": "compute_vuln_elderly",
+      "geojson_property": "vuln_elderly",
+      "used_in_validation": "No"
+    },
+    "vuln_poverty": {
+      "code_locations": "scripts/real_import.py:import_acs_poverty; src/utils/real_data.py:compute_vuln_poverty_real; main.js:_formatValue/_debugTag",
+      "dependencies": "ACS poverty",
+      "exists_in_code": "Yes",
+      "function_name": "compute_vuln_poverty",
+      "geojson_property": "vuln_poverty",
+      "used_in_validation": "Yes"
+    },
+    "vuln_vehicle_access": {
+      "code_locations": "scripts/real_import.py:import_acs_vehicle_access; src/utils/real_data.py:compute_vuln_vehicle_access_real; main.js:_formatValue/_debugTag",
+      "dependencies": "ACS vehicle stats",
+      "exists_in_code": "Yes",
+      "function_name": "compute_vuln_vehicle_access",
+      "geojson_property": "vuln_vehicle_access",
+      "used_in_validation": "Yes"
+    },
+    "vulnerability_score": {
+      "code_locations": "src/features/build_features.py:weighted_sum",
+      "dependencies": "vuln_poverty,vuln_elderly,vuln_vehicle_access",
+      "exists_in_code": "Yes",
+      "function_name": "compute_vulnerability_score",
+      "geojson_property": "vulnerability_score",
+      "used_in_validation": "Yes"
+    }
+  },
+  "schema_version": 1,
+  "source": "calculations.csv"
+}
