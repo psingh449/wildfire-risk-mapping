@@ -34,7 +34,7 @@ Example:
 - **Evidence**: unit tests in `tests/test_validation_metrics.py`; lineage coverage test in `tests/test_validation_lineage.py`.
 
 ## geojson_property:fema_nri_comparison
-- **Definition**: JSON object with `{corr_risk, rmse_risk, corr_eal, rmse_eal, source}` comparing county aggregates to FEMA NRI.
+- **Definition**: JSON object with `{n_counties, corr_risk, rmse_risk, corr_eal, rmse_eal, source}` comparing county aggregates to FEMA NRI.
 - **Range / type**: JSON string; correlations in `[-1,1]`, RMSE `>=0`.
 - **Dependencies**: `data/external/fema_nri_county.csv` (normalized extract).
 - **Lineage**: `src/validation/metrics.py:compare_with_fema_nri`
@@ -68,6 +68,13 @@ Example:
 - **Range / type**: float in `[0,1]` (uses `0.5` for degenerate label sets).
 - **Lineage**: `src/validation/metrics.py:compute_auc_fire_prediction`
 - **Evidence**: unit tests + runner report.
+
+### Runner-only / UI-only metadata
+
+The validation runner and frontend also surface a few supporting fields to make the validation KPIs interpretable:
+
+- `_burned_label_source`: string label provenance (`MTBS` when perimeters are used, else `PROXY`).
+- `external_sources.burned_pos` / `external_sources.burned_neg`: counts of positive/negative burned labels used for MTBS overlap/AUC.
 
 ## geojson_property:risk_concentration
 - **Definition**: share of total `risk_score` held by the top 10% highest-risk block groups.

@@ -62,3 +62,8 @@ Per-county cached tables live under `data/real_cache/counties/{county_fips}/...`
 ## Validation metrics
 
 County-level aggregates, FEMA NRI comparison (if `data/external/fema_nri_county.csv` is present), MTBS overlap and AUC-style metrics (if fire perimeters are present), concentration, and Gini are computed in `src/validation/metrics.py` and attached to the GeoDataFrame for QA (see `calculations.csv` rows 20–27).
+
+For interpretability, the validation layer also records:
+
+- `_burned_label_source`: whether burned labels were derived from MTBS perimeters (`MTBS`) or a proxy fallback (`PROXY`).
+- `fema_nri_comparison.n_counties`: how many county points participated in the FEMA join (correlations are only meaningful when many counties are present; the repo avoids enforcing correlation thresholds on tiny `n_counties`).

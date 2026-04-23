@@ -185,6 +185,21 @@ Each row lists the **GeoJSON property** name, the **calculation** (as implemente
    - `reports/lineage_report.json` (spec-driven registry from `calculations.csv`)
    - Contract/spec: `docs/validation_contract.md`
 
+   **Multi-county validation (recommended for FEMA NRI correlation):**
+   ```bash
+   # PowerShell note: quote the counties so leading zeros are preserved
+   python -m src.validation.run_all --counties "06007,06073" --no-write
+   ```
+
+   **Export a small UI bundle (for the static frontend):**
+   ```bash
+   python -m src.validation.run_all --counties "06007,06073" --no-write --export-ui data/validation/merged_06007_06073.json
+   ```
+   The browser UI will auto-load `data/validation/merged_06007_06073.json` (if present) and show a “joint run” panel with the full KPI set:
+   - FEMA NRI: `n_counties`, `corr_risk`, `rmse_risk`, `corr_eal`, `rmse_eal`, `source`
+   - MTBS validation: `fire_overlap_ratio`, `auc_score`, plus burned label counts and `_burned_label_source` (MTBS vs PROXY)
+   - Distribution diagnostics: `risk_concentration`, `gini_risk`
+
 8. **Fetch external validation datasets (FEMA NRI + MTBS) and rerun validation for Butte:**
    ```bash
    python scripts/fetch_external_validation_data.py
@@ -192,7 +207,18 @@ Each row lists the **GeoJSON property** name, the **calculation** (as implemente
    ```
    This will populate:
    - `data/external/fema_nri_county.csv` (California counties extract)
-   - `data/external/mtbs_fire_perimeters.geojson` (Butte-clipped MTBS perimeters)
+   - `data/external/mtbs_fire_perimeters.geojson` (MTBS perimeters clipped to the selected county list)
+
+   **San Diego (06073) + Butte (06007) external validation:**
+   ```bash
+   python scripts/fetch_external_validation_data.py --counties 06007,06073
+   python scripts/run_external_validation_butte.py --county-fips 06073
+   python scripts/run_external_validation_butte.py --county-fips 06007
+   ```
+   Then regenerate the merged UI bundle:
+   ```bash
+   python -m src.validation.run_all --counties "06007,06073" --no-write --export-ui data/validation/merged_06007_06073.json
+   ```
 
 ### 1.3 Running the Pipeline
 
