@@ -1,0 +1,17 @@
+{
+  "external": {
+    "fema_nri": {
+      "min_corr_risk": 0.1,
+      "min_corr_eal": 0.1
+    },
+    "mtbs": {
+      "min_auc": 0.55,
+      "min_fire_overlap_ratio": 0.1
+    }
+  },
+  "notes": {
+    "purpose": "Central thresholds for external-truth validation. Keep conservative defaults; tighten as you establish baselines.",
+    "how_used": "src.validation.run_all reads this file and applies thresholds only when the required external inputs are present."
+  }
+}
+
