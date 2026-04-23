@@ -7,7 +7,8 @@
     "41039"
   ],
   "datasets": {
-    "06007": "data/processed/counties/06007/blocks_validated.geojson"
+    "06007": "data/processed/counties/06007/blocks_validated.geojson",
+    "06073": "data/processed/counties/06073/blocks_validated.geojson"
   },
   "notes": "Add entries under datasets when you publish data/processed/counties/{id}/blocks.geojson for more counties. prefetched_county_ids controls bold labels in the county menu."
 }

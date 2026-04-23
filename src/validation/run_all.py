@@ -3,7 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple, List
 
 import pandas as pd
 
@@ -92,7 +92,14 @@ def _apply_external_thresholds(metrics: Dict[str, Any], thresholds: Dict[str, An
     # - we used REAL
     # - correlation is defined (requires >=2 counties in the comparison join)
     fema_path = _resolve_repo_file("data/external/fema_nri_county.csv")
-    if fema_path.exists() and str(fema.get("source", "")).upper() == "REAL" and fema.get("corr_risk") is not None:
+    n_counties = fema.get("n_counties")
+    if (
+        fema_path.exists()
+        and str(fema.get("source", "")).upper() == "REAL"
+        and fema.get("corr_risk") is not None
+        and isinstance(n_counties, int)
+        and n_counties >= 5
+    ):
         fema_thr = ext.get("fema_nri", {})
         min_corr_risk = fema_thr.get("min_corr_risk")
         min_corr_eal = fema_thr.get("min_corr_eal")
@@ -131,17 +138,36 @@ def _apply_external_thresholds(metrics: Dict[str, Any], thresholds: Dict[str, An
 def run_validation_runner(
     *,
     use_real_data: bool = False,
+    counties: Optional[List[str]] = None,
     thresholds_path: str = "validation_thresholds.json",
     write_reports: bool = True,
     reports_dir: str = "reports",
 ) -> Dict[str, Any]:
-    # Build a representative frame through the existing pipeline.
-    steps.USE_REAL_DATA = bool(use_real_data)
-    gdf = steps.step_ingestion()
-    gdf = steps.step_preprocessing(gdf)
-    gdf = run_feature_pipeline(gdf)
-    gdf = steps.step_features(gdf)
-    gdf = steps.step_model(gdf)
+    # If counties are provided, run validation directly on packaged county GeoJSONs
+    # (this is how we make FEMA/MTBS comparisons meaningful across multiple counties).
+    if counties:
+        try:
+            import geopandas as gpd
+        except Exception as e:
+            raise RuntimeError("geopandas is required for --counties validation runs") from e
+
+        manifest = json.loads(_resolve_repo_file("data/county_manifest.json").read_text(encoding="utf-8"))
+        datasets = manifest.get("datasets", {}) or {}
+        frames = []
+        for cf in counties:
+            path = datasets.get(cf)
+            if not path:
+                raise FileNotFoundError(f"county_manifest.json has no dataset path for {cf}")
+            frames.append(gpd.read_file(_resolve_repo_file(path)))
+        gdf = pd.concat(frames, ignore_index=True)
+    else:
+        # Build a representative frame through the existing pipeline.
+        steps.USE_REAL_DATA = bool(use_real_data)
+        gdf = steps.step_ingestion()
+        gdf = steps.step_preprocessing(gdf)
+        gdf = run_feature_pipeline(gdf)
+        gdf = steps.step_features(gdf)
+        gdf = steps.step_model(gdf)
 
     # Existing schema/range/provenance validations (warning-level logging).
     validator.run_all_validations(gdf)
@@ -235,13 +261,16 @@ def _render_report_md(report: Dict[str, Any]) -> str:
 def main(argv: Optional[list[str]] = None) -> int:
     parser = argparse.ArgumentParser(description="Run end-to-end validation and emit a report.")
     parser.add_argument("--use-real-data", action="store_true", help="Run ingestion with real data if available.")
+    parser.add_argument("--counties", default="", help="Comma-separated county FIPS to validate together (e.g., 06007,06073).")
     parser.add_argument("--no-write", action="store_true", help="Do not write reports to disk.")
     parser.add_argument("--reports-dir", default="reports", help="Where to write reports.")
     parser.add_argument("--thresholds", default="validation_thresholds.json", help="Thresholds JSON path.")
     args = parser.parse_args(argv)
 
+    counties = [c.strip() for c in str(args.counties).split(",") if c.strip()]
     report = run_validation_runner(
         use_real_data=bool(args.use_real_data),
+        counties=counties or None,
         thresholds_path=str(args.thresholds),
         write_reports=not bool(args.no_write),
         reports_dir=str(args.reports_dir),
