@@ -185,6 +185,15 @@ Each row lists the **GeoJSON property** name, the **calculation** (as implemente
    - `reports/lineage_report.json` (spec-driven registry from `calculations.csv`)
    - Contract/spec: `docs/validation_contract.md`
 
+8. **Fetch external validation datasets (FEMA NRI + MTBS) and rerun validation for Butte:**
+   ```bash
+   python scripts/fetch_external_validation_data.py
+   python scripts/run_external_validation_butte.py
+   ```
+   This will populate:
+   - `data/external/fema_nri_county.csv` (California counties extract)
+   - `data/external/mtbs_fire_perimeters.geojson` (Butte-clipped MTBS perimeters)
+
 ### 1.3 Running the Pipeline
 
 **The pipeline executes in 5 stages:**

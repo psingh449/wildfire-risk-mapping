@@ -66,11 +66,12 @@ def compare_with_fema_nri(gdf: pd.DataFrame, fema_path: str = "data/external/fem
         gdf = compute_county_eal_from_blocks(gdf)
 
     summary = {
-        "corr_risk": 0.0,
+        "corr_risk": None,
         "rmse_risk": 0.0,
-        "corr_eal": 0.0,
+        "corr_eal": None,
         "rmse_eal": 0.0,
-        "source": "DUMMY"
+        "source": "DUMMY",
+        "n_counties": 0,
     }
 
     if os.path.exists(fema_path):
@@ -82,17 +83,18 @@ def compare_with_fema_nri(gdf: pd.DataFrame, fema_path: str = "data/external/fem
 
         county_df = gdf[["county_fips", "county_risk", "county_eal"]].drop_duplicates("county_fips")
         merged = county_df.merge(fema, on="county_fips", how="inner")
+        summary["n_counties"] = int(len(merged))
 
         if risk_col and not merged.empty:
             r1 = pd.to_numeric(merged["county_risk"], errors="coerce")
             r2 = pd.to_numeric(merged[risk_col], errors="coerce")
-            summary["corr_risk"] = float(r1.corr(r2)) if r1.notna().sum() > 1 and r2.notna().sum() > 1 else 0.0
+            summary["corr_risk"] = float(r1.corr(r2)) if r1.notna().sum() > 1 and r2.notna().sum() > 1 else None
             summary["rmse_risk"] = _rmse(r1, r2)
 
         if eal_col and not merged.empty:
             e1 = pd.to_numeric(merged["county_eal"], errors="coerce")
             e2 = pd.to_numeric(merged[eal_col], errors="coerce")
-            summary["corr_eal"] = float(e1.corr(e2)) if e1.notna().sum() > 1 and e2.notna().sum() > 1 else 0.0
+            summary["corr_eal"] = float(e1.corr(e2)) if e1.notna().sum() > 1 and e2.notna().sum() > 1 else None
             summary["rmse_eal"] = _rmse(e1, e2)
 
         summary["source"] = "REAL"
