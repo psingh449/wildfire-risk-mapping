@@ -726,6 +726,8 @@ function renderAll() {
     hoveredBlockId = null;
     const features = (geoData && geoData.features) ? geoData.features : [];
 
+    renderValidationSummary(features);
+
     for (const { panelId, metric } of MAP_PANELS) {
         const mapSvg = d3.select(`#${panelId} svg.map-svg`);
         const legendSvg = d3.select(`#${panelId} svg.legend-svg`);
@@ -820,6 +822,175 @@ function renderAll() {
     updateZoomSliderFromTransform();
 
     updateBlockHighlight();
+}
+
+function _safeNumber(x, fallback = null) {
+    const v = Number(x);
+    return Number.isFinite(v) ? v : fallback;
+}
+
+function _firstScalar(features, prop, fallback = null) {
+    if (!features || !features.length) return fallback;
+    const p = features[0] && features[0].properties ? features[0].properties : {};
+    if (!p) return fallback;
+    return p[prop] != null ? p[prop] : fallback;
+}
+
+function _parseJsonMaybe(value) {
+    if (value == null) return null;
+    if (typeof value === "object") return value;
+    if (typeof value !== "string") return null;
+    try { return JSON.parse(value); } catch (e) { return null; }
+}
+
+function _pillClassForSource(source) {
+    const s = String(source || "").toUpperCase();
+    if (s === "REAL") return "validation-pill--real";
+    if (s === "PROXY") return "validation-pill--proxy";
+    if (s === "DUMMY") return "validation-pill--dummy";
+    return "validation-pill--unknown";
+}
+
+function renderValidationSummary(features) {
+    const host = document.getElementById("validationKpis");
+    const chart = d3.select("#validationChart");
+    if (!host || chart.empty()) return;
+
+    if (!features || features.length === 0) {
+        host.innerHTML = `<div class="validation-kpi"><span class="validation-kpi__label">Validation</span><span class="validation-kpi__meta">No county GeoJSON loaded.</span></div>`;
+        chart.selectAll("*").remove();
+        return;
+    }
+
+    const fireOverlap = _safeNumber(_firstScalar(features, "fire_overlap_ratio", null), null);
+    const auc = _safeNumber(_firstScalar(features, "auc_score", null), null);
+    const conc = _safeNumber(_firstScalar(features, "risk_concentration", null), null);
+    const gini = _safeNumber(_firstScalar(features, "gini_risk", null), null);
+    const femaRaw = _firstScalar(features, "fema_nri_comparison", null);
+    const fema = _parseJsonMaybe(femaRaw) || {};
+    const femaSource = fema.source || "UNKNOWN";
+
+    const corrRisk = _safeNumber(fema.corr_risk, null);
+    const rmseRisk = _safeNumber(fema.rmse_risk, null);
+    const corrEal = _safeNumber(fema.corr_eal, null);
+    const rmseEal = _safeNumber(fema.rmse_eal, null);
+
+    const fmt01 = (v) => (v == null ? "—" : v.toFixed(3));
+    const fmtPos = (v) => (v == null ? "—" : Number(v).toFixed(3));
+
+    host.innerHTML = [
+        `<div class="validation-kpi">
+            <span class="validation-kpi__label">MTBS overlap</span>
+            <span class="validation-kpi__value">${fmt01(fireOverlap)}</span>
+            <span class="validation-kpi__meta">fire_overlap_ratio</span>
+        </div>`,
+        `<div class="validation-kpi">
+            <span class="validation-kpi__label">AUC</span>
+            <span class="validation-kpi__value">${fmt01(auc)}</span>
+            <span class="validation-kpi__meta">auc_score</span>
+        </div>`,
+        `<div class="validation-kpi">
+            <span class="validation-kpi__label">Concentration (top 10%)</span>
+            <span class="validation-kpi__value">${fmt01(conc)}</span>
+            <span class="validation-kpi__meta">risk_concentration</span>
+        </div>`,
+        `<div class="validation-kpi">
+            <span class="validation-kpi__label">Gini</span>
+            <span class="validation-kpi__value">${fmt01(gini)}</span>
+            <span class="validation-kpi__meta">gini_risk</span>
+        </div>`,
+        `<div class="validation-kpi">
+            <span class="validation-kpi__label">FEMA NRI</span>
+            <span class="validation-kpi__value">${fmtPos(corrRisk)}</span>
+            <span class="validation-kpi__meta">corr_risk</span>
+            <span class="validation-pill ${_pillClassForSource(femaSource)}">${_escapeHtml(String(femaSource))}</span>
+        </div>`
+    ].join("");
+
+    // --- Mini chart: 0..1 bars (overlap, AUC, concentration, gini), plus FEMA corr bars (-1..1) ---
+    const data = [
+        { key: "fire_overlap_ratio", label: "Overlap", value: fireOverlap, domain: [0, 1], color: "#E65100" },
+        { key: "auc_score", label: "AUC", value: auc, domain: [0, 1], color: "#B71C1C" },
+        { key: "risk_concentration", label: "Top10%", value: conc, domain: [0, 1], color: "#0369A1" },
+        { key: "gini_risk", label: "Gini", value: gini, domain: [0, 1], color: "#5B21B6" },
+        { key: "fema_corr_risk", label: "FEMA corr", value: corrRisk, domain: [-1, 1], color: "#166534" },
+    ];
+
+    const svgNode = chart.node();
+    const w = (svgNode && svgNode.getBoundingClientRect && svgNode.getBoundingClientRect().width) ? svgNode.getBoundingClientRect().width : (+chart.attr("width") || 900);
+    const h = (+chart.attr("height") || 120);
+    chart.attr("viewBox", `0 0 ${Math.max(320, w)} ${h}`);
+    chart.selectAll("*").remove();
+
+    const pad = { l: 14, r: 14, t: 12, b: 12 };
+    const innerW = Math.max(200, w - pad.l - pad.r);
+    const innerH = Math.max(60, h - pad.t - pad.b);
+    const g = chart.append("g").attr("transform", `translate(${pad.l},${pad.t})`);
+
+    const rowH = innerH / data.length;
+    const barH = Math.max(10, rowH * 0.52);
+    const labelW = Math.min(120, innerW * 0.2);
+    const barW = innerW - labelW - 10;
+
+    const rows = g.selectAll("g.row").data(data).join("g").attr("class", "row").attr("transform", (_, i) => `translate(0,${i * rowH})`);
+
+    rows.append("text")
+        .attr("x", 0)
+        .attr("y", rowH * 0.6)
+        .attr("font-size", 11)
+        .attr("fill", "#111827")
+        .text(d => d.label);
+
+    rows.append("rect")
+        .attr("x", labelW)
+        .attr("y", (rowH - barH) / 2)
+        .attr("width", barW)
+        .attr("height", barH)
+        .attr("rx", 6)
+        .attr("fill", "#f3f4f6")
+        .attr("stroke", "#e5e7eb");
+
+    rows.append("rect")
+        .attr("x", d => {
+            if (d.domain[0] < 0) {
+                const x0 = labelW + barW * (0 - d.domain[0]) / (d.domain[1] - d.domain[0]);
+                const v = d.value;
+                if (v == null) return x0;
+                const xv = labelW + barW * (v - d.domain[0]) / (d.domain[1] - d.domain[0]);
+                return Math.min(x0, xv);
+            }
+            return labelW;
+        })
+        .attr("y", (rowH - barH) / 2)
+        .attr("width", d => {
+            if (d.value == null) return 0;
+            if (d.domain[0] < 0) {
+                const x0 = barW * (0 - d.domain[0]) / (d.domain[1] - d.domain[0]);
+                const xv = barW * (d.value - d.domain[0]) / (d.domain[1] - d.domain[0]);
+                return Math.max(0, Math.abs(xv - x0));
+            }
+            return Math.max(0, Math.min(barW, barW * (d.value - d.domain[0]) / (d.domain[1] - d.domain[0])));
+        })
+        .attr("height", barH)
+        .attr("rx", 6)
+        .attr("fill", d => d.color)
+        .attr("opacity", d => (d.value == null ? 0.2 : 0.85));
+
+    // Zero line for signed metrics (FEMA corr).
+    rows.filter(d => d.domain[0] < 0).append("line")
+        .attr("x1", labelW + barW * (0 - (-1)) / (2))
+        .attr("x2", labelW + barW * (0 - (-1)) / (2))
+        .attr("y1", (rowH - barH) / 2 - 2)
+        .attr("y2", (rowH + barH) / 2 + 2)
+        .attr("stroke", "#9ca3af")
+        .attr("stroke-width", 1);
+
+    rows.append("text")
+        .attr("x", labelW + barW + 6)
+        .attr("y", rowH * 0.6)
+        .attr("font-size", 11)
+        .attr("fill", "#374151")
+        .text(d => (d.value == null ? "—" : (Number(d.value).toFixed(3))));
 }
 
 function prefetchPackagedCounties(manifest, currentId) {

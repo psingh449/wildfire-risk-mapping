@@ -37,6 +37,22 @@
             Hover any map for the same full-detail tooltip.
         </p>
 
+        <section class="validation-panel" aria-label="Validation summary">
+            <div class="validation-panel__header">
+                <h2 class="validation-panel__title">Validation summary</h2>
+                <div class="validation-panel__subtitle">
+                    These values are computed during the pipeline and embedded in the county GeoJSON (rows 20–27 in <code>calculations.csv</code>).
+                </div>
+            </div>
+            <div class="validation-panel__body">
+                <div class="validation-kpis" id="validationKpis" aria-live="polite"></div>
+                <svg class="validation-chart" id="validationChart" width="1200" height="120" aria-label="Validation bar chart"></svg>
+                <div class="validation-panel__note">
+                    External comparisons (FEMA NRI, MTBS) only become “real” when the corresponding external datasets are present at build time.
+                </div>
+            </div>
+        </section>
+
         <div class="map-grid" id="mapGrid">
             <div class="map-cell map-cell--text" data-metric="eal_norm" id="text-panel-eal">
                 <h3 class="map-title metric-accent metric-accent-el">About EAL (EL)</h3>
