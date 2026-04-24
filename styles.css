@@ -15,6 +15,11 @@ body {
     box-sizing: border-box;
 }
 
+/* Wider content when debug mode shows text + map in two columns */
+body.layout-debug .container {
+    max-width: min(1680px, 100%);
+}
+
 .controls {
     margin-bottom: 10px;
 }
@@ -189,10 +194,9 @@ button {
     color: #4b5563;
 }
 
+/* Non-debug: six map cells only, 3 columns × 2 rows. Debug: 6 rows, each row = text (left) + map (right). */
 .map-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    grid-auto-rows: 1fr;
     gap: 0;
     align-items: stretch;
     justify-items: stretch;
@@ -201,6 +205,22 @@ button {
     overflow: hidden;
     position: relative;
     padding-right: 0;
+}
+
+.map-grid:not(.map-grid--debug) {
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(2, auto);
+}
+
+/* Hide explanatory text blocks when not in debug mode; maps stay 3×2. */
+.map-grid:not(.map-grid--debug) .map-cell--text {
+    display: none !important;
+}
+
+/* Debug: two columns × six rows; DOM order is (text, map) × 6. */
+.map-grid.map-grid--debug {
+    grid-template-columns: minmax(260px, 1fr) minmax(320px, 1.35fr);
+    grid-template-rows: repeat(6, auto);
 }
 
 .map-cell {

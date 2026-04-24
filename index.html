@@ -24,17 +24,19 @@
 
         <p id="countyMessage" class="county-message" aria-live="polite"></p>
         <p class="description">
-            Six block-group maps in a 3×2 grid. Drag to pan, scroll or pinch to zoom (all six stay in sync). Double-click any map to reset the view. 
+            <span class="description--layout-nondebug">Six block-group maps in a 3×2 matrix (debug off). Drag to pan, scroll or pinch to zoom (all six stay in sync). Double-click any map to reset the view.</span>
+            <span class="description--layout-debug" hidden>With debug mode on, each metric appears as one row: documentation on the left and the map on the right (six rows). Double-click a map to reset; zoom controls stay in sync across maps.</span>
+            <span class="description-metrics"> Metrics:
             <span class="metric-accent metric-accent-el"><strong>EL</strong></span>
-            (<span class="metric-accent metric-accent-el">EAL</span>, normalized for the choropleth) and
+            (<span class="metric-accent metric-accent-el">EAL</span>, normalized) and
             <span class="metric-accent metric-accent-risk"><strong>RISC</strong></span>
-            (overall risk) on the first row;
+            (overall risk);
             <span class="metric-accent metric-accent-hazard">hazard</span>,
             <span class="metric-accent metric-accent-exposure">exposure</span>,
             <span class="metric-accent metric-accent-vulnerability">vulnerability</span>, and
-            <span class="metric-accent metric-accent-resilience">resilience</span>
-            on the next two rows.
+            <span class="metric-accent metric-accent-resilience">resilience</span>.
             Hover any map for the same full-detail tooltip.
+            </span>
         </p>
 
         <section class="validation-panel" aria-label="Validation summary">

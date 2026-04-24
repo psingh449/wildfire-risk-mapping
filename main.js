@@ -1204,6 +1204,25 @@ function prefetchPackagedCounties(manifest, currentId) {
     }
 }
 
+function applyMapGridLayout() {
+    const g = document.getElementById("mapGrid");
+    if (g) g.classList.toggle("map-grid--debug", DEBUG_MODE);
+    document.body.classList.toggle("layout-debug", DEBUG_MODE);
+    const nonDbg = document.querySelector(".description--layout-nondebug");
+    const dbgDesc = document.querySelector(".description--layout-debug");
+    if (nonDbg) nonDbg.hidden = DEBUG_MODE;
+    if (dbgDesc) dbgDesc.hidden = !DEBUG_MODE;
+    requestAnimationFrame(() => {
+        if (typeof geoData !== "undefined" && geoData && Array.isArray(geoData.features)) {
+            try {
+                renderAll();
+            } catch (e) {
+                console.error(e);
+            }
+        }
+    });
+}
+
 function loadCounty(id, manifest) {
     const url = manifest.datasets && manifest.datasets[id];
     const msg = d3.select("#countyMessage");
@@ -1304,12 +1323,14 @@ d3.select("#county").on("change", function () {
 
 d3.select("#debugToggle").on("change", function () {
     DEBUG_MODE = this.checked;
+    applyMapGridLayout();
 });
 
 try {
     const t = document.getElementById("debugToggle");
     if (t) t.checked = DEBUG_MODE;
 } catch (e) {}
+applyMapGridLayout();
 
 // Synced zoom sliders (one per panel)
 try {
