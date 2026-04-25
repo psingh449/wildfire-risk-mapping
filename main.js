@@ -488,6 +488,7 @@ function resetMapView() {
 
 let geoData;
 let countyManifest;
+let _mergedAllUiDoc = null;
 
 const tooltip = d3.select("body")
     .append("div")
@@ -631,8 +632,6 @@ function renderAll() {
     fitProjectionToGeo(mapW, mapH);
     hoveredBlockId = null;
     const features = (geoData && geoData.features) ? geoData.features : [];
-
-    renderValidationSummary(features);
 
     for (const { panelId, metric } of MAP_PANELS) {
         const mapSvg = d3.select(`#${panelId} svg.map-svg`);
@@ -811,6 +810,7 @@ function buildValidationMetricsFromFeatures(features) {
     const p0 = (features[0] && features[0].properties) || {};
     const fema = _parseJsonMaybe(p0.fema_nri_comparison) || {};
     const moduleSensitivity = _parseJsonMaybe(p0.module_sensitivity) || {};
+    const calfireValidation = _parseJsonMaybe(p0.calfire_validation) || {};
     const burned = _countBurnedLabels(features);
     return {
         block_rows: features.length,
@@ -820,6 +820,7 @@ function buildValidationMetricsFromFeatures(features) {
         gini_risk: _safeNumber(p0.gini_risk, null),
         fema_nri_comparison: fema,
         module_sensitivity: moduleSensitivity,
+        calfire_validation: calfireValidation,
         county_risk: _safeNumber(p0.county_risk, null),
         county_eal: p0.county_eal != null && p0.county_eal !== "" ? Number(p0.county_eal) : null,
         block_to_county_mapping: p0.block_to_county_mapping,
@@ -834,12 +835,20 @@ function buildValidationMetricsFromFeatures(features) {
 
 function validationMetricsToChartData(m) {
     const fema = m.fema_nri_comparison || {};
+    const cal = m.calfire_validation || {};
     const out = [
         { key: "fire_overlap_ratio", label: "Overlap", value: _safeNumber(m.fire_overlap_ratio, null), domain: [0, 1], color: "#E65100" },
         { key: "auc_score", label: "AUC", value: _safeNumber(m.auc_score, null), domain: [0, 1], color: "#B71C1C" },
         { key: "risk_concentration", label: "Top 10%", value: _safeNumber(m.risk_concentration, null), domain: [0, 1], color: "#0369A1" },
         { key: "gini_risk", label: "Gini", value: _safeNumber(m.gini_risk, null), domain: [0, 1], color: "#5B21B6" }
     ];
+    const caAuc = _safeNumber(
+        (cal && cal.overall && cal.overall.top_pct_metrics) ? cal.overall.top_pct_metrics.auc : cal.auc,
+        null
+    );
+    if (caAuc != null) {
+        out.push({ key: "calfire_auc", label: "CAL FIRE AUC", value: caAuc, domain: [0, 1], color: "#7C2D12" });
+    }
     const cr = _safeNumber(fema.corr_risk, null);
     out.push({ key: "fema_corr_risk", label: "FEMA ρ (risk)", value: cr, domain: [-1, 1], color: "#166534" });
     const ce = _safeNumber(fema.corr_eal, null);
@@ -1015,6 +1024,75 @@ function kpiHtmlFromMetrics(m, opts) {
         );
     }
 
+    // Experiment 2 – Historical Fire Validation (CAL FIRE; show both threshold modes + per-county when available).
+    const calRoot = m.calfire_validation || {};
+    const calSrc = calRoot.source != null ? String(calRoot.source) : "";
+    const calOverall = calRoot.overall || null;
+    const calByCounty = calRoot.by_county || null;
+    const currentFips = (options && options.current_county_fips) ? String(options.current_county_fips) : "";
+    const cal = joint ? calOverall : (calByCounty && currentFips ? calByCounty[currentFips] : null);
+
+    const minPos = 30;
+    const topPctMetrics = cal && cal.top_pct_metrics ? cal.top_pct_metrics : null;
+    const topKMetrics = cal && cal.top_k_metrics ? cal.top_k_metrics : null;
+    const burnedTotal = topPctMetrics ? topPctMetrics.burned_total : null;
+
+    if (calRoot && (topPctMetrics || topKMetrics)) {
+        const y0 = calRoot.year_min != null ? String(calRoot.year_min) : "—";
+        const y1 = calRoot.year_max != null ? String(calRoot.year_max) : "—";
+        const topPct = (Number(cal && cal.top_pct != null ? cal.top_pct : 0.1) * 100);
+        const topPctText = Number.isFinite(topPct) ? `${topPct.toFixed(0)}%` : "—";
+        const topK = cal && cal.top_k != null ? String(cal.top_k) : "—";
+
+        const insufficient = burnedTotal != null && Number(burnedTotal) < minPos;
+        const scopeLabel = joint ? "all packaged counties" : (currentFips ? `county ${currentFips}` : "current county");
+
+        const rowBlock = (label, metrics, predLabel) => {
+            if (!metrics) return "";
+            const burnedText = `${metrics.burned_total != null ? String(metrics.burned_total) : "—"} of ${metrics.n_total != null ? String(metrics.n_total) : "—"}`;
+            const predText = `${metrics.predicted_high_risk != null ? String(metrics.predicted_high_risk) : "—"}`;
+            const tpfpText = `${metrics.tp != null ? String(metrics.tp) : "—"} / ${metrics.fp != null ? String(metrics.fp) : "—"}`;
+            const prfText = `${_formatMetricValue(metrics.precision)} / ${_formatMetricValue(metrics.recall)} / ${_formatMetricValue(metrics.f1)}`;
+            return (
+                `<tr class="validation-table__section"><td colspan="3"><b>${_escapeHtml(label)}</b> <span class="validation-kpi__meta">${_escapeHtml(predLabel)}</span></td></tr>` +
+                `<tr><td>Block groups that burned (ground truth)</td><td>${_escapeHtml(burnedText)}</td><td>CAL FIRE FRAP perimeters</td></tr>` +
+                `<tr><td>Predicted high-risk</td><td>${_escapeHtml(predText)}</td><td>Model <code>risk_score</code></td></tr>` +
+                `<tr><td>True Positives / False Positives</td><td>${_escapeHtml(tpfpText)}</td><td>CAL FIRE + <code>risk_score</code></td></tr>` +
+                `<tr><td>Precision / Recall / F1</td><td>${_escapeHtml(prfText)}</td><td>CAL FIRE + <code>risk_score</code></td></tr>` +
+                `<tr><td>Accuracy</td><td>${_escapeHtml(_formatMetricValue(metrics.accuracy))}</td><td>CAL FIRE + <code>risk_score</code></td></tr>` +
+                `<tr><td>AUC</td><td>${_escapeHtml(_formatMetricValue(metrics.auc))}</td><td>CAL FIRE + <code>risk_score</code></td></tr>`
+            );
+        };
+
+        parts.push(
+            `<div class="validation-kpi validation-kpi--table">
+                <div class="validation-kpi__table-head">
+                    <span class="validation-kpi__label">Experiment 2 – Historical Fire Validation</span>
+                    <span class="validation-kpi__meta">${_escapeHtml(y0)}–${_escapeHtml(y1)} (${_escapeHtml(scopeLabel)})</span>
+                    <span class="validation-pill ${_pillClassForSource(calSrc)}">${_escapeHtml(calSrc || "UNKNOWN")}</span>
+                </div>
+                ${
+                    insufficient
+                        ? `<div class="validation-kpi__meta">Insufficient burned positives for stable per-county KPIs (need ≥ ${minPos}).</div>`
+                        : ""
+                }
+                <table class="validation-table" role="table" aria-label="Experiment 2 – Historical Fire Validation">
+                    <thead>
+                        <tr>
+                            <th>Metric</th>
+                            <th>Value</th>
+                            <th>Data source</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rowBlock(`Mode A`, topPctMetrics, `predicted = top ${topPctText}`)}
+                        ${rowBlock(`Mode B`, topKMetrics, `predicted = top K (K = burned_total = ${topK})`)}
+                    </tbody>
+                </table>
+            </div>`
+        );
+    }
+
     if (joint && failKeys.length) {
         const brief = failKeys.map((k) => `${k}`).join(", ");
         parts.push(
@@ -1118,40 +1196,109 @@ function renderValidationBarChart(chart, data, heightPx) {
         .text((d) => (d.value == null ? "—" : Number(d.value).toFixed(3)));
 }
 
-function renderValidationSummary(features) {
-    const host = document.getElementById("validationKpis");
-    const chart = d3.select("#validationChart");
-    if (!host || chart.empty()) return;
-
-    if (!features || features.length === 0) {
-        host.innerHTML = `<div class="validation-kpi"><span class="validation-kpi__label">Validation</span><span class="validation-kpi__meta">No county GeoJSON loaded.</span></div>`;
-        chart.selectAll("*").remove();
-        return;
-    }
-
-    const m = buildValidationMetricsFromFeatures(features);
-    host.innerHTML = kpiHtmlFromMetrics(m, { joint: false });
-    renderValidationBarChart(chart, validationMetricsToChartData(m), 200);
+function _fmtMoneyShort(n) {
+    const v = Number(n);
+    if (!Number.isFinite(v)) return "—";
+    const abs = Math.abs(v);
+    if (abs >= 1e9) return `$${(v / 1e9).toFixed(2)}B`;
+    if (abs >= 1e6) return `$${(v / 1e6).toFixed(2)}M`;
+    if (abs >= 1e3) return `$${(v / 1e3).toFixed(1)}K`;
+    return `$${Math.round(v).toLocaleString()}`;
 }
 
-function renderJointValidationSummary(uiDoc) {
-    const host = document.getElementById("validationKpisPair");
-    const chart = d3.select("#validationChartPair");
-    if (!host || chart.empty() || !uiDoc || !uiDoc.metrics) {
-        if (host) {
-            host.innerHTML = `<div class="validation-kpi"><span class="validation-kpi__label">Joint run</span><span class="validation-kpi__meta">No metrics in bundle.</span></div>`;
-        }
-        if (!chart.empty()) chart.selectAll("*").remove();
+function renderExperimentsDashboard() {
+    const host = document.getElementById("experimentsDashboard");
+    if (!host) return;
+    if (!_mergedAllUiDoc || !_mergedAllUiDoc.metrics || !_mergedAllUiDoc.metrics.experiments) {
+        host.innerHTML = `<div class="exp-card"><div class="exp-card__title">Dashboard</div><div class="exp-card__meta">Missing <code>data/validation/merged_all_counties.json</code>. Re-run: <code>python -m src.validation.run_all --no-write --export-ui data/validation/merged_all_counties.json</code></div></div>`;
         return;
     }
-    const m = uiDoc.metrics;
-    host.innerHTML = kpiHtmlFromMetrics(m, {
-        joint: true,
-        passed: !!uiDoc.passed,
-        threshold_failures: uiDoc.threshold_failures,
-        county_fips: uiDoc.county_fips
-    });
-    renderValidationBarChart(chart, validationMetricsToChartData(m), 200);
+
+    const exp = _mergedAllUiDoc.metrics.experiments || {};
+    const exp1 = exp.experiment1_fema_nri || {};
+    const exp2 = Array.isArray(exp.experiment2_county_eal_top10) ? exp.experiment2_county_eal_top10 : [];
+
+    const femaUw = exp1.pearson_unweighted || {};
+    const femaPw = exp1.pearson_pop_weighted || {};
+    const rUw = femaUw.r != null ? Number(femaUw.r).toFixed(3) : "—";
+    const pUw = femaUw.p != null ? Number(femaUw.p).toExponential(2) : "—";
+    const rPw = femaPw.r != null ? Number(femaPw.r).toFixed(3) : "—";
+    const pPw = femaPw.p != null ? Number(femaPw.p).toExponential(2) : "—";
+
+    const overlap = exp.experiment3_fire_overlap_ratio != null ? Number(exp.experiment3_fire_overlap_ratio).toFixed(3) : "—";
+    const auc = exp.experiment4_auc_score != null ? Number(exp.experiment4_auc_score).toFixed(3) : "—";
+    const conc = exp.experiment5_concentration != null ? Number(exp.experiment5_concentration).toFixed(3) : "—";
+    const gini = exp.experiment5_gini != null ? Number(exp.experiment5_gini).toFixed(3) : "—";
+
+    const countiesCompared = exp1.counties_compared != null ? String(exp1.counties_compared) : "—";
+    const blocks = _mergedAllUiDoc.metrics.block_rows != null ? String(_mergedAllUiDoc.metrics.block_rows) : "—";
+
+    const cards = `
+        <div class="exp-cards">
+            <div class="exp-card">
+                <div class="exp-card__title">Coverage</div>
+                <div class="exp-card__value">${_escapeHtml(countiesCompared)}</div>
+                <div class="exp-card__meta">counties in FEMA join; blocks in bundle: <b>${_escapeHtml(blocks)}</b></div>
+            </div>
+            <div class="exp-card">
+                <div class="exp-card__title">Exp1 – FEMA NRI</div>
+                <div class="exp-card__value">r ${_escapeHtml(rUw)}</div>
+                <div class="exp-card__meta">unweighted p ${_escapeHtml(pUw)}; pop‑weighted r ${_escapeHtml(rPw)} (p ${_escapeHtml(pPw)})</div>
+            </div>
+            <div class="exp-card">
+                <div class="exp-card__title">Exp3/4 – Fire history</div>
+                <div class="exp-card__value">AUC ${_escapeHtml(auc)}</div>
+                <div class="exp-card__meta">overlap@top10: <b>${_escapeHtml(overlap)}</b> (labels: ${_escapeHtml(String(exp.fire_labels_source || "UNKNOWN"))})</div>
+            </div>
+            <div class="exp-card">
+                <div class="exp-card__title">Exp5 – Concentration</div>
+                <div class="exp-card__value">${_escapeHtml(conc)}</div>
+                <div class="exp-card__meta">top10 share; gini ${_escapeHtml(gini)}</div>
+            </div>
+        </div>
+    `;
+
+    const ealRows = exp2.slice(0, 10).map((r, i) => {
+        const fips = r.county_fips != null ? String(r.county_fips) : "—";
+        const name = r.county_name != null ? String(r.county_name) : "";
+        const eal = _fmtMoneyShort(r.sum_eal);
+        const meanRisk = r.mean_risk != null ? Number(r.mean_risk).toFixed(4) : "—";
+        return `<tr><td>${i + 1}</td><td>${_escapeHtml(fips)}</td><td>${_escapeHtml(name)}</td><td>${_escapeHtml(eal)}</td><td>${_escapeHtml(meanRisk)}</td></tr>`;
+    }).join("");
+
+    const het = Array.isArray(exp.experiment5_heterogeneity_by_county) ? exp.experiment5_heterogeneity_by_county : [];
+    const selected = ["06073", "06037", "06059"];
+    const selRows = selected.map((fips) => het.find((r) => String(r.county_fips || "") === fips)).filter(Boolean);
+    const hetRows = (selRows.length ? selRows : het.slice(0, 10)).map((r) => {
+        const fips = r.county_fips != null ? String(r.county_fips) : "—";
+        const name = r.county_name != null ? String(r.county_name) : "";
+        const mean = r.mean_risk != null ? Number(r.mean_risk).toFixed(4) : "—";
+        const mx = r.max_risk != null ? Number(r.max_risk).toFixed(4) : "—";
+        const ratio = r.max_mean_ratio != null ? Number(r.max_mean_ratio).toFixed(1) + "×" : "—";
+        const top10 = r.top10_share != null ? (Number(r.top10_share) * 100).toFixed(1) + "%" : "—";
+        return `<tr><td>${_escapeHtml(fips)}</td><td>${_escapeHtml(name)}</td><td>${_escapeHtml(mean)}</td><td>${_escapeHtml(mx)}</td><td>${_escapeHtml(ratio)}</td><td>${_escapeHtml(top10)}</td></tr>`;
+    }).join("");
+
+    const tables = `
+        <div class="exp-tables">
+            <div class="exp-table-wrap">
+                <div class="exp-table-wrap__title">Exp2 – County Expected Annual Loss (top 10)</div>
+                <table class="exp-table" aria-label="Experiment 2 county EAL ranking">
+                    <thead><tr><th>#</th><th>County</th><th>Name</th><th>county_eal (sum)</th><th>mean risk</th></tr></thead>
+                    <tbody>${ealRows || `<tr><td colspan="5">—</td></tr>`}</tbody>
+                </table>
+            </div>
+            <div class="exp-table-wrap">
+                <div class="exp-table-wrap__title">Exp5 – Within-county heterogeneity (selected)</div>
+                <table class="exp-table" aria-label="Experiment 5 within-county heterogeneity">
+                    <thead><tr><th>County</th><th>Name</th><th>Block mean</th><th>Block max</th><th>Max/Mean</th><th>Top-10% share</th></tr></thead>
+                    <tbody>${hetRows || `<tr><td colspan="6">—</td></tr>`}</tbody>
+                </table>
+            </div>
+        </div>
+    `;
+
+    host.innerHTML = cards + tables;
 }
 
 function prefetchPackagedCounties(manifest, currentId) {
@@ -1194,10 +1341,27 @@ function loadCounty(id, manifest) {
 function populateCountySelect(list, manifest) {
     const sel = document.getElementById("county");
     const prefetched = new Set(manifest.prefetched_county_ids || []);
-    for (const c of list.counties) {
+    sel.innerHTML = "";
+
+    function _isCaliforniaCountyId(id) {
+        const s = String(id || "").trim();
+        return s.length === 5 && s.startsWith("06");
+    }
+
+    function _normalizeCountyLabel(label) {
+        // county_list.json currently uses "State - County Name" (e.g., "California - Los Angeles County")
+        // but we want just "Los Angeles County".
+        const s = String(label || "").trim();
+        const parts = s.split(" - ");
+        const tail = parts.length >= 2 ? parts[parts.length - 1] : s;
+        return tail.replace(/\s*\(.*?\)\s*/g, "").trim();
+    }
+
+    const caCounties = (list.counties || []).filter((c) => _isCaliforniaCountyId(c.id));
+    for (const c of caCounties) {
         const o = document.createElement("option");
         o.value = c.id;
-        o.textContent = c.label;
+        o.textContent = _normalizeCountyLabel(c.label);
         if (prefetched.has(c.id)) o.className = "prefetched";
         sel.appendChild(o);
     }
@@ -1212,7 +1376,7 @@ function populateCountySelect(list, manifest) {
     if (!defaultId && Object.keys(datasets).length) {
         defaultId = Object.keys(datasets)[0];
     }
-    const fallback = list.counties[0] && list.counties[0].id;
+    const fallback = caCounties[0] && caCounties[0].id;
     const start = defaultId || fallback;
     if (start) sel.value = start;
     return start;
@@ -1225,6 +1389,7 @@ Promise.all([
     d3.json("data/validation/merged_06007_06073.json").catch(() => null)
 ]).then(([list, manifest, mergedAll, mergedLegacy]) => {
     countyManifest = manifest;
+    _mergedAllUiDoc = mergedAll || null;
     populateMapCalcSections();
     const startId = populateCountySelect(list, manifest);
     return loadCounty(startId, manifest).then(() => {
@@ -1234,21 +1399,7 @@ Promise.all([
         const detail = document.getElementById("mapDetail");
         if (detail) applyMapDetailMode(!!detail.checked);
         else renderAll();
-        const pairSec = document.getElementById("validationPairSection");
-        const pairMsg = document.getElementById("validationPairMessage");
-        const mergedUi = mergedAll || mergedLegacy;
-        if (mergedUi) {
-            if (pairSec) pairSec.hidden = false;
-            if (pairMsg) pairMsg.textContent = "";
-            renderJointValidationSummary(mergedUi);
-        } else {
-            if (pairSec) pairSec.hidden = true;
-            if (pairMsg) {
-                pairMsg.textContent =
-                    "Joint validation file missing. Run: " +
-                    "python -m src.validation.run_all --no-write --export-ui data/validation/merged_all_counties.json";
-            }
-        }
+        renderExperimentsDashboard();
     });
 }).catch(err => {
     const msg = document.getElementById("countyMessage");
@@ -1264,6 +1415,7 @@ d3.select("#county").on("change", function () {
     const id = this.value;
     loadCounty(id, countyManifest).then(() => {
         renderAll();
+        renderExperimentsDashboard();
     });
 });
 

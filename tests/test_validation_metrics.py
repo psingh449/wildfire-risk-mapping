@@ -7,6 +7,7 @@ from src.validation.metrics import (
     compute_county_eal_from_blocks,
     compare_with_fema_nri,
     compute_module_sensitivity,
+    compute_calfire_historical_validation,
     compute_historical_fire_overlap,
     compute_auc_fire_prediction,
     compute_risk_concentration,
@@ -53,6 +54,9 @@ def test_validation_metric_functions():
     gdf = compute_module_sensitivity(gdf)
     assert "module_sensitivity" in gdf
 
+    gdf = compute_calfire_historical_validation(gdf)
+    assert "calfire_validation" in gdf
+
     gdf = compute_historical_fire_overlap(gdf)
     assert "fire_overlap_ratio" in gdf
     assert gdf["fire_overlap_ratio"].between(0, 1).all()
@@ -78,6 +82,7 @@ def test_apply_validation_metrics():
         "county_eal",
         "fema_nri_comparison",
         "module_sensitivity",
+        "calfire_validation",
         "fire_overlap_ratio",
         "auc_score",
         "risk_concentration",

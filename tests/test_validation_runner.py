@@ -7,4 +7,5 @@ def test_validation_runner_smoke(tmp_path):
     assert "metrics" in report
     assert "lineage" in report
     assert "block_rows" in report["metrics"]
+    assert "experiments" in report["metrics"]
 

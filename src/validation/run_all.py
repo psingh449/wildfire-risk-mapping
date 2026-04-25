@@ -6,6 +6,8 @@ from pathlib import Path
 from typing import Any, Dict, Optional, Tuple, List
 
 import pandas as pd
+import math
+from statistics import NormalDist
 
 from src.pipeline import steps
 from src.pipeline.feature_pipeline import run_feature_pipeline
@@ -54,6 +56,7 @@ def _extract_scalar_metrics(gdf: pd.DataFrame) -> Dict[str, Any]:
 
     fema = _parse_json_cell(first_value("fema_nri_comparison", "{}"))
     module_sens = _parse_json_cell(first_value("module_sensitivity", "{}"))
+    calfire = _parse_json_cell(first_value("calfire_validation", "{}"))
     burned_src = str(first_value("_burned_label_source", "UNKNOWN") or "UNKNOWN")
     burned_pos = None
     burned_neg = None
@@ -70,6 +73,7 @@ def _extract_scalar_metrics(gdf: pd.DataFrame) -> Dict[str, Any]:
         "gini_risk": float(first_value("gini_risk", 0.0) or 0.0),
         "fema_nri_comparison": fema,
         "module_sensitivity": module_sens,
+        "calfire_validation": calfire,
         "external_sources": {
             "fema_nri": str(fema.get("source", "UNKNOWN")),
             "burned_labels": burned_src,
@@ -77,6 +81,162 @@ def _extract_scalar_metrics(gdf: pd.DataFrame) -> Dict[str, Any]:
             "burned_neg": burned_neg,
         },
     }
+
+
+def _pearson_r_and_p_fisher_z(x: pd.Series, y: pd.Series) -> tuple[float | None, float | None, int]:
+    """
+    Pearson r and approximate two-sided p-value without SciPy.
+
+    Fisher z-transform with normal approximation:
+      z = atanh(r) * sqrt(n - 3), p = 2 * (1 - Φ(|z|))
+    """
+    x = pd.to_numeric(x, errors="coerce")
+    y = pd.to_numeric(y, errors="coerce")
+    mask = x.notna() & y.notna()
+    n = int(mask.sum())
+    if n < 4:
+        return None, None, n
+    r = float(x[mask].corr(y[mask]))
+    if not math.isfinite(r):
+        return None, None, n
+    if abs(r) >= 1.0:
+        return max(-1.0, min(1.0, r)), 0.0, n
+    z = math.atanh(r) * math.sqrt(max(1, n - 3))
+    p = 2.0 * (1.0 - NormalDist().cdf(abs(z)))
+    return max(-1.0, min(1.0, r)), max(0.0, min(1.0, float(p))), n
+
+
+def _compute_top10_share(values: pd.Series) -> float:
+    v = pd.to_numeric(values, errors="coerce").fillna(0.0)
+    total = float(v.sum())
+    if total <= 0 or len(v) == 0:
+        return 0.0
+    top_n = max(1, int(math.ceil(0.1 * len(v))))
+    top_sum = float(v.sort_values(ascending=False).head(top_n).sum())
+    return float(top_sum / total)
+
+
+def _compute_experiments_summary(gdf: pd.DataFrame) -> Dict[str, Any]:
+    """
+    Summaries aligned to `team155report.md` Experiment 1–6.
+    Computed across the full validation frame (all packaged counties when available).
+    """
+    out: Dict[str, Any] = {"schema_version": 1}
+
+    if gdf is None or len(gdf) == 0:
+        return out
+
+    # Ensure county_fips exists (apply_validation_metrics already does, but be defensive).
+    if "county_fips" not in gdf.columns:
+        if "GEOID" in gdf.columns:
+            gdf = gdf.copy()
+            gdf["county_fips"] = gdf["GEOID"].astype(str).str[:5].str.zfill(5)
+        else:
+            return out
+
+    # --- Per-county aggregations used by multiple experiments ---
+    risk = pd.to_numeric(gdf.get("risk_score", 0.0), errors="coerce").fillna(0.0)
+    eal = pd.to_numeric(gdf.get("eal", 0.0), errors="coerce").fillna(0.0)
+    pop = pd.to_numeric(gdf.get("exposure_population", 0.0), errors="coerce").fillna(0.0)
+
+    grp = gdf.groupby("county_fips", dropna=False)
+    county_df = pd.DataFrame(
+        {
+            "county_fips": grp.size().index.astype(str).str.zfill(5),
+            "n_blocks": grp.size().values,
+            "mean_risk": grp["risk_score"].mean().astype(float).values if "risk_score" in gdf.columns else 0.0,
+            "max_risk": grp["risk_score"].max().astype(float).values if "risk_score" in gdf.columns else 0.0,
+            "sum_eal": grp["eal"].sum().astype(float).values if "eal" in gdf.columns else 0.0,
+        }
+    )
+
+    # Population-weighted mean risk per county
+    by_pop = (
+        pd.DataFrame({"county_fips": gdf["county_fips"].astype(str).str.zfill(5), "risk": risk, "pop": pop})
+        .groupby("county_fips", as_index=False)
+        .apply(lambda d: float((d["risk"] * d["pop"]).sum() / max(1.0, float(d["pop"].sum()))))
+    )
+    by_pop = by_pop.rename(columns={None: "mean_risk_popw"})
+    county_df = county_df.merge(by_pop[["county_fips", "mean_risk_popw"]], on="county_fips", how="left")
+
+    # Exp5: within-county top10 share + max/mean ratio
+    top10_share = grp["risk_score"].apply(_compute_top10_share) if "risk_score" in gdf.columns else 0.0
+    county_df["top10_share"] = [float(top10_share.get(cf, 0.0)) for cf in county_df["county_fips"]]
+    county_df["max_mean_ratio"] = county_df.apply(
+        lambda r: float(r["max_risk"] / r["mean_risk"]) if float(r["mean_risk"]) > 0 else None, axis=1
+    )
+
+    # Attach FEMA NRI fields (if present)
+    fema_path = _resolve_repo_file("data/external/fema_nri_county.csv")
+    fema_df = None
+    if fema_path.exists():
+        try:
+            fema_df = pd.read_csv(fema_path, dtype={"county_fips": str})
+            fema_df["county_fips"] = fema_df["county_fips"].astype(str).str.zfill(5)
+        except Exception:
+            fema_df = None
+
+    merged = county_df.copy()
+    if fema_df is not None and not fema_df.empty:
+        # Prefer a wildfire-specific field if present; otherwise fall back to `nri_risk`.
+        if "nri_wfir_risks" in fema_df.columns:
+            nri_col = "nri_wfir_risks"
+        elif "WFIR_RISKS" in fema_df.columns:
+            nri_col = "WFIR_RISKS"
+        else:
+            nri_col = "nri_risk" if "nri_risk" in fema_df.columns else None
+        if nri_col:
+            merged = merged.merge(
+                fema_df[["county_fips", nri_col] + (["county_name"] if "county_name" in fema_df.columns else [])],
+                on="county_fips",
+                how="left",
+            )
+            merged = merged.rename(columns={nri_col: "nri_wildfire_risk"})
+
+    # --- Experiment 1 (report): FEMA NRI comparison ---
+    exp1: Dict[str, Any] = {"counties_compared": int(merged["nri_wildfire_risk"].notna().sum()) if "nri_wildfire_risk" in merged.columns else 0}
+    if "nri_wildfire_risk" in merged.columns:
+        r_u, p_u, n_u = _pearson_r_and_p_fisher_z(merged["mean_risk"], merged["nri_wildfire_risk"])
+        r_w, p_w, n_w = _pearson_r_and_p_fisher_z(merged["mean_risk_popw"], merged["nri_wildfire_risk"])
+        exp1.update(
+            {
+                "pearson_unweighted": {"r": r_u, "p": p_u, "n": n_u},
+                "pearson_pop_weighted": {"r": r_w, "p": p_w, "n": n_w},
+            }
+        )
+    out["experiment1_fema_nri"] = exp1
+
+    # --- Experiment 2 (report): county EAL aggregation ---
+    top_eal = merged.sort_values("sum_eal", ascending=False).head(10)
+    out["experiment2_county_eal_top10"] = top_eal[
+        [c for c in ["county_fips", "county_name", "sum_eal", "mean_risk", "mean_risk_popw"] if c in top_eal.columns]
+    ].to_dict(orient="records")
+
+    # --- Experiment 3/4 (report): historical overlap + AUC ---
+    # Use the scalar metrics already computed for the full frame.
+    # The UI will also show per-county CAL FIRE overlap/AUC via the calfire_validation blob.
+    out["experiment3_fire_overlap_ratio"] = float(gdf["fire_overlap_ratio"].dropna().iloc[0]) if "fire_overlap_ratio" in gdf.columns and gdf["fire_overlap_ratio"].notna().any() else None
+    out["experiment4_auc_score"] = float(gdf["auc_score"].dropna().iloc[0]) if "auc_score" in gdf.columns and gdf["auc_score"].notna().any() else None
+    out["fire_labels_source"] = str(gdf["_burned_label_source"].dropna().iloc[0]) if "_burned_label_source" in gdf.columns and gdf["_burned_label_source"].notna().any() else "UNKNOWN"
+
+    # --- Experiment 5 (report): concentration + inequality + selected heterogeneity table ---
+    out["experiment5_concentration"] = float(gdf["risk_concentration"].dropna().iloc[0]) if "risk_concentration" in gdf.columns and gdf["risk_concentration"].notna().any() else None
+    out["experiment5_gini"] = float(gdf["gini_risk"].dropna().iloc[0]) if "gini_risk" in gdf.columns and gdf["gini_risk"].notna().any() else None
+
+    # Full heterogeneity table (used for UI display; keep to key columns).
+    het_cols = [c for c in ["county_fips", "county_name", "mean_risk", "max_risk", "max_mean_ratio", "top10_share"] if c in merged.columns]
+    out["experiment5_heterogeneity_by_county"] = merged[het_cols].sort_values("max_mean_ratio", ascending=False).to_dict(orient="records")
+
+    # --- Experiment 6 (report): qualitative UI evaluation (status) ---
+    out["experiment6_ui"] = {
+        "detail_toggle": True,
+        "six_maps": True,
+        "tooltip": True,
+        "validation_dashboard": True,
+        "note": "Qualitative experiment is assessed via interface inspection; this dashboard reports feature availability."
+    }
+
+    return out
 
 
 def _apply_external_thresholds(metrics: Dict[str, Any], thresholds: Dict[str, Any]) -> Tuple[bool, Dict[str, Any]]:
@@ -199,6 +359,7 @@ def run_validation_runner(
 
     thresholds = _load_thresholds(thresholds_path)
     scalars = _extract_scalar_metrics(gdf)
+    scalars["experiments"] = _compute_experiments_summary(gdf)
     passed, failures = _apply_external_thresholds(scalars, thresholds)
 
     lineage_path = str(Path(reports_dir) / "lineage_report.json")

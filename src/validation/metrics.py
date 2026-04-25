@@ -170,6 +170,152 @@ def compute_module_sensitivity(gdf: pd.DataFrame) -> pd.DataFrame:
     return gdf
 
 
+def compute_calfire_historical_validation(
+    gdf: pd.DataFrame,
+    fire_path: str = "data/external/calfire_perimeters_2015_2024.geojson",
+    *,
+    top_pct: float = 0.10,
+    year_min: int = 2015,
+    year_max: int = 2024,
+) -> pd.DataFrame:
+    """
+    Experiment 2 — Historical Fire Validation (CAL FIRE FRAP perimeters).
+
+    - Ground truth: a block group is "burned" if its polygon intersects ANY perimeter.
+    - Prediction: "high risk" if risk_score is in the top `top_pct` fraction.
+    - Outputs: TP/FP/FN/TN, precision/recall/F1, accuracy, AUC (continuous ranking).
+
+    Stored as a JSON blob (`calfire_validation`) repeated across rows so the static UI can
+    read it from any single feature.
+    """
+    gdf = gdf.copy()
+
+    def _binary_metrics(y_true: pd.Series, scores: pd.Series, pred: pd.Series) -> dict:
+        y_true = pd.to_numeric(y_true, errors="coerce").fillna(0).astype(int)
+        pred = pd.to_numeric(pred, errors="coerce").fillna(0).astype(int)
+        tp = int(((y_true == 1) & (pred == 1)).sum())
+        fp = int(((y_true == 0) & (pred == 1)).sum())
+        fn = int(((y_true == 1) & (pred == 0)).sum())
+        tn = int(((y_true == 0) & (pred == 0)).sum())
+        precision = float(tp / (tp + fp)) if (tp + fp) > 0 else 0.0
+        recall = float(tp / (tp + fn)) if (tp + fn) > 0 else 0.0
+        f1 = float((2 * precision * recall) / (precision + recall)) if (precision + recall) > 0 else 0.0
+        accuracy = float((tp + tn) / max(1, (tp + fp + fn + tn)))
+        auc = float(_roc_auc_from_scores(y_true, scores))
+        return {
+            "n_total": int(len(y_true)),
+            "burned_total": int((y_true == 1).sum()),
+            "predicted_high_risk": int((pred == 1).sum()),
+            "tp": tp,
+            "fp": fp,
+            "fn": fn,
+            "tn": tn,
+            "precision": float(np.clip(precision, 0.0, 1.0)),
+            "recall": float(np.clip(recall, 0.0, 1.0)),
+            "f1": float(np.clip(f1, 0.0, 1.0)),
+            "accuracy": float(np.clip(accuracy, 0.0, 1.0)),
+            "auc": float(np.clip(auc, 0.0, 1.0)),
+        }
+
+    # Always populate a JSON cell so the contract is stable even when the external file is absent.
+    summary: dict = {
+        "source": "DUMMY",
+        "perimeters_path": fire_path,
+        "year_min": int(year_min),
+        "year_max": int(year_max),
+        "method": "intersects(perimeter_union) + threshold(risk_score)",
+        "overall": {},
+        "by_county": {},
+    }
+
+    if len(gdf) == 0:
+        gdf["calfire_validation"] = json.dumps(summary)
+        return gdf
+
+    risk = _safe_series(gdf, "risk_score", 0.0)
+    # Guardrails: top_pct in (0,1).
+    try:
+        top_pct = float(top_pct)
+    except Exception:
+        top_pct = 0.10
+    top_pct = min(0.99, max(0.01, top_pct))
+    threshold = float(risk.quantile(1.0 - top_pct)) if len(risk) else 0.0
+    pred_top_pct = (risk >= threshold).astype(int)
+
+    burned = None
+    if os.path.exists(fire_path) and "geometry" in gdf.columns:
+        try:
+            import geopandas as gpd
+
+            fire = gpd.read_file(fire_path)
+            if fire.empty:
+                raise ValueError("empty fire perimeter file")
+
+            if (
+                hasattr(gdf, "crs")
+                and hasattr(fire, "crs")
+                and getattr(gdf, "crs", None) is not None
+                and getattr(fire, "crs", None) is not None
+            ):
+                fire = fire.to_crs(gdf.crs)
+
+            fire_union = fire.geometry.unary_union
+            burned = gdf["geometry"].apply(
+                lambda geom: int(geom is not None and not geom.is_empty and geom.intersects(fire_union))
+            )
+            summary["source"] = "CALFIRE"
+        except Exception:
+            burned = None
+
+    # If no external perimeters, we can't compute the experiment metrics.
+    if burned is None:
+        gdf["calfire_validation"] = json.dumps(summary)
+        return gdf
+
+    burned = pd.to_numeric(burned, errors="coerce").fillna(0).astype(int)
+    pred_top_pct = pd.to_numeric(pred_top_pct, errors="coerce").fillna(0).astype(int)
+
+    # Prevalence-matched: predict the top K where K = number of burned positives.
+    burned_total_all = int((burned == 1).sum())
+    k = int(max(1, min(len(risk), burned_total_all))) if len(risk) else 1
+    # Mark top-k by risk score (ties resolved by rank order).
+    order = risk.rank(method="first", ascending=False)
+    pred_top_k = (order <= k).astype(int)
+
+    summary["overall"] = {
+        "top_pct": float(top_pct),
+        "top_pct_metrics": _binary_metrics(burned, risk, pred_top_pct),
+        "top_k": int(k),
+        "top_k_metrics": _binary_metrics(burned, risk, pred_top_k),
+    }
+
+    # Per-county metrics (meaningful only when there are enough positives).
+    if "county_fips" not in gdf.columns:
+        gdf = aggregate_block_to_county(gdf)
+    by: dict = {}
+    for cf, idx in gdf.groupby("county_fips").groups.items():
+        cf = str(cf).zfill(5)
+        yy = burned.loc[idx]
+        ss = risk.loc[idx]
+        # top_pct within county
+        thr_c = float(ss.quantile(1.0 - top_pct)) if len(ss) else 0.0
+        pred_c_pct = (ss >= thr_c).astype(int)
+        burned_total_c = int((yy == 1).sum())
+        kc = int(max(1, min(len(ss), burned_total_c))) if len(ss) else 1
+        order_c = ss.rank(method="first", ascending=False)
+        pred_c_k = (order_c <= kc).astype(int)
+        by[cf] = {
+            "top_pct": float(top_pct),
+            "top_pct_metrics": _binary_metrics(yy, ss, pred_c_pct),
+            "top_k": int(kc),
+            "top_k_metrics": _binary_metrics(yy, ss, pred_c_k),
+        }
+    summary["by_county"] = by
+
+    gdf["calfire_validation"] = json.dumps(summary)
+    return gdf
+
+
 def _compute_burned_labels_with_source(
     gdf: pd.DataFrame, fire_path: str = "data/external/mtbs_fire_perimeters.geojson"
 ) -> tuple[pd.Series, str]:
@@ -286,6 +432,7 @@ def apply_validation_metrics(gdf: pd.DataFrame) -> pd.DataFrame:
     gdf = compute_county_eal_from_blocks(gdf)
     gdf = compare_with_fema_nri(gdf)
     gdf = compute_module_sensitivity(gdf)
+    gdf = compute_calfire_historical_validation(gdf)
     gdf = compute_historical_fire_overlap(gdf)
     gdf = compute_auc_fire_prediction(gdf)
     gdf = compute_risk_concentration(gdf)

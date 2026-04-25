@@ -3,14 +3,14 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Wildfire Risk Map</title>
+    <title>Wildfire Risk Mapping in California</title>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
     <div class="container">
-        <h1>Wildfire Risk Mapping</h1>
+        <h1>Wildfire Risk Mapping in California</h1>
 
         <div class="controls">
             <label for="county">County:</label>
@@ -22,42 +22,14 @@
         </div>
 
         <p id="countyMessage" class="county-message" aria-live="polite"></p>
-        <p class="description">
-            Six block-group maps in a 3×2 matrix. Drag to pan, scroll or pinch to zoom (all six stay in sync). Double-click any map to reset. Check <strong>Detail</strong> to show per-panel calculation notes and a shared legend key below. Metrics:
-            <span class="metric-accent metric-accent-el"><strong>Expected Annual Loss</strong></span>
-            (map uses <code>eal_norm</code>) and
-            <span class="metric-accent metric-accent-risk"><strong>Risk</strong></span>;
-            <span class="metric-accent metric-accent-hazard">hazard</span>,
-            <span class="metric-accent metric-accent-exposure">exposure</span>,
-            <span class="metric-accent metric-accent-vulnerability">vulnerability</span>, and
-            <span class="metric-accent metric-accent-resilience">resilience</span>.
-            Hover any map for the full tooltip.
-        </p>
-
-        <section class="validation-panel" aria-label="Validation summary">
-            <div class="validation-panel__header">
-                <h2 class="validation-panel__title">Validation summary</h2>
-                <div class="validation-panel__subtitle">
-                    These values are computed during the pipeline and embedded in the county GeoJSON (rows 20–28 in <code>calculations.csv</code>).
+        <section class="experiments-dashboard" aria-label="Experiments dashboard">
+            <div class="experiments-dashboard__header">
+                <h2 class="experiments-dashboard__title">Evaluation dashboard (Experiments 1–6)</h2>
+                <div class="experiments-dashboard__subtitle">
+                    Summaries computed across all packaged counties available (today: your downloaded counties; later: CA 58 counties).
                 </div>
             </div>
-            <div class="validation-panel__body">
-                <h3 class="validation-subhead">Current county (packaged GeoJSON)</h3>
-                <div class="validation-kpis" id="validationKpis" aria-live="polite"></div>
-                <svg class="validation-chart" id="validationChart" width="1200" height="200" aria-label="Validation bar chart (current county)"></svg>
-                <h3 class="validation-subhead">All packaged counties (joint <code>run_all</code>)</h3>
-                <p class="validation-panel__subtext">
-                    FEMA <code>corr_*</code> / <code>rmse_*</code> and <code>n_counties</code> are computed on the combined blocks from the manifest. Single-county files repeat the same block-level FEMA object with <code>n_counties: 1</code>.
-                </p>
-                <div id="validationPairSection" class="validation-pair" hidden>
-                    <div class="validation-kpis" id="validationKpisPair" aria-live="polite"></div>
-                    <svg class="validation-chart" id="validationChartPair" width="1200" height="200" aria-label="Validation bar chart (joint run)"></svg>
-                </div>
-                <p class="validation-panel__subtext" id="validationPairMessage"></p>
-                <div class="validation-panel__note">
-                    External comparisons (FEMA NRI, MTBS) only become “real” when the corresponding external datasets are present at build time. Refresh <code>data/validation/merged_all_counties.json</code> after re-running validation.
-                </div>
-            </div>
+            <div id="experimentsDashboard" class="experiments-dashboard__body" aria-live="polite"></div>
         </section>
 
         <div class="map-viz" id="mapViz" aria-label="Choropleth block-group maps">

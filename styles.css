@@ -80,6 +80,176 @@ button {
     line-height: 1.45;
 }
 
+.experiments-dashboard {
+    margin: 10px 0 16px 0;
+    padding: 12px 12px 10px;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    background: #fbfbfc;
+}
+
+.experiments-dashboard__header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.experiments-dashboard__title {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 800;
+    color: #111827;
+}
+
+.experiments-dashboard__subtitle {
+    font-size: 12px;
+    color: #374151;
+}
+
+.experiments-dashboard__body {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.exp-cards {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+}
+
+@media (max-width: 1100px) {
+    .exp-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 700px) {
+    .exp-cards { grid-template-columns: 1fr; }
+}
+
+.exp-card {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 10px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-height: 92px;
+}
+
+.exp-card__title {
+    font-size: 12px;
+    font-weight: 800;
+    color: #0f172a;
+}
+
+.exp-card__value {
+    font-size: 18px;
+    font-weight: 900;
+    color: #111827;
+}
+
+.exp-card__meta {
+    font-size: 12px;
+    color: #6b7280;
+    line-height: 1.35;
+}
+
+.exp-tables {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+@media (max-width: 1100px) {
+    .exp-tables { grid-template-columns: 1fr; }
+}
+
+.exp-table-wrap {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 10px 10px;
+}
+
+.exp-table-wrap__title {
+    font-size: 12px;
+    font-weight: 800;
+    color: #0f172a;
+    margin: 0 0 8px 0;
+}
+
+.exp-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    color: #111827;
+}
+
+.exp-table th {
+    text-align: left;
+    font-weight: 800;
+    color: #374151;
+    padding: 6px 8px;
+    border-bottom: 1px solid #e5e7eb;
+    background: #f9fafb;
+}
+
+.exp-table td {
+    padding: 6px 8px;
+    border-bottom: 1px solid #f3f4f6;
+    vertical-align: top;
+}
+
+.exp-table tr:last-child td { border-bottom: none; }
+
+.exp-table code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-size: 11px;
+    background: rgba(17, 24, 39, 0.06);
+    padding: 1px 4px;
+    border-radius: 4px;
+}
+.exp2-panel {
+    margin: 10px 0 16px 0;
+    padding: 12px 12px 10px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    background: #fbfbfc;
+}
+
+.exp2-panel__header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+.exp2-panel__title {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+    color: #111827;
+}
+
+.exp2-panel__subtitle {
+    font-size: 12px;
+    color: #374151;
+}
+
+.exp2-panel__subtitle code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-size: 11px;
+    background: rgba(17, 24, 39, 0.06);
+    padding: 1px 4px;
+    border-radius: 4px;
+}
+
+.exp2-panel__body {
+    display: block;
+}
+
 .validation-panel {
     margin: 10px 0 16px 0;
     padding: 12px 12px 10px;
@@ -178,6 +348,54 @@ button {
 .validation-kpi__meta {
     font-size: 12px;
     color: #6b7280;
+}
+
+.validation-kpi--table {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    min-width: min(100%, 640px);
+}
+
+.validation-kpi__table-head {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.validation-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    color: #111827;
+}
+
+.validation-table thead th {
+    text-align: left;
+    font-weight: 700;
+    color: #374151;
+    padding: 6px 8px;
+    border-bottom: 1px solid #e5e7eb;
+    background: #f9fafb;
+}
+
+.validation-table tbody td {
+    padding: 6px 8px;
+    border-bottom: 1px solid #f3f4f6;
+    vertical-align: top;
+}
+
+.validation-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.validation-table code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-size: 11px;
+    background: rgba(17, 24, 39, 0.06);
+    padding: 1px 4px;
+    border-radius: 4px;
 }
 .validation-pill {
     display: inline-block;

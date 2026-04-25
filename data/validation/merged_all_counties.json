@@ -1,0 +1,236 @@
+{
+  "county_fips": [],
+  "metrics": {
+    "auc_score": 0.4216380394565583,
+    "block_rows": 2258,
+    "calfire_validation": {
+      "by_county": {
+        "06007": {
+          "top_k": 69,
+          "top_k_metrics": {
+            "accuracy": 0.46,
+            "auc": 0.29848434561345283,
+            "burned_total": 69,
+            "f1": 0.21739130434782608,
+            "fn": 54,
+            "fp": 54,
+            "n_total": 200,
+            "precision": 0.21739130434782608,
+            "predicted_high_risk": 69,
+            "recall": 0.21739130434782608,
+            "tn": 77,
+            "tp": 15
+          },
+          "top_pct": 0.1,
+          "top_pct_metrics": {
+            "accuracy": 0.645,
+            "auc": 0.29848434561345283,
+            "burned_total": 69,
+            "f1": 0.20224719101123598,
+            "fn": 60,
+            "fp": 11,
+            "n_total": 200,
+            "precision": 0.45,
+            "predicted_high_risk": 20,
+            "recall": 0.13043478260869565,
+            "tn": 120,
+            "tp": 9
+          }
+        },
+        "06073": {
+          "top_k": 66,
+          "top_k_metrics": {
+            "accuracy": 0.9378036929057337,
+            "auc": 0.5443212242911039,
+            "burned_total": 66,
+            "f1": 0.030303030303030304,
+            "fn": 64,
+            "fp": 64,
+            "n_total": 2058,
+            "precision": 0.030303030303030304,
+            "predicted_high_risk": 66,
+            "recall": 0.030303030303030304,
+            "tn": 1928,
+            "tp": 2
+          },
+          "top_pct": 0.1,
+          "top_pct_metrics": {
+            "accuracy": 0.8736637512147716,
+            "auc": 0.5443212242911039,
+            "burned_total": 66,
+            "f1": 0.04411764705882353,
+            "fn": 60,
+            "fp": 200,
+            "n_total": 2058,
+            "precision": 0.02912621359223301,
+            "predicted_high_risk": 206,
+            "recall": 0.09090909090909091,
+            "tn": 1792,
+            "tp": 6
+          }
+        }
+      },
+      "method": "intersects(perimeter_union) + threshold(risk_score)",
+      "overall": {
+        "top_k": 135,
+        "top_k_metrics": {
+          "accuracy": 0.8981399468556245,
+          "auc": 0.5293208422742102,
+          "burned_total": 135,
+          "f1": 0.14814814814814814,
+          "fn": 115,
+          "fp": 115,
+          "n_total": 2258,
+          "precision": 0.14814814814814814,
+          "predicted_high_risk": 135,
+          "recall": 0.14814814814814814,
+          "tn": 2008,
+          "tp": 20
+        },
+        "top_pct": 0.1,
+        "top_pct_metrics": {
+          "accuracy": 0.8622674933569531,
+          "auc": 0.5293208422742102,
+          "burned_total": 135,
+          "f1": 0.13850415512465375,
+          "fn": 110,
+          "fp": 201,
+          "n_total": 2258,
+          "precision": 0.11061946902654868,
+          "predicted_high_risk": 226,
+          "recall": 0.18518518518518517,
+          "tn": 1922,
+          "tp": 25
+        }
+      },
+      "perimeters_path": "data/external/calfire_perimeters_2015_2024.geojson",
+      "source": "CALFIRE",
+      "year_max": 2024,
+      "year_min": 2015
+    },
+    "experiments": {
+      "experiment1_fema_nri": {
+        "counties_compared": 2,
+        "pearson_pop_weighted": {
+          "n": 2,
+          "p": null,
+          "r": null
+        },
+        "pearson_unweighted": {
+          "n": 2,
+          "p": null,
+          "r": null
+        }
+      },
+      "experiment2_county_eal_top10": [
+        {
+          "county_fips": "06073",
+          "county_name": "San Diego",
+          "mean_risk": 0.0015025405879108725,
+          "mean_risk_popw": 0.0017175784375208015,
+          "sum_eal": 1359695038.7223117
+        },
+        {
+          "county_fips": "06007",
+          "county_name": "Butte",
+          "mean_risk": 0.007903355368318873,
+          "mean_risk_popw": 0.009228084871898223,
+          "sum_eal": 268842014.2382978
+        }
+      ],
+      "experiment3_fire_overlap_ratio": 0.08333333333333333,
+      "experiment4_auc_score": 0.4216380394565583,
+      "experiment5_concentration": 0.45586284841628777,
+      "experiment5_gini": 0.5671599758693953,
+      "experiment5_heterogeneity_by_county": [
+        {
+          "county_fips": "06007",
+          "county_name": "Butte",
+          "max_mean_ratio": 12.336272223089535,
+          "max_risk": 0.09749794329939768,
+          "mean_risk": 0.007903355368318873,
+          "top10_share": 0.4442596951441014
+        },
+        {
+          "county_fips": "06073",
+          "county_name": "San Diego",
+          "max_mean_ratio": 8.718531036869713,
+          "max_risk": 0.013099946749857407,
+          "mean_risk": 0.0015025405879108725,
+          "top10_share": 0.32067103791811435
+        }
+      ],
+      "experiment6_ui": {
+        "detail_toggle": true,
+        "note": "Qualitative experiment is assessed via interface inspection; this dashboard reports feature availability.",
+        "six_maps": true,
+        "tooltip": true,
+        "validation_dashboard": true
+      },
+      "fire_labels_source": "MTBS",
+      "schema_version": 1
+    },
+    "external_sources": {
+      "burned_labels": "MTBS",
+      "burned_neg": 1982,
+      "burned_pos": 276,
+      "fema_nri": "REAL"
+    },
+    "fema_nri_comparison": {
+      "corr_eal": 1.0,
+      "corr_risk": -1.0,
+      "n_counties": 2,
+      "rmse_eal": 161688402.16258705,
+      "rmse_risk": 96.85798749696058,
+      "source": "REAL"
+    },
+    "fire_overlap_ratio": 0.08333333333333333,
+    "gini_risk": 0.5671599758693953,
+    "module_sensitivity": {
+      "counties": [
+        "06007",
+        "06073"
+      ],
+      "method": "pearson_r_fisher_z_normal_approx",
+      "modules": {
+        "exposure": {
+          "n": 2258,
+          "p": 0.0,
+          "r": 0.44317783723124876
+        },
+        "hazard": {
+          "n": 2258,
+          "p": 9.388637367324648e-06,
+          "r": 0.09303590934435924
+        },
+        "resilience": {
+          "n": 2258,
+          "p": 0.0,
+          "r": -0.41813250305358307
+        },
+        "vulnerability": {
+          "n": 2258,
+          "p": 0.0,
+          "r": 0.4248350302981545
+        }
+      },
+      "risk": {
+        "field": "risk_score"
+      },
+      "scope": "all_rows_in_frame"
+    },
+    "risk_concentration": 0.45586284841628777
+  },
+  "passed": false,
+  "schema_version": 1,
+  "threshold_failures": {
+    "mtbs.auc_score": {
+      "min": 0.55,
+      "value": 0.4216380394565583
+    },
+    "mtbs.fire_overlap_ratio": {
+      "min": 0.1,
+      "value": 0.08333333333333333
+    }
+  }
+}
