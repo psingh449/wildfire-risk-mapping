@@ -1221,9 +1221,9 @@ function renderExperimentsDashboard() {
     const femaUw = exp1.pearson_unweighted || {};
     const femaPw = exp1.pearson_pop_weighted || {};
     const rUw = femaUw.r != null ? Number(femaUw.r).toFixed(3) : "—";
-    const pUw = femaUw.p != null ? Number(femaUw.p).toExponential(2) : "—";
+    const pUw = femaUw.p != null ? Number(femaUw.p).toExponential(2) : (femaUw.n != null && Number(femaUw.n) < 4 ? "n<4" : "—");
     const rPw = femaPw.r != null ? Number(femaPw.r).toFixed(3) : "—";
-    const pPw = femaPw.p != null ? Number(femaPw.p).toExponential(2) : "—";
+    const pPw = femaPw.p != null ? Number(femaPw.p).toExponential(2) : (femaPw.n != null && Number(femaPw.n) < 4 ? "n<4" : "—");
 
     const overlap = exp.experiment3_fire_overlap_ratio != null ? Number(exp.experiment3_fire_overlap_ratio).toFixed(3) : "—";
     const auc = exp.experiment4_auc_score != null ? Number(exp.experiment4_auc_score).toFixed(3) : "—";

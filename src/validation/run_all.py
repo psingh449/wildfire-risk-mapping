@@ -94,13 +94,16 @@ def _pearson_r_and_p_fisher_z(x: pd.Series, y: pd.Series) -> tuple[float | None,
     y = pd.to_numeric(y, errors="coerce")
     mask = x.notna() & y.notna()
     n = int(mask.sum())
-    if n < 4:
+    if n < 2:
         return None, None, n
     r = float(x[mask].corr(y[mask]))
     if not math.isfinite(r):
         return None, None, n
     if abs(r) >= 1.0:
         return max(-1.0, min(1.0, r)), 0.0, n
+    # p-value requires Fisher z approximation; it becomes unstable for tiny n.
+    if n < 4:
+        return max(-1.0, min(1.0, r)), None, n
     z = math.atanh(r) * math.sqrt(max(1, n - 3))
     p = 2.0 * (1.0 - NormalDist().cdf(abs(z)))
     return max(-1.0, min(1.0, r)), max(0.0, min(1.0, float(p))), n

@@ -113,13 +113,13 @@
         "counties_compared": 2,
         "pearson_pop_weighted": {
           "n": 2,
-          "p": null,
-          "r": null
+          "p": 0.0,
+          "r": -1.0
         },
         "pearson_unweighted": {
           "n": 2,
-          "p": null,
-          "r": null
+          "p": 0.0,
+          "r": -1.0
         }
       },
       "experiment2_county_eal_top10": [
