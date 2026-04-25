@@ -7,80 +7,235 @@ const MAP_PANELS = [
     { panelId: "map-panel-resilience", metric: "resilience_score" },
 ];
 
-// Calculation copy under each map: 2–4 bullets; <b>Label</b>: <code>formula</code> on one line (formula may wrap).
-const PANEL_DOCS = {
-    eal_norm: {
-        bullets: [
-            { lead: "Dollar amount", formula: "eal = risk_score × exposure_building_value" },
-            { lead: "Value at stake (exposure)", formula: "exposure_building_value = housing_units × median_home_value (ACS B25077; county mean if BG median missing)" },
-            { lead: "Choropleth field", formula: "eal_norm = (eal − min) / (max − min) over loaded county; min–max for color only" },
-            { lead: "Stars / tags", formula: "eal tooltip quality follows exposure_building_value (* = ESTIMATED/PROXY; e.g. [src:acs], [est:acs], [missing])" }
-        ]
-    },
-    risk_score: {
-        bullets: [
-            { lead: "Composite ([0,1] factors)", formula: "risk_score = hazard_score × exposure_score × vulnerability_score × (1 − resilience_score)" },
-            { lead: "Small values", formula: "product shrinks if any term ≈ 0; uninhabited areas often have exposure → 0" },
-            { lead: "Color scale", formula: "domain = [min(risk_score), max(risk_score)] in county (main.js: _computeDomainForMetric; not a new DB field)" }
-        ]
-    },
-    hazard_score: {
-        bullets: [
-            { lead: "Inputs", formula: "hazard_wildfire, hazard_vegetation, hazard_forest_distance" },
-            { lead: "Composite", formula: "hazard_score = Σ wᵢ × norm(input_i) (weights: calculations.csv / config; per-input min–max in pipeline)" },
-            { lead: "Provenance", formula: "e.g. [src:whp] = USFS; [px:osm] = proxy if primary raster/NLCD missing" }
-        ]
-    },
-    exposure_score: {
-        bullets: [
-            { lead: "Building value (USD proxy)", formula: "exposure_building_value = housing_units × median_home_value" },
-            { lead: "Composite", formula: "exposure_score = Σ w × norm(population, housing_units, exposure_building_value)" },
-            { lead: "Missing medians", formula: "county-mean imputation → * and [est:acs] in tooltips" }
-        ]
-    },
-    vulnerability_score: {
-        bullets: [
-            { lead: "Raw inputs (ACS, BG)", formula: "vuln_poverty, vuln_elderly, vuln_vehicle_access" },
-            { lead: "Vehicle direction", formula: "vuln_vehicle_access_norm = 1 − norm(vehicle_access_raw) (higher car access → lower vulnerability score)" },
-            { lead: "Composite", formula: "vulnerability_score = Σ w × norm(poverty, elderly, vehicle_access)" },
-            { lead: "Tract fallback", formula: "if BG null → tract to BG; * and [est:tract]" }
-        ]
-    },
-    resilience_score: {
-        bullets: [
-            { lead: "Distance features", formula: "res_fire_station_dist, res_hospital_dist, res_road_access; nearness = 1/(1+d_km)" },
-            { lead: "Composite", formula: "resilience_score = Σ w × norm(fire_station, hospital, road_access)" },
-            { lead: "In Risk", formula: "risk uses (1 − resilience_score) so higher resilience → lower risk_score" }
-        ]
-    }
+// Detail text under each map (shown only when "Detail" is checked).
+// HTML is authored here so we can mix bullets + inline <code> + bold/colored section headers.
+const PANEL_DETAIL_HTML = {
+    eal_norm: `
+        <div class="map-calc__section-title metric-accent metric-accent-el"><b>Expected Annual Loss</b></div>
+        <ul class="map-calc__list">
+            <li class="map-calc__item">Expected Annual Loss is our “economic consequence” view: how much $ loss we expect in a typical year for each block group.</li>
+            <li class="map-calc__item">Two numbers exist: <code class="map-calc__inline">eal</code> (USD) and <code class="map-calc__inline">eal_norm</code> (0–1).</li>
+            <li class="map-calc__item">This panel maps <code class="map-calc__inline">eal_norm</code> so the choropleth has contrast even when dollar values span huge ranges.</li>
+            <li class="map-calc__item">Interpretation: darker = higher expected annual loss (relative within the run), not “guaranteed loss.”</li>
+        </ul>
+        <ul class="map-calc__list map-calc__list--tight">
+            <li class="map-calc__item"><b>How Expected Annual Loss built</b>
+                <ul class="map-calc__sublist">
+                    <li class="map-calc__item">compute overall Risk on 0–1.</li>
+                    <li class="map-calc__item">estimate “value at stake” (<code class="map-calc__inline">exposure_building_value</code>).</li>
+                    <li class="map-calc__item">multiply: <code class="map-calc__inline">eal = risk_score × exposure_building_value</code></li>
+                    <li class="map-calc__item">Then rescale for the map: <code class="map-calc__inline">eal_norm = (eal − min) / (max − min)</code></li>
+                    <li class="map-calc__item"><b>Why normalize?</b> Without it, almost every block group would look the same color when a few very-large-dollar areas dominate the scale.</li>
+                </ul>
+            </li>
+        </ul>
+        <ul class="map-calc__list map-calc__list--tight">
+            <li class="map-calc__item"><b>Relevant code / fields</b>
+                <ul class="map-calc__sublist">
+                    <li class="map-calc__item">GeoJSON fields: <code class="map-calc__inline">eal</code>, <code class="map-calc__inline">eal_norm</code>, <code class="map-calc__inline">exposure_building_value</code>, <code class="map-calc__inline">risk_score</code></li>
+                    <li class="map-calc__item">Primary implementation: <code class="map-calc__inline">src/models/risk_model.py</code> (EAL + normalization)</li>
+                    <li class="map-calc__item">Frontend metric key: <code class="map-calc__inline">eal_norm</code> (see <code class="map-calc__inline">main.js → MAP_PANELS</code>)</li>
+                    <li class="map-calc__item">Tooltip formatting: <code class="map-calc__inline">_formatValue</code>, <code class="map-calc__inline">_debugTagEalFamily</code></li>
+                </ul>
+            </li>
+        </ul>
+    `,
+    risk_score: `
+        <div class="map-calc__section-title metric-accent metric-accent-risk"><b>Risk</b></div>
+        <ul class="map-calc__list">
+            <li class="map-calc__item">Risk is the “overall ranking” score: where is wildfire risk comparatively higher inside a county?</li>
+        </ul>
+        <ul class="map-calc__list map-calc__list--tight">
+            <li class="map-calc__item"><b>Conceptual model</b>
+                <ul class="map-calc__sublist">
+                    <li class="map-calc__item">Hazard = how fire-prone the place is.</li>
+                    <li class="map-calc__item">Exposure = how many people/structures are in the way.</li>
+                    <li class="map-calc__item">Vulnerability = who may be less able to cope/evacuate.</li>
+                    <li class="map-calc__item">Resilience = response/recovery capacity (help close by).</li>
+                </ul>
+            </li>
+            <li class="map-calc__item"><b>The formula (why it behaves this way)</b>
+                <ul class="map-calc__sublist">
+                    <li class="map-calc__item"><code class="map-calc__inline">risk_score = hazard_score × exposure_score × vulnerability_score × (1 − resilience_score)</code></li>
+                    <li class="map-calc__item">Multiplication matters: if any component is near 0, overall risk shrinks fast.</li>
+                    <li class="map-calc__item">Resilience reduces risk: bigger resilience ⇒ bigger <code class="map-calc__inline">(1 − resilience)</code> reduction.</li>
+                    <li class="map-calc__item">Practical consequence: values can be very small (e.g., <code class="map-calc__inline">0.003</code>), especially when all components are fractions.</li>
+                </ul>
+            </li>
+            <li class="map-calc__item"><b>How to read the colors</b>
+                <ul class="map-calc__sublist">
+                    <li class="map-calc__item">The number is always the same raw value (<code class="map-calc__inline">risk_score</code>).</li>
+                    <li class="map-calc__item">The colors are stretched within the selected county so tiny-but-real differences remain visible.</li>
+                    <li class="map-calc__item">This is visual scaling only (no additional <code class="map-calc__inline">risk_score_norm</code> column is created).</li>
+                    <li class="map-calc__item">If you switch counties, the Risk colors can shift because the min/max window changes — that’s expected.</li>
+                </ul>
+            </li>
+        </ul>
+        <ul class="map-calc__list map-calc__list--tight">
+            <li class="map-calc__item"><b>Relevant code / fields</b>
+                <ul class="map-calc__sublist">
+                    <li class="map-calc__item">GeoJSON field: <code class="map-calc__inline">risk_score</code></li>
+                    <li class="map-calc__item">Depends on: <code class="map-calc__inline">hazard_score</code>, <code class="map-calc__inline">exposure_score</code>, <code class="map-calc__inline">vulnerability_score</code>, <code class="map-calc__inline">resilience_score</code></li>
+                    <li class="map-calc__item">Primary implementation: <code class="map-calc__inline">src/models/risk_model.py:compute_risk</code></li>
+                    <li class="map-calc__item">Visualization scaling: <code class="map-calc__inline">main.js:_computeDomainForMetric</code> (county-level min/max for colors)</li>
+                    <li class="map-calc__item"><code class="map-calc__inline">Risk (RISC)</code></li>
+                </ul>
+            </li>
+        </ul>
+    `,
+    hazard_score: `
+        <div class="map-calc__section-title metric-accent metric-accent-hazard"><b>Hazard</b></div>
+        <ul class="map-calc__list">
+            <li class="map-calc__item">Hazard asks: is this place physically conducive to wildfire?</li>
+        </ul>
+        <ul class="map-calc__list map-calc__list--tight">
+            <li class="map-calc__item"><b>Three building blocks</b>
+                <ul class="map-calc__sublist">
+                    <li class="map-calc__item">Wildfire probability (<code class="map-calc__inline">hazard_wildfire</code>)</li>
+                    <li class="map-calc__item">Fuel / vegetation proxy (<code class="map-calc__inline">hazard_vegetation</code>)</li>
+                    <li class="map-calc__item">Proximity to forest-like land (<code class="map-calc__inline">hazard_forest_distance</code>)</li>
+                </ul>
+            </li>
+            <li class="map-calc__item"><b>Why there are “proxy” paths</b>
+                <ul class="map-calc__sublist">
+                    <li class="map-calc__item">Some counties may lack the “ideal” raster-derived inputs at build time.</li>
+                    <li class="map-calc__item">In that case we use a proxy blend so the panel stays informative, but it is flagged as <code class="map-calc__inline">PROXY</code> in provenance.</li>
+                    <li class="map-calc__item">When both primary + proxy are missing, values become missing (shown as <code class="map-calc__inline">—</code>).</li>
+                    <li class="map-calc__item">In debug mode you’ll see tags like <code class="map-calc__inline">[src:whp]</code> vs <code class="map-calc__inline">[px:osm]</code> indicating which path fed the number.</li>
+                </ul>
+            </li>
+            <li class="map-calc__item"><b>Composite</b>
+                <ul class="map-calc__sublist">
+                    <li class="map-calc__item">Inputs are first rescaled to 0–1 within the run for comparability.</li>
+                    <li class="map-calc__item">Then weighted and combined: <code class="map-calc__inline">hazard_score = Σ wᵢ × inputᵢ_norm</code></li>
+                </ul>
+            </li>
+        </ul>
+        <ul class="map-calc__list map-calc__list--tight">
+            <li class="map-calc__item"><b>Relevant code / fields</b>
+                <ul class="map-calc__sublist">
+                    <li class="map-calc__item">GeoJSON fields: <code class="map-calc__inline">hazard_wildfire</code>, <code class="map-calc__inline">hazard_vegetation</code>, <code class="map-calc__inline">hazard_forest_distance</code>, <code class="map-calc__inline">hazard_score</code></li>
+                    <li class="map-calc__item">Data + fallbacks: <code class="map-calc__inline">src/utils/real_data.py</code> (real/proxy/missing tiers)</li>
+                    <li class="map-calc__item">Normalization + weighted sum: <code class="map-calc__inline">src/features/build_features.py</code></li>
+                </ul>
+            </li>
+        </ul>
+    `,
+    exposure_score: `
+        <div class="map-calc__section-title metric-accent metric-accent-exposure"><b>Exposure</b></div>
+        <ul class="map-calc__list">
+            <li class="map-calc__item">Exposure asks: how much is in the way if a fire happens?</li>
+        </ul>
+        <ul class="map-calc__list map-calc__list--tight">
+            <li class="map-calc__item"><b>What counts as “exposed” here</b>
+                <ul class="map-calc__sublist">
+                    <li class="map-calc__item">People (<code class="map-calc__inline">exposure_population</code>)</li>
+                    <li class="map-calc__item">Homes (<code class="map-calc__inline">exposure_housing</code>)</li>
+                    <li class="map-calc__item">Residential value proxy (<code class="map-calc__inline">exposure_building_value</code>)</li>
+                </ul>
+            </li>
+            <li class="map-calc__item"><b>Value proxy (why it’s reasonable)</b>
+                <ul class="map-calc__sublist">
+                    <li class="map-calc__item">We estimate “total residential value” as: <code class="map-calc__inline">exposure_building_value = housing_units × median_home_value</code></li>
+                    <li class="map-calc__item">If a local median is missing, we use a county mean so the map doesn’t collapse to zero.</li>
+                    <li class="map-calc__item">This is an exposure ranking tool, not a parcel-level appraisal.</li>
+                </ul>
+            </li>
+            <li class="map-calc__item"><b>Composite</b>
+                <ul class="map-calc__sublist">
+                    <li class="map-calc__item">Population, housing, and value are normalized to 0–1 and combined with weights.</li>
+                    <li class="map-calc__item"><code class="map-calc__inline">exposure_score = Σ wᵢ × inputᵢ_norm</code></li>
+                </ul>
+            </li>
+        </ul>
+        <ul class="map-calc__list map-calc__list--tight">
+            <li class="map-calc__item"><b>Relevant code / fields</b>
+                <ul class="map-calc__sublist">
+                    <li class="map-calc__item">GeoJSON fields: <code class="map-calc__inline">exposure_population</code>, <code class="map-calc__inline">exposure_housing</code>, <code class="map-calc__inline">exposure_building_value</code>, <code class="map-calc__inline">exposure_score</code></li>
+                    <li class="map-calc__item">Census + ACS joins: <code class="map-calc__inline">src/utils/real_data.py</code> (including county-mean imputation rules)</li>
+                    <li class="map-calc__item">Normalization + weighted sum: <code class="map-calc__inline">src/features/build_features.py</code></li>
+                </ul>
+            </li>
+        </ul>
+    `,
+    vulnerability_score: `
+        <div class="map-calc__section-title metric-accent metric-accent-vulnerability"><b>Vulnerability</b></div>
+        <ul class="map-calc__list">
+            <li class="map-calc__item">Vulnerability asks: if a fire happens, who might face a harder time responding?</li>
+        </ul>
+        <ul class="map-calc__list map-calc__list--tight">
+            <li class="map-calc__item"><b>The three signals</b>
+                <ul class="map-calc__sublist">
+                    <li class="map-calc__item">Poverty share (<code class="map-calc__inline">vuln_poverty</code>)</li>
+                    <li class="map-calc__item">Older adult share (<code class="map-calc__inline">vuln_elderly</code>)</li>
+                    <li class="map-calc__item">Vehicle access (<code class="map-calc__inline">vuln_vehicle_access</code>)</li>
+                </ul>
+            </li>
+            <li class="map-calc__item"><b>Important direction rule (vehicle access)</b>
+                <ul class="map-calc__sublist">
+                    <li class="map-calc__item">The raw “vehicle access” concept means: higher = more households can evacuate by car.</li>
+                    <li class="map-calc__item">But vulnerability should increase when evacuation is harder, so we flip the normalized value:</li>
+                    <li class="map-calc__item"><code class="map-calc__inline">vehicle_vulnerability_component = 1 − norm(vehicle_access)</code></li>
+                    <li class="map-calc__item">This is why the model can treat vehicle access as a vulnerability signal without changing the meaning of the source data.</li>
+                </ul>
+            </li>
+        </ul>
+        <ul class="map-calc__list map-calc__list--tight">
+            <li class="map-calc__item"><b>Relevant code / fields</b>
+                <ul class="map-calc__sublist">
+                    <li class="map-calc__item">GeoJSON fields: <code class="map-calc__inline">vuln_poverty</code>, <code class="map-calc__inline">vuln_elderly</code>, <code class="map-calc__inline">vuln_vehicle_access</code>, <code class="map-calc__inline">vulnerability_score</code></li>
+                    <li class="map-calc__item">ACS import + tract fallback: <code class="map-calc__inline">scripts/real_import.py</code> (writes <code class="map-calc__inline">poverty_tract</code>, <code class="map-calc__inline">vehicle_access_tract</code>)</li>
+                    <li class="map-calc__item">Feature assembly: <code class="map-calc__inline">src/utils/real_data.py</code> (applies tract→block group assignment + provenance)</li>
+                    <li class="map-calc__item">Normalization + combine: <code class="map-calc__inline">src/features/build_features.py</code> (including the vehicle inversion)</li>
+                    <li class="map-calc__item"><code class="map-calc__inline">Vulnerability</code></li>
+                </ul>
+            </li>
+        </ul>
+    `,
+    resilience_score: `
+        <div class="map-calc__section-title metric-accent metric-accent-resilience"><b>Resilience</b></div>
+        <ul class="map-calc__list">
+            <li class="map-calc__item">Resilience asks: how much response capacity is nearby, and how connected is the area?</li>
+        </ul>
+        <ul class="map-calc__list map-calc__list--tight">
+            <li class="map-calc__item"><b>Three pieces of “capacity”</b>
+                <ul class="map-calc__sublist">
+                    <li class="map-calc__item">Fire station access (<code class="map-calc__inline">res_fire_station_dist</code>)</li>
+                    <li class="map-calc__item">Hospital access (<code class="map-calc__inline">res_hospital_dist</code>)</li>
+                    <li class="map-calc__item">Road connectivity (<code class="map-calc__inline">res_road_access</code>)</li>
+                </ul>
+            </li>
+            <li class="map-calc__item"><b>Distance is converted to a 0–1 “nearness” score</b>
+                <ul class="map-calc__sublist">
+                    <li class="map-calc__item">We turn distance into “closer is better” using an inverse transform:</li>
+                    <li class="map-calc__item"><code class="map-calc__inline">nearness = 1 / (1 + distance_km)</code></li>
+                    <li class="map-calc__item">That keeps values bounded and makes the metric comparable across counties.</li>
+                </ul>
+            </li>
+            <li class="map-calc__item"><b>Why it reduces risk</b>
+                <ul class="map-calc__sublist">
+                    <li class="map-calc__item">In the Risk formula, resilience enters as <code class="map-calc__inline">(1 − resilience_score)</code>.</li>
+                    <li class="map-calc__item">Higher resilience ⇒ smaller multiplier ⇒ lower risk.</li>
+                </ul>
+            </li>
+        </ul>
+        <ul class="map-calc__list map-calc__list--tight">
+            <li class="map-calc__item"><b>Relevant code / fields</b>
+                <ul class="map-calc__sublist">
+                    <li class="map-calc__item">GeoJSON fields: <code class="map-calc__inline">res_fire_station_dist</code>, <code class="map-calc__inline">res_hospital_dist</code>, <code class="map-calc__inline">res_road_access</code>, <code class="map-calc__inline">resilience_score</code></li>
+                    <li class="map-calc__item">Distance/access features: <code class="map-calc__inline">src/utils/real_data.py</code> (HIFLD + OSM cache readers)</li>
+                    <li class="map-calc__item">Normalization + combine: <code class="map-calc__inline">src/features/build_features.py</code></li>
+                </ul>
+            </li>
+        </ul>
+    `
 };
-
-function _escapeCalcFormula(s) {
-    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-}
-
-function _formulaOneLine(s) {
-    return String(s).replace(/\s*\n\s*/g, " ").replace(/\s{2,}/g, " ").trim();
-}
-
-function renderCalcBulletsHtml(bullets) {
-    if (!bullets || !bullets.length) return "";
-    const items = bullets.map((b) => {
-        const code = _escapeCalcFormula(_formulaOneLine(b.formula));
-        return `<li class="map-calc__item"><b>${_escapeCalcFormula(b.lead)}</b>: <code class="map-calc__inline">${code}</code></li>`;
-    });
-    return `<ul class="map-calc__list">${items.join("")}</ul>`;
-}
 
 function populateMapCalcSections() {
     document.querySelectorAll(".map-calc").forEach((el) => {
         const metric = el.getAttribute("data-metric") || "";
-        const doc = PANEL_DOCS[metric];
-        if (!doc || !doc.bullets) {
-            el.innerHTML = "";
-            return;
-        }
-        el.innerHTML = renderCalcBulletsHtml(doc.bullets);
+        const html = PANEL_DETAIL_HTML[metric];
+        el.innerHTML = html ? String(html).trim() : "";
     });
 }
 
@@ -625,6 +780,14 @@ function renderAll() {
     updateBlockHighlight();
 }
 
+function applyMapDetailMode(on) {
+    const viz = document.getElementById("mapViz");
+    const legend = document.getElementById("mapDetailLegend");
+    if (viz) viz.classList.toggle("map-viz--detail", !!on);
+    if (legend) legend.hidden = !on;
+    renderAll();
+}
+
 function _safeNumber(x, fallback = null) {
     const v = Number(x);
     return Number.isFinite(v) ? v : fallback;
@@ -1101,6 +1264,10 @@ d3.select("#county").on("change", function () {
     loadCounty(id, countyManifest).then(() => {
         renderAll();
     });
+});
+
+d3.select("#mapDetail").on("change", function () {
+    applyMapDetailMode(!!this.checked);
 });
 
 // Synced zoom sliders (one per panel)
