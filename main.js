@@ -221,10 +221,14 @@ function darkestColor(metric) {
 function _fmtPanelTooltip(v, metric) {
     const n = Number(v);
     if (!Number.isFinite(n)) return "NA";
+    // Rule: show 2 decimals when typical magnitude is < 2.
+    // Keep a bit more precision for very small risk values so differences are still readable.
     if (metric === "risk_score") {
-        if (n < 0.01) return n.toFixed(3);
-        if (n < 0.1) return n.toFixed(2);
+        if (Math.abs(n) < 0.01) return n.toFixed(3);
+        if (Math.abs(n) < 2) return n.toFixed(2);
+        return n.toFixed(1);
     }
+    if (Math.abs(n) < 2) return n.toFixed(2);
     return n.toFixed(1);
 }
 
@@ -380,7 +384,16 @@ function _formatValue(p, key, fmt) {
     const v = p[key];
     const missing = q === "MISSING" || v == null || (typeof v === "number" && !Number.isFinite(v));
     if (missing) return `— ${_debugTag(p, key)}`.trim();
-    const base = fmt(v);
+    // If caller formats to 1 decimal but the value is small (<2), upgrade to 2 decimals
+    // for readability (matches panel header rule).
+    let base = fmt(v);
+    const n = Number(v);
+    if (Number.isFinite(n) && Math.abs(n) < 2) {
+        const s = String(base);
+        if (/^-?\d+(?:\.\d+)?$/.test(s) && /\.\d$/.test(s)) {
+            base = n.toFixed(2);
+        }
+    }
     const star = (q === "ESTIMATED" || q === "PROXY") ? "*" : "";
     const tag = _debugTag(p, key);
     return `${base}${star}${tag ? " " + tag : ""}`;
@@ -651,7 +664,8 @@ function renderAll() {
 
         if (legendSvg.empty()) continue;
 
-        const sideMargin = 6;
+        // Extra side margin so min/max tick labels don't touch the SVG edge.
+        const sideMargin = 14;
         const legendNode = legendSvg.node();
         const rr = legendNode && legendNode.getBoundingClientRect ? legendNode.getBoundingClientRect() : null;
         const svgW = rr && Number.isFinite(rr.width) && rr.width > 0 ? rr.width : (+legendSvg.attr("width") || 440);
@@ -687,7 +701,8 @@ function renderAll() {
 
         const axis = d3.axisBottom(scale)
             .tickValues(legendTickValues(domain, 4))
-            .tickFormat(tickFmt);
+            .tickFormat(tickFmt)
+            .tickPadding(6);
 
         const axisG = legendGroup.append("g")
             .attr("transform", `translate(0,${legendBarH})`);
@@ -1170,7 +1185,11 @@ Promise.all([
     const startId = populateCountySelect(list, manifest);
     return loadCounty(startId, manifest).then(() => {
         prefetchPackagedCounties(manifest, startId);
-        renderAll();
+        // Ensure initial render matches the checkbox default state (some browsers restore
+        // checkbox state without triggering a "change" event).
+        const detail = document.getElementById("mapDetail");
+        if (detail) applyMapDetailMode(!!detail.checked);
+        else renderAll();
         const pairSec = document.getElementById("validationPairSection");
         const pairMsg = document.getElementById("validationPairMessage");
         if (mergedUi) {
