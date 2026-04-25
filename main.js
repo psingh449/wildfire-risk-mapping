@@ -7,257 +7,51 @@ const MAP_PANELS = [
     { panelId: "map-panel-resilience", metric: "resilience_score" },
 ];
 
-// Human-facing panel descriptions derived from README/METHODS docs.
-// We embed them here so the static GitHub Pages build can show them without a server-side doc fetch.
-//
-// These strings are trusted (repo-authored) HTML snippets so we can use bullets, emphasis,
-// and metric-colored accents to keep the explainer engaging inside the UI.
+// One-line explainer per map (Detail mode, left column). No headings there — common quality/code lives in #mapsGridFooter.
+// Trusted HTML: metric-colored spans + inline formulas.
 const PANEL_DOCS = {
     eal_norm: {
-        plainHtml: `
-            <p class="doc-lede">
-                <span class="doc-accent doc-accent-el"><b>EL / EAL</b></span> is our “economic consequence” view: <i>how much $ loss we expect in a typical year</i> for each block group.
-            </p>
-            <div class="doc-section">
-                <div class="doc-section-title">What you’re looking at</div>
-                <ul>
-                    <li><b>Two numbers exist:</b> <code>eal</code> (USD) and <code>eal_norm</code> (0–1).</li>
-                    <li><b>This panel maps</b> <code>eal_norm</code> so the choropleth has contrast even when dollar values span huge ranges.</li>
-                    <li><b>Interpretation:</b> darker = <i>higher expected annual loss</i> (relative within the run), not “guaranteed loss.”</li>
-                </ul>
-            </div>
-            <div class="doc-section">
-                <div class="doc-section-title">How EAL is built (math, not code)</div>
-                <ul>
-                    <li><b>Step A:</b> compute overall <span class="doc-accent doc-accent-risk"><b>Risk</b></span> on 0–1.</li>
-                    <li><b>Step B:</b> estimate “value at stake” (<code>exposure_building_value</code>).</li>
-                    <li><b>Step C:</b> multiply:</li>
-                    <li class="doc-formula"><code>eal = risk_score × exposure_building_value</code></li>
-                    <li><b>Then rescale for the map:</b></li>
-                    <li class="doc-formula"><code>eal_norm = (eal − min) / (max − min)</code></li>
-                </ul>
-                <p class="doc-note">
-                    <i>Why normalize?</i> Without it, almost every block group would look the same color when a few very-large-dollar areas dominate the scale.
-                </p>
-            </div>
-            <div class="doc-section">
-                <div class="doc-section-title">Quality / stars</div>
-                <ul>
-                    <li>If the building value uses an <b>estimate</b> (e.g., county-mean median value), the UI may show a <b>*</b>.</li>
-                    <li>Turn on <code>?debug=1</code> (or use the debug toggle) to see tags like <code>[src:acs]</code>, <code>[est:county-mean]</code>, <code>[missing]</code>.</li>
-                </ul>
-            </div>
-        `,
-        codeHtml: `
-            <ul>
-                <li><b>GeoJSON fields</b>: <code>eal</code>, <code>eal_norm</code>, <code>exposure_building_value</code>, <code>risk_score</code></li>
-                <li><b>Primary implementation</b>: <code>src/models/risk_model.py</code> (EAL + normalization)</li>
-                <li><b>Frontend metric key</b>: <code>eal_norm</code> (see <code>main.js</code> → <code>MAP_PANELS</code>)</li>
-                <li><b>Tooltip formatting</b>: <code>_formatValue</code>, <code>_debugTagEalFamily</code></li>
-            </ul>
-        `
+        oneLine: `<p class="doc-map-oneline"><span class="doc-accent doc-accent-el">EAL</span>: dollars <code>eal = risk_score × exposure_building_value</code> (residential value proxy: housing × ACS median); this map uses <code>eal_norm = (eal−min)/(max−min)</code> per county for choropleth contrast. <b>*</b> / <code>[src:…] / [est:…]</code> (Detail on) follow <code>exposure_building_value</code> quality.</p>`
     },
     risk_score: {
-        plainHtml: `
-            <p class="doc-lede">
-                <span class="doc-accent doc-accent-risk"><b>Risk (RISC)</b></span> is the “overall ranking” score: <i>where is wildfire risk comparatively higher inside a county?</i>
-            </p>
-            <div class="doc-section">
-                <div class="doc-section-title">Conceptual model</div>
-                <ul>
-                    <li><b>Hazard</b> = how fire-prone the place is.</li>
-                    <li><b>Exposure</b> = how many people/structures are in the way.</li>
-                    <li><b>Vulnerability</b> = who may be less able to cope/evacuate.</li>
-                    <li><b>Resilience</b> = response/recovery capacity (help close by).</li>
-                </ul>
-            </div>
-            <div class="doc-section">
-                <div class="doc-section-title">The formula (why it behaves this way)</div>
-                <ul>
-                    <li class="doc-formula"><code>risk_score = hazard_score × exposure_score × vulnerability_score × (1 − resilience_score)</code></li>
-                    <li><b>Multiplication matters:</b> if any component is near 0, overall risk shrinks fast.</li>
-                    <li><b>Resilience reduces risk:</b> bigger resilience ⇒ bigger <code>(1 − resilience)</code> reduction.</li>
-                    <li><b>Practical consequence:</b> values can be <i>very small</i> (e.g., 0.003), especially when all components are fractions.</li>
-                </ul>
-            </div>
-            <div class="doc-section">
-                <div class="doc-section-title">How to read the colors</div>
-                <ul>
-                    <li><b>The number is always the same raw value</b> (<code>risk_score</code>).</li>
-                    <li><b>The colors are stretched within the selected county</b> so tiny-but-real differences remain visible.</li>
-                    <li>This is <i>visual scaling only</i> (no additional <code>risk_score_norm</code> column is created).</li>
-                </ul>
-                <p class="doc-note">
-                    If you switch counties, the Risk colors can shift because the min/max window changes — that’s expected.
-                </p>
-            </div>
-        `,
-        codeHtml: `
-            <ul>
-                <li><b>GeoJSON field</b>: <code>risk_score</code></li>
-                <li><b>Depends on</b>: <code>hazard_score</code>, <code>exposure_score</code>, <code>vulnerability_score</code>, <code>resilience_score</code></li>
-                <li><b>Primary implementation</b>: <code>src/models/risk_model.py:compute_risk</code></li>
-                <li><b>Visualization scaling</b>: <code>main.js:_computeDomainForMetric</code> (county-level min/max for colors)</li>
-            </ul>
-        `
+        oneLine: `<p class="doc-map-oneline"><span class="doc-accent doc-accent-risk">Risk</span>: <code>risk_score = hazard×exposure×vulnerability×(1−resilience)</code> (all [0,1]; multiply collapses to ~0 if any term is). Colors use the raw field but the color scale is min–max <em>within the loaded county</em> (<code>main.js:_computeDomainForMetric</code>) so small values stay visible.</p>`
     },
     hazard_score: {
-        plainHtml: `
-            <p class="doc-lede">
-                <span class="doc-accent doc-accent-hazard"><b>Hazard</b></span> asks: <i>is this place physically conducive to wildfire?</i>
-            </p>
-            <div class="doc-section">
-                <div class="doc-section-title">Three building blocks</div>
-                <ul>
-                    <li><b>Wildfire probability</b> (<code>hazard_wildfire</code>)</li>
-                    <li><b>Fuel / vegetation proxy</b> (<code>hazard_vegetation</code>)</li>
-                    <li><b>Proximity to forest-like land</b> (<code>hazard_forest_distance</code>)</li>
-                </ul>
-            </div>
-            <div class="doc-section">
-                <div class="doc-section-title">Why there are “proxy” paths</div>
-                <ul>
-                    <li>Some counties may lack the “ideal” raster-derived inputs at build time.</li>
-                    <li>In that case we use a <b>proxy blend</b> so the panel stays informative, but it is flagged as <i>PROXY</i> in provenance.</li>
-                    <li>When both primary + proxy are missing, values become <b>missing</b> (shown as <code>—</code>).</li>
-                </ul>
-                <p class="doc-note">
-                    In debug mode you’ll see tags like <code>[src:whp]</code> vs <code>[px:osm]</code> indicating which path fed the number.
-                </p>
-            </div>
-            <div class="doc-section">
-                <div class="doc-section-title">Composite</div>
-                <ul>
-                    <li>Inputs are first rescaled to 0–1 <i>within the run</i> for comparability.</li>
-                    <li>Then weighted and combined:</li>
-                    <li class="doc-formula"><code>hazard_score = Σ wᵢ × inputᵢ_norm</code></li>
-                </ul>
-            </div>
-        `,
-        codeHtml: `
-            <ul>
-                <li><b>GeoJSON fields</b>: <code>hazard_wildfire</code>, <code>hazard_vegetation</code>, <code>hazard_forest_distance</code>, <code>hazard_score</code></li>
-                <li><b>Data + fallbacks</b>: <code>src/utils/real_data.py</code> (real/proxy/missing tiers)</li>
-                <li><b>Normalization + weighted sum</b>: <code>src/features/build_features.py</code></li>
-            </ul>
-        `
+        oneLine: `<p class="doc-map-oneline"><span class="doc-accent doc-accent-hazard">Hazard</span>: <code>hazard_score = Σ w·norm(hazard_wildfire, hazard_vegetation, hazard_forest_distance)</code> with WHP/NLCD or OSM-proxy paths; <code>[src:whp]</code> vs <code>[px:osm]</code> in Detail mode map sources.</p>`
     },
     exposure_score: {
-        plainHtml: `
-            <p class="doc-lede">
-                <span class="doc-accent doc-accent-exposure"><b>Exposure</b></span> asks: <i>how much is in the way if a fire happens?</i>
-            </p>
-            <div class="doc-section">
-                <div class="doc-section-title">What counts as “exposed” here</div>
-                <ul>
-                    <li><b>People</b> (<code>exposure_population</code>)</li>
-                    <li><b>Homes</b> (<code>exposure_housing</code>)</li>
-                    <li><b>Residential value proxy</b> (<code>exposure_building_value</code>)</li>
-                </ul>
-            </div>
-            <div class="doc-section">
-                <div class="doc-section-title">Value proxy (why it’s reasonable)</div>
-                <ul>
-                    <li>We estimate “total residential value” as:</li>
-                    <li class="doc-formula"><code>exposure_building_value = housing_units × median_home_value</code></li>
-                    <li>If a local median is missing, we use a <b>county mean</b> so the map doesn’t collapse to zero.</li>
-                    <li>This is an <i>exposure ranking tool</i>, not a parcel-level appraisal.</li>
-                </ul>
-            </div>
-            <div class="doc-section">
-                <div class="doc-section-title">Composite</div>
-                <ul>
-                    <li>Population, housing, and value are normalized to 0–1 and combined with weights.</li>
-                    <li class="doc-formula"><code>exposure_score = Σ wᵢ × inputᵢ_norm</code></li>
-                </ul>
-            </div>
-        `,
-        codeHtml: `
-            <ul>
-                <li><b>GeoJSON fields</b>: <code>exposure_population</code>, <code>exposure_housing</code>, <code>exposure_building_value</code>, <code>exposure_score</code></li>
-                <li><b>Census + ACS joins</b>: <code>src/utils/real_data.py</code> (including county-mean imputation rules)</li>
-                <li><b>Normalization + weighted sum</b>: <code>src/features/build_features.py</code></li>
-            </ul>
-        `
+        oneLine: `<p class="doc-map-oneline"><span class="doc-accent doc-accent-exposure">Exposure</span>: <code>exposure_score = Σ w·norm(pop, housing, building_value)</code> with <code>exposure_building_value = units × median_home</code> (ACS; county-mean if BG median missing → <b>*</b> <code>[est:acs]</code>).</p>`
     },
     vulnerability_score: {
-        plainHtml: `
-            <p class="doc-lede">
-                <span class="doc-accent doc-accent-vulnerability"><b>Vulnerability</b></span> asks: <i>if a fire happens, who might face a harder time responding?</i>
-            </p>
-            <div class="doc-section">
-                <div class="doc-section-title">The three signals</div>
-                <ul>
-                    <li><b>Poverty share</b> (<code>vuln_poverty</code>)</li>
-                    <li><b>Older adult share</b> (<code>vuln_elderly</code>)</li>
-                    <li><b>Vehicle access</b> (<code>vuln_vehicle_access</code>)</li>
-                </ul>
-            </div>
-            <div class="doc-section">
-                <div class="doc-section-title">Important direction rule (vehicle access)</div>
-                <ul>
-                    <li>The raw “vehicle access” concept means: <b>higher</b> = more households can evacuate by car.</li>
-                    <li>But vulnerability should increase when evacuation is harder, so we flip the normalized value:</li>
-                    <li class="doc-formula"><code>vehicle_vulnerability_component = 1 − norm(vehicle_access)</code></li>
-                    <li>This is why the model can treat vehicle access as a vulnerability signal without changing the meaning of the source data.</li>
-                </ul>
-            </div>
-            <div class="doc-section">
-                <div class="doc-section-title">Why you may see “ESTIMATED”</div>
-                <ul>
-                    <li>Some ACS tables come back as all-null at block group for a county.</li>
-                    <li>When that happens, we use <b>tract-level</b> values and assign them to block groups in that tract.</li>
-                    <li>The UI marks those as <b>*</b> and, in debug mode, tags like <code>[est:tract]</code>.</li>
-                </ul>
-            </div>
-        `,
-        codeHtml: `
-            <ul>
-                <li><b>GeoJSON fields</b>: <code>vuln_poverty</code>, <code>vuln_elderly</code>, <code>vuln_vehicle_access</code>, <code>vulnerability_score</code></li>
-                <li><b>ACS import + tract fallback</b>: <code>scripts/real_import.py</code> (writes <code>poverty_tract</code>, <code>vehicle_access_tract</code>)</li>
-                <li><b>Feature assembly</b>: <code>src/utils/real_data.py</code> (applies tract→block group assignment + provenance)</li>
-                <li><b>Normalization + combine</b>: <code>src/features/build_features.py</code> (including the vehicle inversion)</li>
-            </ul>
-        `
+        oneLine: `<p class="doc-map-oneline"><span class="doc-accent doc-accent-vulnerability">Vulnerability</span>: <code>vulnerability_score = Σ w·norm(poverty, elderly, vehicle)</code> after <code>vuln_vehicle_access_norm := 1−norm(vehicle access)</code>; tract fallbacks if BG ACS null → <b>*</b> <code>[est:tract]</code>.</p>`
     },
     resilience_score: {
-        plainHtml: `
-            <p class="doc-lede">
-                <span class="doc-accent doc-accent-resilience"><b>Resilience</b></span> asks: <i>how much response capacity is nearby, and how connected is the area?</i>
-            </p>
-            <div class="doc-section">
-                <div class="doc-section-title">Three pieces of “capacity”</div>
-                <ul>
-                    <li><b>Fire station access</b> (<code>res_fire_station_dist</code>)</li>
-                    <li><b>Hospital access</b> (<code>res_hospital_dist</code>)</li>
-                    <li><b>Road connectivity</b> (<code>res_road_access</code>)</li>
-                </ul>
-            </div>
-            <div class="doc-section">
-                <div class="doc-section-title">Distance is converted to a 0–1 “nearness” score</div>
-                <ul>
-                    <li>We turn distance into “closer is better” using an inverse transform:</li>
-                    <li class="doc-formula"><code>nearness = 1 / (1 + distance_km)</code></li>
-                    <li>That keeps values bounded and makes the metric comparable across counties.</li>
-                </ul>
-            </div>
-            <div class="doc-section">
-                <div class="doc-section-title">Why it reduces risk</div>
-                <ul>
-                    <li>In the Risk formula, resilience enters as <code>(1 − resilience_score)</code>.</li>
-                    <li><b>Higher resilience</b> ⇒ <b>smaller multiplier</b> ⇒ lower risk.</li>
-                </ul>
-            </div>
-        `,
-        codeHtml: `
-            <ul>
-                <li><b>GeoJSON fields</b>: <code>res_fire_station_dist</code>, <code>res_hospital_dist</code>, <code>res_road_access</code>, <code>resilience_score</code></li>
-                <li><b>Distance/access features</b>: <code>src/utils/real_data.py</code> (HIFLD + OSM cache readers)</li>
-                <li><b>Normalization + combine</b>: <code>src/features/build_features.py</code></li>
-            </ul>
-        `
+        oneLine: `<p class="doc-map-oneline"><span class="doc-accent doc-accent-resilience">Resilience</span>: <code>resilience_score = Σ w·norm(fire_station, hospital, roads)</code> (HIFLD/OSM; nearness <code>1/(1+d_km)</code>); risk uses <code>(1−resilience)</code> so higher here lowers Risk.</p>`
     }
 };
+
+const MAPS_GRID_FOOTER = {
+    quality: `
+        <ul class="maps-grid-footer__list">
+            <li><b>Stars (*)</b> mark <b>ESTIMATED</b> or <b>PROXY</b> field quality (per GeoJSON <code>*_source</code>), not a worse fire model per se.</li>
+            <li><b>Detail mode</b> (checkbox or <code>?detail=1</code> / <code>?debug=1</code>) appends tags to many values, e.g. <code>[src:acs]</code> real ACS, <code>[est:acs]</code> / <code>[est:tract]</code> imputed, <code>[px:osm]</code> stand-in, <code>[src:whp]</code> / <code>[src:hifld]</code> / <code>[src:osm]</code> primary data, <code>[missing]</code> fallback.</li>
+            <li><b>EAL row</b> in tooltips inherits the same quality as <code>exposure_building_value</code> (<code>_debugTagEalFamily</code>).</li>
+        </ul>`,
+    code: `
+        <ul class="maps-grid-footer__list">
+            <li><b>Choropleth / tooltips</b>: <code>main.js</code> — <code>MAP_PANELS</code>, <code>buildTooltip</code>, <code>_formatValue</code>, <code>_debugTag</code>.</li>
+            <li><b>Risk + EAL</b>: <code>src/models/risk_model.py</code> — <code>risk_score</code>, <code>eal</code>, <code>eal_norm</code>.</li>
+            <li><b>Component scores + norms</b>: <code>src/features/build_features.py</code> — weights from <code>calculations.csv</code> / <code>src/utils/config.py</code>.</li>
+            <li><b>GeoJSON properties (excerpt)</b>: <code>risk_score</code>; <code>eal</code>, <code>eal_norm</code>; <code>hazard_wildfire</code>, <code>hazard_vegetation</code>, <code>hazard_forest_distance</code>, <code>hazard_score</code>; <code>exposure_population</code>, <code>exposure_housing</code>, <code>exposure_building_value</code>, <code>exposure_score</code>; <code>vuln_poverty</code>, <code>vuln_elderly</code>, <code>vuln_vehicle_access</code>, <code>vulnerability_score</code>; <code>res_fire_station_dist</code>, <code>res_hospital_dist</code>, <code>res_road_access</code>, <code>resilience_score</code>.</li>
+        </ul>`
+};
+
+function populateMapsGridFooter() {
+    const q = document.getElementById("mapsGridFooterQuality");
+    const c = document.getElementById("mapsGridFooterCode");
+    if (q) q.innerHTML = MAPS_GRID_FOOTER.quality;
+    if (c) c.innerHTML = MAPS_GRID_FOOTER.code;
+}
 
 function populatePanelText() {
     document.querySelectorAll(".map-cell--text").forEach((cell) => {
@@ -266,16 +60,12 @@ function populatePanelText() {
         const host = cell.querySelector(".map-text");
         if (!host) return;
         if (!doc) {
-            host.innerHTML = `<div class="doc-section"><b>No description configured for</b> <code>${metric}</code>.</div>`;
+            host.innerHTML = `<p class="doc-map-oneline">No one-line text for <code>${metric}</code>.</p>`;
             return;
         }
-        host.innerHTML = [
-            `<div class="doc-section-title">Plain language</div>`,
-            `<div class="doc-section">${doc.plainHtml || ""}</div>`,
-            `<div class="doc-section-title">Relevant code / fields</div>`,
-            `<div class="doc-section">${doc.codeHtml || ""}</div>`
-        ].join("");
+        host.innerHTML = doc.oneLine || "";
     });
+    populateMapsGridFooter();
 }
 
 const BASE_STROKE = 0.65;
@@ -448,12 +238,12 @@ function _abbrToken(s) {
 }
 
 function _debugTag(p, key) {
-    if ((key === "eal" || key === "eal_norm") && DEBUG_MODE) {
+    if ((key === "eal" || key === "eal_norm") && DETAIL_MODE) {
         return _debugTagEalFamily(p, key);
     }
     const q = _qualityFor(p, key);
     const prov = p[key + "_provenance"] || "";
-    if (!DEBUG_MODE) return "";
+    if (!DETAIL_MODE) return "";
     if (q === "REAL") return `[src:${_abbrToken(prov)}]`;
     if (q === "ESTIMATED") return `[est:${_abbrToken(prov)}]`;
     if (q === "PROXY") return `[px:${_abbrToken(prov)}]`;
@@ -579,7 +369,11 @@ function resetMapView() {
 let geoData;
 let countyManifest;
 const _params = new URLSearchParams(window.location.search);
-let DEBUG_MODE = _params.get("debug") === "1" || _params.get("debug") === "true";
+let DETAIL_MODE =
+    _params.get("debug") === "1" ||
+    _params.get("debug") === "true" ||
+    _params.get("detail") === "1" ||
+    _params.get("detail") === "true";
 
 const tooltip = d3.select("body")
     .append("div")
@@ -598,19 +392,19 @@ function buildTooltip(p) {
         _tooltipRowCols("exposure_score", "Exposure:", _fmtPanelTooltip(p.exposure_score, "exposure_score"), "", false),
         _tooltipRowCols("vulnerability_score", "Vulnerability:", _fmtPanelTooltip(p.vulnerability_score, "vulnerability_score"), "", false),
         _tooltipRowCols("resilience_score", "Resilience:", _fmtPanelTooltip(p.resilience_score, "resilience_score"), "", false),
-        _tooltipRowCols("eal_norm", "EL (eal_norm):", _fmtPanelTooltip(p.eal_norm, "eal_norm"), "", false),
+        _tooltipRowCols("eal_norm", "EAL (norm):", _fmtPanelTooltip(p.eal_norm, "eal_norm"), "", false),
     ].join("");
 
     const bigHtml = [
         rowFromFormatted("exposure_score", "Population:", _formatValue(p, "exposure_population", v => Number(v).toLocaleString()), true),
         rowFromFormatted("exposure_score", "Housing units:", _formatValue(p, "exposure_housing", v => Math.round(v).toLocaleString()), true),
         rowFromFormatted("exposure_score", "Building value:", _formatValue(p, "exposure_building_value", v => "$" + Math.round(v).toLocaleString()), true),
-        rowFromFormatted("eal_norm", "EAL (USD):", _formatValue(p, "eal", v => "$" + Math.round(v).toLocaleString()), false),
+        rowFromFormatted("eal_norm", "Expected loss (USD):", _formatValue(p, "eal", v => "$" + Math.round(v).toLocaleString()), false),
     ].join("");
 
     const parts = [scoresHtml, `<hr class="tooltip-hr"/>`, bigHtml];
 
-    if (DEBUG_MODE) {
+    if (DETAIL_MODE) {
         let diag = p.diagnostics;
         if (typeof diag === "string") {
             try { diag = JSON.parse(diag); } catch (e) { diag = {}; }
@@ -1206,12 +1000,12 @@ function prefetchPackagedCounties(manifest, currentId) {
 
 function applyMapGridLayout() {
     const g = document.getElementById("mapGrid");
-    if (g) g.classList.toggle("map-grid--debug", DEBUG_MODE);
-    document.body.classList.toggle("layout-debug", DEBUG_MODE);
-    const nonDbg = document.querySelector(".description--layout-nondebug");
-    const dbgDesc = document.querySelector(".description--layout-debug");
-    if (nonDbg) nonDbg.hidden = DEBUG_MODE;
-    if (dbgDesc) dbgDesc.hidden = !DEBUG_MODE;
+    if (g) g.classList.toggle("map-grid--debug", DETAIL_MODE);
+    document.body.classList.toggle("layout-debug", DETAIL_MODE);
+    const nonDet = document.querySelector(".description--layout-nondetail");
+    const detDesc = document.querySelector(".description--layout-detail");
+    if (nonDet) nonDet.hidden = DETAIL_MODE;
+    if (detDesc) detDesc.hidden = !DETAIL_MODE;
     requestAnimationFrame(() => {
         if (typeof geoData !== "undefined" && geoData && Array.isArray(geoData.features)) {
             try {
@@ -1321,14 +1115,14 @@ d3.select("#county").on("change", function () {
     });
 });
 
-d3.select("#debugToggle").on("change", function () {
-    DEBUG_MODE = this.checked;
+d3.select("#detailToggle").on("change", function () {
+    DETAIL_MODE = this.checked;
     applyMapGridLayout();
 });
 
 try {
-    const t = document.getElementById("debugToggle");
-    if (t) t.checked = DEBUG_MODE;
+    const t = document.getElementById("detailToggle");
+    if (t) t.checked = DETAIL_MODE;
 } catch (e) {}
 applyMapGridLayout();
 
