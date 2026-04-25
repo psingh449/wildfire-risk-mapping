@@ -15,29 +15,19 @@
         <div class="controls">
             <label for="county">County:</label>
             <select id="county" class="county-select" title="Bold options are priority demo counties (browser-prefetched when packaged)."></select>
-
-            <label class="detail-toggle">
-                <input type="checkbox" id="detailToggle" checked aria-describedby="detailHelp" />
-                Detail
-            </label>
-            <span id="detailHelp" class="visually-hidden">When on, each metric shows a one-line explanation beside the map, six rows. URL: ?detail=1 or ?debug=1</span>
         </div>
 
         <p id="countyMessage" class="county-message" aria-live="polite"></p>
         <p class="description">
-            <span class="description--layout-nondetail">Six block-group maps in a 3×2 matrix (Detail off). Drag to pan, scroll or pinch to zoom (all six stay in sync). Double-click any map to reset the view.</span>
-            <span class="description--layout-detail" hidden>With Detail on, each metric is one row: a one-line note on the left and the map on the right (six rows). Double-click a map to reset; zoom stays in sync across maps.</span>
-            <span class="description-metrics"> Maps:
+            Six block-group maps in a 3×2 matrix. Drag to pan, scroll or pinch to zoom (all six stay in sync). Double-click any map to reset. Each panel lists calculation details below the map. Metrics:
             <span class="metric-accent metric-accent-el"><strong>Expected Annual Loss</strong></span>
-            (choropleth uses normalized <code>eal_norm</code> for contrast; dollars and formula below) and
-            <span class="metric-accent metric-accent-risk"><strong>Risk</strong></span>
-            (overall);
+            (map uses <code>eal_norm</code>) and
+            <span class="metric-accent metric-accent-risk"><strong>Risk</strong></span>;
             <span class="metric-accent metric-accent-hazard">hazard</span>,
             <span class="metric-accent metric-accent-exposure">exposure</span>,
             <span class="metric-accent metric-accent-vulnerability">vulnerability</span>, and
             <span class="metric-accent metric-accent-resilience">resilience</span>.
-            Hover any map for the same full-detail tooltip. Common “quality / stars” and “relevant code / fields” for all layers are under the map grid.
-            </span>
+            Hover any map for the full tooltip.
         </p>
 
         <section class="validation-panel" aria-label="Validation summary">
@@ -67,9 +57,6 @@
         </section>
 
         <div class="map-grid" id="mapGrid">
-            <div class="map-cell map-cell--text" data-metric="eal_norm" id="text-panel-eal">
-                <div class="map-text" role="note" aria-label="Expected Annual Loss, one-line explanation"></div>
-            </div>
             <div class="map-cell map-cell--result" id="map-panel-eal">
                 <h3 class="map-title metric-accent metric-accent-el">Expected Annual Loss</h3>
                 <div class="map-stack">
@@ -79,9 +66,7 @@
                     <svg class="map-svg" width="520" height="360" aria-label="Expected Annual Loss map (eal_norm)"></svg>
                     <svg class="legend-svg" width="520" height="46" overflow="visible" aria-hidden="true"></svg>
                 </div>
-            </div>
-            <div class="map-cell map-cell--text" data-metric="risk_score" id="text-panel-risk">
-                <div class="map-text" role="note" aria-label="Risk, one-line explanation"></div>
+                <div class="map-calc" data-metric="eal_norm" aria-label="Expected Annual Loss calculation details"></div>
             </div>
             <div class="map-cell map-cell--result" id="map-panel-risk">
                 <h3 class="map-title metric-accent metric-accent-risk">Risk</h3>
@@ -92,9 +77,7 @@
                     <svg class="map-svg" width="520" height="360" aria-label="Risk map (risk_score)"></svg>
                     <svg class="legend-svg" width="520" height="46" overflow="visible" aria-hidden="true"></svg>
                 </div>
-            </div>
-            <div class="map-cell map-cell--text" data-metric="hazard_score" id="text-panel-hazard">
-                <div class="map-text" role="note" aria-label="Hazard, one-line explanation"></div>
+                <div class="map-calc" data-metric="risk_score" aria-label="Risk calculation details"></div>
             </div>
             <div class="map-cell map-cell--component" id="map-panel-hazard">
                 <h3 class="map-title metric-accent metric-accent-hazard">Hazard</h3>
@@ -105,9 +88,7 @@
                     <svg class="map-svg" width="520" height="360" aria-label="Hazard map"></svg>
                     <svg class="legend-svg" width="520" height="46" overflow="visible" aria-hidden="true"></svg>
                 </div>
-            </div>
-            <div class="map-cell map-cell--text" data-metric="exposure_score" id="text-panel-exposure">
-                <div class="map-text" role="note" aria-label="Exposure, one-line explanation"></div>
+                <div class="map-calc" data-metric="hazard_score" aria-label="Hazard calculation details"></div>
             </div>
             <div class="map-cell map-cell--component" id="map-panel-exposure">
                 <h3 class="map-title metric-accent metric-accent-exposure">Exposure</h3>
@@ -118,9 +99,7 @@
                     <svg class="map-svg" width="520" height="360" aria-label="Exposure map"></svg>
                     <svg class="legend-svg" width="520" height="46" overflow="visible" aria-hidden="true"></svg>
                 </div>
-            </div>
-            <div class="map-cell map-cell--text" data-metric="vulnerability_score" id="text-panel-vulnerability">
-                <div class="map-text" role="note" aria-label="Vulnerability, one-line explanation"></div>
+                <div class="map-calc" data-metric="exposure_score" aria-label="Exposure calculation details"></div>
             </div>
             <div class="map-cell map-cell--component" id="map-panel-vulnerability">
                 <h3 class="map-title metric-accent metric-accent-vulnerability">Vulnerability</h3>
@@ -131,9 +110,7 @@
                     <svg class="map-svg" width="520" height="360" aria-label="Vulnerability map"></svg>
                     <svg class="legend-svg" width="520" height="46" overflow="visible" aria-hidden="true"></svg>
                 </div>
-            </div>
-            <div class="map-cell map-cell--text" data-metric="resilience_score" id="text-panel-resilience">
-                <div class="map-text" role="note" aria-label="Resilience, one-line explanation"></div>
+                <div class="map-calc" data-metric="vulnerability_score" aria-label="Vulnerability calculation details"></div>
             </div>
             <div class="map-cell map-cell--component" id="map-panel-resilience">
                 <h3 class="map-title metric-accent metric-accent-resilience">Resilience</h3>
@@ -144,14 +121,8 @@
                     <svg class="map-svg" width="520" height="360" aria-label="Resilience map"></svg>
                     <svg class="legend-svg" width="520" height="46" overflow="visible" aria-hidden="true"></svg>
                 </div>
+                <div class="map-calc" data-metric="resilience_score" aria-label="Resilience calculation details"></div>
             </div>
-        </div>
-
-        <div class="maps-grid-footer" id="mapsGridFooter" aria-label="All maps: data quality and code references">
-            <h3 class="maps-grid-footer__title">All maps: quality / stars and provenance</h3>
-            <div class="maps-grid-footer__body" id="mapsGridFooterQuality"></div>
-            <h3 class="maps-grid-footer__title">Relevant code / GeoJSON fields (all layers)</h3>
-            <div class="maps-grid-footer__body" id="mapsGridFooterCode"></div>
         </div>
     </div>
 

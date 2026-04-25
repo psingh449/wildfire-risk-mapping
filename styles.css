@@ -15,30 +15,8 @@ body {
     box-sizing: border-box;
 }
 
-/* Wider content when Detail mode shows text + map in two columns */
-body.layout-debug .container {
-    max-width: min(1680px, 100%);
-}
-
 .controls {
     margin-bottom: 10px;
-}
-
-.detail-toggle,
-.debug-toggle {
-    margin-left: 10px;
-}
-
-.visually-hidden {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
 }
 
 select, button {
@@ -207,51 +185,11 @@ button {
     color: #4b5563;
 }
 
-/* Shared copy under all maps (quality + code pointers) */
-.maps-grid-footer {
-    margin-top: 14px;
-    padding: 12px 14px;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
-    background: #fafbfc;
-    font-size: 13px;
-    line-height: 1.45;
-    color: #1e293b;
-}
-.maps-grid-footer__title {
-    margin: 0 0 6px 0;
-    font-size: 14px;
-    font-weight: 700;
-    color: #0f172a;
-}
-.maps-grid-footer__title + .maps-grid-footer__body + .maps-grid-footer__title {
-    margin-top: 10px;
-}
-.maps-grid-footer__body {
-    margin: 0 0 12px 0;
-}
-.maps-grid-footer__body:last-of-type,
-.maps-grid-footer__body:last-child {
-    margin-bottom: 0;
-}
-.maps-grid-footer__list {
-    margin: 0;
-    padding-left: 1.2rem;
-}
-.maps-grid-footer__list li {
-    margin: 0 0 6px 0;
-}
-.maps-grid-footer__list code {
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-    font-size: 12px;
-    background: rgba(15, 23, 42, 0.06);
-    padding: 0 3px;
-    border-radius: 3px;
-}
-
-/* Non-debug: six map cells only, 3 columns × 2 rows. Detail: 6 rows, each row = text (left) + map (right). */
+/* 3×2 map grid; each cell: title, map + legend, then calculation details */
 .map-grid {
     display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(2, auto);
     gap: 0;
     align-items: stretch;
     justify-items: stretch;
@@ -260,22 +198,6 @@ button {
     overflow: hidden;
     position: relative;
     padding-right: 0;
-}
-
-.map-grid:not(.map-grid--debug) {
-    grid-template-columns: repeat(3, 1fr);
-    grid-template-rows: repeat(2, auto);
-}
-
-/* Hide explanatory text blocks when not in debug mode; maps stay 3×2. */
-.map-grid:not(.map-grid--debug) .map-cell--text {
-    display: none !important;
-}
-
-/* Debug: two columns × six rows; DOM order is (text, map) × 6. */
-.map-grid.map-grid--debug {
-    grid-template-columns: minmax(260px, 1fr) minmax(320px, 1.35fr);
-    grid-template-rows: repeat(6, auto);
 }
 
 .map-cell {
@@ -288,78 +210,44 @@ button {
     border-bottom: 1px solid #ddd;
     display: flex;
     flex-direction: column;
-    min-height: 420px;
+    min-height: 360px;
 }
 
-/* Text panels: match map panel size; scroll content if needed */
-.map-cell--text {
-    background: #fff;
-}
-.map-text {
-    padding: 10px 10px 12px;
-    font-size: 13px;
-    line-height: 1.4;
-    color: #222;
-    overflow: auto;
-    flex: 1;
-}
-.map-text p {
-    margin: 0 0 10px 0;
-}
-.map-text p.doc-map-oneline {
-    margin: 0;
-    font-size: 12.5px;
-    line-height: 1.4;
-    color: #1e293b;
-}
-.map-text p.doc-map-oneline code {
-    font-size: 11.5px;
-}
-.map-text ul {
-    margin: 6px 0 10px 18px;
-    padding: 0;
-}
-.map-text li {
-    margin: 0 0 4px 0;
-}
-.map-text .doc-section-title {
-    margin: 0 0 4px 0;
-    font-weight: 700;
-    color: #000;
-}
-.map-text .doc-section {
-    margin: 0 0 10px 0;
-}
-.map-text code {
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+/* Calculation bullets under each map */
+.map-calc {
+    flex: 0 0 auto;
+    border-top: 1px solid #e5e7eb;
+    background: #f8fafc;
+    padding: 8px 10px 10px;
     font-size: 12px;
-    background: #f5f5f5;
-    padding: 1px 4px;
-    border-radius: 3px;
+    line-height: 1.35;
+    color: #1e293b;
+    max-width: 100%;
 }
-.map-text .doc-lede {
-    font-size: 13px;
-    line-height: 1.45;
+.map-calc__list {
+    margin: 0;
+    padding-left: 1.15rem;
 }
-.map-text .doc-note {
-    margin: 6px 0 0 0;
-    color: #333;
+.map-calc__list li {
+    margin: 0 0 8px 0;
 }
-.map-text .doc-formula {
-    list-style: none;
-    margin-left: -18px;
+.map-calc__list li:last-child {
+    margin-bottom: 0;
 }
-
-/* Metric-colored accents inside doc text */
-.map-text .doc-accent {
-    font-weight: 700;
+.map-calc__code {
+    display: block;
+    margin-top: 4px;
+    padding: 6px 8px;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-size: 11px;
+    line-height: 1.4;
+    white-space: pre-wrap;
+    word-break: break-word;
+    color: #0f172a;
 }
-.map-text .doc-accent-el { color: #00695C; }
-.map-text .doc-accent-risk { color: #B71C1C; }
-.map-text .doc-accent-hazard { color: #E65100; }
-.map-text .doc-accent-exposure { color: #0369A1; }
-.map-text .doc-accent-vulnerability { color: #5B21B6; }
-.map-text .doc-accent-resilience { color: #047857; }
 
 /* End-result maps (EL + Risk): bold frame */
 .map-cell--result {

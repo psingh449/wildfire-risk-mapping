@@ -7,65 +7,77 @@ const MAP_PANELS = [
     { panelId: "map-panel-resilience", metric: "resilience_score" },
 ];
 
-// One-line explainer per map (Detail mode, left column). No headings there — common quality/code lives in #mapsGridFooter.
-// Trusted HTML: metric-colored spans + inline formulas.
+// Calculation copy under each map: 2–4 bullets; each **bold** lead, colon, then formula on a new line in <code>.
 const PANEL_DOCS = {
     eal_norm: {
-        oneLine: `<p class="doc-map-oneline"><span class="doc-accent doc-accent-el">EAL</span>: dollars <code>eal = risk_score × exposure_building_value</code> (residential value proxy: housing × ACS median); this map uses <code>eal_norm = (eal−min)/(max−min)</code> per county for choropleth contrast. <b>*</b> / <code>[src:…] / [est:…]</code> (Detail on) follow <code>exposure_building_value</code> quality.</p>`
+        bullets: [
+            { lead: "Dollar amount", formula: "eal = risk_score × exposure_building_value" },
+            { lead: "Value at stake (exposure)", formula: "exposure_building_value = housing_units × median_home_value\n(ACS B25077 at block group; county mean if BG median missing)" },
+            { lead: "Choropleth field", formula: "eal_norm = (eal − min) / (max − min)\n(range is over block groups in the loaded county; min–max scaling for color contrast)" },
+            { lead: "Stars and tags in tooltips", formula: "Quality of eal and eal_norm follows exposure_building_value\n(* = ESTIMATED/PROXY; e.g. [src:acs], [est:acs], [missing])" }
+        ]
     },
     risk_score: {
-        oneLine: `<p class="doc-map-oneline"><span class="doc-accent doc-accent-risk">Risk</span>: <code>risk_score = hazard×exposure×vulnerability×(1−resilience)</code> (all [0,1]; multiply collapses to ~0 if any term is). Colors use the raw field but the color scale is min–max <em>within the loaded county</em> (<code>main.js:_computeDomainForMetric</code>) so small values stay visible.</p>`
+        bullets: [
+            { lead: "Composite (all factors [0,1])", formula: "risk_score = hazard_score × exposure_score × vulnerability_score × (1 − resilience_score)" },
+            { lead: "Why values look tiny", formula: "Multiplication: if any component is near 0, the product shrinks (uninhabited blocks often drive exposure to 0)" },
+            { lead: "Color scale for this map", formula: "domain = [ min(risk_score), max(risk_score) ] in county\n(see main.js: _computeDomainForMetric — not a new database column)" }
+        ]
     },
     hazard_score: {
-        oneLine: `<p class="doc-map-oneline"><span class="doc-accent doc-accent-hazard">Hazard</span>: <code>hazard_score = Σ w·norm(hazard_wildfire, hazard_vegetation, hazard_forest_distance)</code> with WHP/NLCD or OSM-proxy paths; <code>[src:whp]</code> vs <code>[px:osm]</code> in Detail mode map sources.</p>`
+        bullets: [
+            { lead: "Inputs", formula: "hazard_wildfire, hazard_vegetation, hazard_forest_distance" },
+            { lead: "Composite", formula: "hazard_score = Σ wᵢ × norm(input_i)\n(weights from calculations.csv or config; each input min–max normalized in the pipeline)" },
+            { lead: "Provenance in tooltips", formula: "e.g. [src:whp] = USFS raster path; [px:osm] = proxy when primary raster/NLCD path missing" }
+        ]
     },
     exposure_score: {
-        oneLine: `<p class="doc-map-oneline"><span class="doc-accent doc-accent-exposure">Exposure</span>: <code>exposure_score = Σ w·norm(pop, housing, building_value)</code> with <code>exposure_building_value = units × median_home</code> (ACS; county-mean if BG median missing → <b>*</b> <code>[est:acs]</code>).</p>`
+        bullets: [
+            { lead: "Building value (USD proxy)", formula: "exposure_building_value = housing_units × median_home_value" },
+            { lead: "Composite", formula: "exposure_score = Σ w × norm(population, housing_units, exposure_building_value)" },
+            { lead: "Missing BG medians", formula: "impute with county mean → * and tags like [est:acs] in tooltips" }
+        ]
     },
     vulnerability_score: {
-        oneLine: `<p class="doc-map-oneline"><span class="doc-accent doc-accent-vulnerability">Vulnerability</span>: <code>vulnerability_score = Σ w·norm(poverty, elderly, vehicle)</code> after <code>vuln_vehicle_access_norm := 1−norm(vehicle access)</code>; tract fallbacks if BG ACS null → <b>*</b> <code>[est:tract]</code>.</p>`
+        bullets: [
+            { lead: "Raw inputs (ACS, block group)", formula: "vuln_poverty, vuln_elderly, vuln_vehicle_access" },
+            { lead: "Vehicle access direction", formula: "vuln_vehicle_access_norm = 1 − norm(vehicle_access_raw)\n(higher car access → lower vulnerability component)" },
+            { lead: "Composite", formula: "vulnerability_score = Σ w × norm(poverty, elderly, vehicle_access)" },
+            { lead: "Tract fallback", formula: "If BG ACS is all-null, tract values assigned to BGs → * and [est:tract]" }
+        ]
     },
     resilience_score: {
-        oneLine: `<p class="doc-map-oneline"><span class="doc-accent doc-accent-resilience">Resilience</span>: <code>resilience_score = Σ w·norm(fire_station, hospital, roads)</code> (HIFLD/OSM; nearness <code>1/(1+d_km)</code>); risk uses <code>(1−resilience)</code> so higher here lowers Risk.</p>`
+        bullets: [
+            { lead: "Distance features (HIFLD, OSM)", formula: "res_fire_station_dist, res_hospital_dist, res_road_access\n(nearness = 1 / (1 + d_km) so closer is better)" },
+            { lead: "Composite", formula: "resilience_score = Σ w × norm(fire_station, hospital, road_access)" },
+            { lead: "How this lowers Risk", formula: "risk uses factor (1 − resilience_score)\nso higher resilience → lower risk_score" }
+        ]
     }
 };
 
-const MAPS_GRID_FOOTER = {
-    quality: `
-        <ul class="maps-grid-footer__list">
-            <li><b>Stars (*)</b> mark <b>ESTIMATED</b> or <b>PROXY</b> field quality (per GeoJSON <code>*_source</code>), not a worse fire model per se.</li>
-            <li><b>Detail mode</b> (checkbox or <code>?detail=1</code> / <code>?debug=1</code>) appends tags to many values, e.g. <code>[src:acs]</code> real ACS, <code>[est:acs]</code> / <code>[est:tract]</code> imputed, <code>[px:osm]</code> stand-in, <code>[src:whp]</code> / <code>[src:hifld]</code> / <code>[src:osm]</code> primary data, <code>[missing]</code> fallback.</li>
-            <li><b>EAL row</b> in tooltips inherits the same quality as <code>exposure_building_value</code> (<code>_debugTagEalFamily</code>).</li>
-        </ul>`,
-    code: `
-        <ul class="maps-grid-footer__list">
-            <li><b>Choropleth / tooltips</b>: <code>main.js</code> — <code>MAP_PANELS</code>, <code>buildTooltip</code>, <code>_formatValue</code>, <code>_debugTag</code>.</li>
-            <li><b>Risk + EAL</b>: <code>src/models/risk_model.py</code> — <code>risk_score</code>, <code>eal</code>, <code>eal_norm</code>.</li>
-            <li><b>Component scores + norms</b>: <code>src/features/build_features.py</code> — weights from <code>calculations.csv</code> / <code>src/utils/config.py</code>.</li>
-            <li><b>GeoJSON properties (excerpt)</b>: <code>risk_score</code>; <code>eal</code>, <code>eal_norm</code>; <code>hazard_wildfire</code>, <code>hazard_vegetation</code>, <code>hazard_forest_distance</code>, <code>hazard_score</code>; <code>exposure_population</code>, <code>exposure_housing</code>, <code>exposure_building_value</code>, <code>exposure_score</code>; <code>vuln_poverty</code>, <code>vuln_elderly</code>, <code>vuln_vehicle_access</code>, <code>vulnerability_score</code>; <code>res_fire_station_dist</code>, <code>res_hospital_dist</code>, <code>res_road_access</code>, <code>resilience_score</code>.</li>
-        </ul>`
-};
-
-function populateMapsGridFooter() {
-    const q = document.getElementById("mapsGridFooterQuality");
-    const c = document.getElementById("mapsGridFooterCode");
-    if (q) q.innerHTML = MAPS_GRID_FOOTER.quality;
-    if (c) c.innerHTML = MAPS_GRID_FOOTER.code;
+function _escapeCalcFormula(s) {
+    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
-function populatePanelText() {
-    document.querySelectorAll(".map-cell--text").forEach((cell) => {
-        const metric = cell.getAttribute("data-metric") || "";
+function renderCalcBulletsHtml(bullets) {
+    if (!bullets || !bullets.length) return "";
+    const items = bullets.map((b) => {
+        const code = _escapeCalcFormula(b.formula);
+        return `<li><b>${_escapeCalcFormula(b.lead)}</b>:<br><code class="map-calc__code">${code}</code></li>`;
+    });
+    return `<ul class="map-calc__list">${items.join("")}</ul>`;
+}
+
+function populateMapCalcSections() {
+    document.querySelectorAll(".map-calc").forEach((el) => {
+        const metric = el.getAttribute("data-metric") || "";
         const doc = PANEL_DOCS[metric];
-        const host = cell.querySelector(".map-text");
-        if (!host) return;
-        if (!doc) {
-            host.innerHTML = `<p class="doc-map-oneline">No one-line text for <code>${metric}</code>.</p>`;
+        if (!doc || !doc.bullets) {
+            el.innerHTML = "";
             return;
         }
-        host.innerHTML = doc.oneLine || "";
+        el.innerHTML = renderCalcBulletsHtml(doc.bullets);
     });
-    populateMapsGridFooter();
 }
 
 const BASE_STROKE = 0.65;
@@ -238,12 +250,11 @@ function _abbrToken(s) {
 }
 
 function _debugTag(p, key) {
-    if ((key === "eal" || key === "eal_norm") && DETAIL_MODE) {
+    if (key === "eal" || key === "eal_norm") {
         return _debugTagEalFamily(p, key);
     }
     const q = _qualityFor(p, key);
     const prov = p[key + "_provenance"] || "";
-    if (!DETAIL_MODE) return "";
     if (q === "REAL") return `[src:${_abbrToken(prov)}]`;
     if (q === "ESTIMATED") return `[est:${_abbrToken(prov)}]`;
     if (q === "PROXY") return `[px:${_abbrToken(prov)}]`;
@@ -368,12 +379,6 @@ function resetMapView() {
 
 let geoData;
 let countyManifest;
-const _params = new URLSearchParams(window.location.search);
-let DETAIL_MODE =
-    _params.get("debug") === "1" ||
-    _params.get("debug") === "true" ||
-    _params.get("detail") === "1" ||
-    _params.get("detail") === "true";
 
 const tooltip = d3.select("body")
     .append("div")
@@ -404,51 +409,49 @@ function buildTooltip(p) {
 
     const parts = [scoresHtml, `<hr class="tooltip-hr"/>`, bigHtml];
 
-    if (DETAIL_MODE) {
-        let diag = p.diagnostics;
-        if (typeof diag === "string") {
-            try { diag = JSON.parse(diag); } catch (e) { diag = {}; }
-        }
-        let diagText = "No validation issues.";
-        if (diag && typeof diag === "object" && Object.keys(diag).length > 0) {
-            diagText = Object.entries(diag)
-                .map(([field, issues]) => {
-                    const arr = Array.isArray(issues) ? issues : [issues];
-                    return `${field}: ${arr.join("; ")}`;
-                })
-                .join("; ");
-        }
-
-        const hazardDebug = [
-            rowFromFormatted("hazard_score", "hazard_wildfire:", _formatValue(p, "hazard_wildfire", v => Number(v).toFixed(1)), false),
-            rowFromFormatted("hazard_score", "hazard_vegetation:", _formatValue(p, "hazard_vegetation", v => Number(v).toFixed(1)), false),
-            rowFromFormatted("hazard_score", "hazard_forest_distance:", _formatValue(p, "hazard_forest_distance", v => Number(v).toFixed(1)), false),
-        ].join("");
-
-        const vulnDebug = [
-            rowFromFormatted("vulnerability_score", "vuln_poverty:", _formatValue(p, "vuln_poverty", v => Number(v).toFixed(1)), false),
-            rowFromFormatted("vulnerability_score", "vuln_elderly:", _formatValue(p, "vuln_elderly", v => Number(v).toFixed(1)), false),
-            rowFromFormatted("vulnerability_score", "vuln_vehicle_access:", _formatValue(p, "vuln_vehicle_access", v => Number(v).toFixed(1)), false),
-        ].join("");
-
-        const resDebug = [
-            rowFromFormatted("resilience_score", "res_fire_station_dist:", _formatValue(p, "res_fire_station_dist", v => Number(v).toFixed(1)), false),
-            rowFromFormatted("resilience_score", "res_hospital_dist:", _formatValue(p, "res_hospital_dist", v => Number(v).toFixed(1)), false),
-            rowFromFormatted("resilience_score", "res_road_access:", _formatValue(p, "res_road_access", v => Number(v).toFixed(1)), false),
-        ].join("");
-
-        parts.push(
-            `<hr class="tooltip-hr"/>`,
-            `<div class="tooltip-diag"><b>Diagnostics:</b> ${_escapeHtml(diagText)}</div>`,
-            `<hr class="tooltip-hr"/>`,
-            `<div class="tooltip-section-title">Hazard inputs</div>`,
-            hazardDebug,
-            `<div class="tooltip-section-title">Vulnerability inputs</div>`,
-            vulnDebug,
-            `<div class="tooltip-section-title">Resilience inputs</div>`,
-            resDebug
-        );
+    let diag = p.diagnostics;
+    if (typeof diag === "string") {
+        try { diag = JSON.parse(diag); } catch (e) { diag = {}; }
     }
+    let diagText = "No validation issues.";
+    if (diag && typeof diag === "object" && Object.keys(diag).length > 0) {
+        diagText = Object.entries(diag)
+            .map(([field, issues]) => {
+                const arr = Array.isArray(issues) ? issues : [issues];
+                return `${field}: ${arr.join("; ")}`;
+            })
+            .join("; ");
+    }
+
+    const hazardDebug = [
+        rowFromFormatted("hazard_score", "hazard_wildfire:", _formatValue(p, "hazard_wildfire", v => Number(v).toFixed(1)), false),
+        rowFromFormatted("hazard_score", "hazard_vegetation:", _formatValue(p, "hazard_vegetation", v => Number(v).toFixed(1)), false),
+        rowFromFormatted("hazard_score", "hazard_forest_distance:", _formatValue(p, "hazard_forest_distance", v => Number(v).toFixed(1)), false),
+    ].join("");
+
+    const vulnDebug = [
+        rowFromFormatted("vulnerability_score", "vuln_poverty:", _formatValue(p, "vuln_poverty", v => Number(v).toFixed(1)), false),
+        rowFromFormatted("vulnerability_score", "vuln_elderly:", _formatValue(p, "vuln_elderly", v => Number(v).toFixed(1)), false),
+        rowFromFormatted("vulnerability_score", "vuln_vehicle_access:", _formatValue(p, "vuln_vehicle_access", v => Number(v).toFixed(1)), false),
+    ].join("");
+
+    const resDebug = [
+        rowFromFormatted("resilience_score", "res_fire_station_dist:", _formatValue(p, "res_fire_station_dist", v => Number(v).toFixed(1)), false),
+        rowFromFormatted("resilience_score", "res_hospital_dist:", _formatValue(p, "res_hospital_dist", v => Number(v).toFixed(1)), false),
+        rowFromFormatted("resilience_score", "res_road_access:", _formatValue(p, "res_road_access", v => Number(v).toFixed(1)), false),
+    ].join("");
+
+    parts.push(
+        `<hr class="tooltip-hr"/>`,
+        `<div class="tooltip-diag"><b>Diagnostics:</b> ${_escapeHtml(diagText)}</div>`,
+        `<hr class="tooltip-hr"/>`,
+        `<div class="tooltip-section-title">Hazard inputs</div>`,
+        hazardDebug,
+        `<div class="tooltip-section-title">Vulnerability inputs</div>`,
+        vulnDebug,
+        `<div class="tooltip-section-title">Resilience inputs</div>`,
+        resDebug
+    );
 
     return `<div class="tooltip-body">${parts.join("")}</div>`;
 }
@@ -998,25 +1001,6 @@ function prefetchPackagedCounties(manifest, currentId) {
     }
 }
 
-function applyMapGridLayout() {
-    const g = document.getElementById("mapGrid");
-    if (g) g.classList.toggle("map-grid--debug", DETAIL_MODE);
-    document.body.classList.toggle("layout-debug", DETAIL_MODE);
-    const nonDet = document.querySelector(".description--layout-nondetail");
-    const detDesc = document.querySelector(".description--layout-detail");
-    if (nonDet) nonDet.hidden = DETAIL_MODE;
-    if (detDesc) detDesc.hidden = !DETAIL_MODE;
-    requestAnimationFrame(() => {
-        if (typeof geoData !== "undefined" && geoData && Array.isArray(geoData.features)) {
-            try {
-                renderAll();
-            } catch (e) {
-                console.error(e);
-            }
-        }
-    });
-}
-
 function loadCounty(id, manifest) {
     const url = manifest.datasets && manifest.datasets[id];
     const msg = d3.select("#countyMessage");
@@ -1078,7 +1062,7 @@ Promise.all([
     d3.json("data/validation/merged_06007_06073.json").catch(() => null)
 ]).then(([list, manifest, mergedUi]) => {
     countyManifest = manifest;
-    populatePanelText();
+    populateMapCalcSections();
     const startId = populateCountySelect(list, manifest);
     return loadCounty(startId, manifest).then(() => {
         prefetchPackagedCounties(manifest, startId);
@@ -1114,17 +1098,6 @@ d3.select("#county").on("change", function () {
         renderAll();
     });
 });
-
-d3.select("#detailToggle").on("change", function () {
-    DETAIL_MODE = this.checked;
-    applyMapGridLayout();
-});
-
-try {
-    const t = document.getElementById("detailToggle");
-    if (t) t.checked = DETAIL_MODE;
-} catch (e) {}
-applyMapGridLayout();
 
 // Synced zoom sliders (one per panel)
 try {
