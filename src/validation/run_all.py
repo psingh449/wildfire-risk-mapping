@@ -53,6 +53,7 @@ def _extract_scalar_metrics(gdf: pd.DataFrame) -> Dict[str, Any]:
         return s.iloc[0] if len(s) else default
 
     fema = _parse_json_cell(first_value("fema_nri_comparison", "{}"))
+    module_sens = _parse_json_cell(first_value("module_sensitivity", "{}"))
     burned_src = str(first_value("_burned_label_source", "UNKNOWN") or "UNKNOWN")
     burned_pos = None
     burned_neg = None
@@ -68,6 +69,7 @@ def _extract_scalar_metrics(gdf: pd.DataFrame) -> Dict[str, Any]:
         "risk_concentration": float(first_value("risk_concentration", 0.0) or 0.0),
         "gini_risk": float(first_value("gini_risk", 0.0) or 0.0),
         "fema_nri_comparison": fema,
+        "module_sensitivity": module_sens,
         "external_sources": {
             "fema_nri": str(fema.get("source", "UNKNOWN")),
             "burned_labels": burned_src,
@@ -161,13 +163,33 @@ def run_validation_runner(
             frames.append(gpd.read_file(_resolve_repo_file(path)))
         gdf = pd.concat(frames, ignore_index=True)
     else:
-        # Build a representative frame through the existing pipeline.
-        steps.USE_REAL_DATA = bool(use_real_data)
-        gdf = steps.step_ingestion()
-        gdf = steps.step_preprocessing(gdf)
-        gdf = run_feature_pipeline(gdf)
-        gdf = steps.step_features(gdf)
-        gdf = steps.step_model(gdf)
+        # Prefer "all packaged counties" when available so cross-county validation metrics
+        # (including Experiment 1 sensitivity) are meaningful by default.
+        gdf = None
+        try:
+            import geopandas as gpd  # type: ignore
+            manifest_path = _resolve_repo_file("data/county_manifest.json")
+            if manifest_path.exists():
+                manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+                datasets = manifest.get("datasets", {}) or {}
+                frames = []
+                for cf, rel in datasets.items():
+                    p = _resolve_repo_file(str(rel))
+                    if p.exists():
+                        frames.append(gpd.read_file(p))
+                if len(frames) >= 2:
+                    gdf = pd.concat(frames, ignore_index=True)
+        except Exception:
+            gdf = None
+
+        if gdf is None:
+            # Fallback: build a representative frame through the existing pipeline.
+            steps.USE_REAL_DATA = bool(use_real_data)
+            gdf = steps.step_ingestion()
+            gdf = steps.step_preprocessing(gdf)
+            gdf = run_feature_pipeline(gdf)
+            gdf = steps.step_features(gdf)
+            gdf = steps.step_model(gdf)
 
     # Existing schema/range/provenance validations (warning-level logging).
     validator.run_all_validations(gdf)

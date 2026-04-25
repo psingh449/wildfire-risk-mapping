@@ -810,6 +810,7 @@ function _countBurnedLabels(features) {
 function buildValidationMetricsFromFeatures(features) {
     const p0 = (features[0] && features[0].properties) || {};
     const fema = _parseJsonMaybe(p0.fema_nri_comparison) || {};
+    const moduleSensitivity = _parseJsonMaybe(p0.module_sensitivity) || {};
     const burned = _countBurnedLabels(features);
     return {
         block_rows: features.length,
@@ -818,6 +819,7 @@ function buildValidationMetricsFromFeatures(features) {
         risk_concentration: _safeNumber(p0.risk_concentration, null),
         gini_risk: _safeNumber(p0.gini_risk, null),
         fema_nri_comparison: fema,
+        module_sensitivity: moduleSensitivity,
         county_risk: _safeNumber(p0.county_risk, null),
         county_eal: p0.county_eal != null && p0.county_eal !== "" ? Number(p0.county_eal) : null,
         block_to_county_mapping: p0.block_to_county_mapping,
@@ -971,6 +973,47 @@ function kpiHtmlFromMetrics(m, opts) {
             <span class="validation-kpi__meta">rmse_eal</span>
         </div>`
     );
+
+    // Experiment 1: module sensitivity (Pearson r + p-value).
+    const ms = m.module_sensitivity || {};
+    const mods = (ms && ms.modules) ? ms.modules : {};
+    if (mods && (mods.hazard || mods.exposure || mods.vulnerability || mods.resilience)) {
+        const fmtRp = (obj) => {
+            if (!obj) return "—";
+            const r = obj.r;
+            const p = obj.p;
+            const rs = (r == null || !Number.isFinite(Number(r))) ? "—" : Number(r).toFixed(3);
+            const ps = (p == null || !Number.isFinite(Number(p))) ? "—" : Number(p).toExponential(2);
+            return `r ${rs}, p ${ps}`;
+        };
+        const scope = ms.scope ? String(ms.scope) : "all_rows_in_frame";
+        parts.push(
+            `<div class="validation-kpi" style="min-width:min(100%, 520px)">
+                <span class="validation-kpi__label">Experiment 1 (Pearson)</span>
+                <span class="validation-kpi__meta">${_escapeHtml(scope)}: corr(module, risk_score)</span>
+            </div>`,
+            `<div class="validation-kpi">
+                <span class="validation-kpi__label">Hazard → Risk</span>
+                <span class="validation-kpi__value">${_escapeHtml(fmtRp(mods.hazard))}</span>
+                <span class="validation-kpi__meta">hazard_score vs risk_score</span>
+            </div>`,
+            `<div class="validation-kpi">
+                <span class="validation-kpi__label">Exposure → Risk</span>
+                <span class="validation-kpi__value">${_escapeHtml(fmtRp(mods.exposure))}</span>
+                <span class="validation-kpi__meta">exposure_score vs risk_score</span>
+            </div>`,
+            `<div class="validation-kpi">
+                <span class="validation-kpi__label">Vulnerability → Risk</span>
+                <span class="validation-kpi__value">${_escapeHtml(fmtRp(mods.vulnerability))}</span>
+                <span class="validation-kpi__meta">vulnerability_score vs risk_score</span>
+            </div>`,
+            `<div class="validation-kpi">
+                <span class="validation-kpi__label">Resilience → Risk</span>
+                <span class="validation-kpi__value">${_escapeHtml(fmtRp(mods.resilience))}</span>
+                <span class="validation-kpi__meta">resilience_score vs risk_score</span>
+            </div>`
+        );
+    }
 
     if (joint && failKeys.length) {
         const brief = failKeys.map((k) => `${k}`).join(", ");
@@ -1178,8 +1221,9 @@ function populateCountySelect(list, manifest) {
 Promise.all([
     d3.json("data/county_list.json"),
     d3.json("data/county_manifest.json"),
+    d3.json("data/validation/merged_all_counties.json").catch(() => null),
     d3.json("data/validation/merged_06007_06073.json").catch(() => null)
-]).then(([list, manifest, mergedUi]) => {
+]).then(([list, manifest, mergedAll, mergedLegacy]) => {
     countyManifest = manifest;
     populateMapCalcSections();
     const startId = populateCountySelect(list, manifest);
@@ -1192,6 +1236,7 @@ Promise.all([
         else renderAll();
         const pairSec = document.getElementById("validationPairSection");
         const pairMsg = document.getElementById("validationPairMessage");
+        const mergedUi = mergedAll || mergedLegacy;
         if (mergedUi) {
             if (pairSec) pairSec.hidden = false;
             if (pairMsg) pairMsg.textContent = "";
@@ -1201,7 +1246,7 @@ Promise.all([
             if (pairMsg) {
                 pairMsg.textContent =
                     "Joint validation file missing. Run: " +
-                    "python -m src.validation.run_all --counties 06007,06073 --no-write --export-ui data/validation/merged_06007_06073.json";
+                    "python -m src.validation.run_all --no-write --export-ui data/validation/merged_all_counties.json";
             }
         }
     });

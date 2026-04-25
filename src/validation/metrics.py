@@ -2,6 +2,8 @@ import os
 import json
 import numpy as np
 import pandas as pd
+import math
+from statistics import NormalDist
 
 
 def _safe_series(gdf: pd.DataFrame, col: str, default: float = 0.0) -> pd.Series:
@@ -100,6 +102,71 @@ def compare_with_fema_nri(gdf: pd.DataFrame, fema_path: str = "data/external/fem
         summary["source"] = "REAL"
 
     gdf["fema_nri_comparison"] = json.dumps(summary)
+    return gdf
+
+
+def _pearson_r_and_p_fisher_z(x: pd.Series, y: pd.Series) -> tuple[float | None, float | None, int]:
+    """
+    Pearson r and an approximate two-sided p-value.
+
+    We avoid SciPy by using a Fisher z-transform with a normal approximation:
+      z = atanh(r) * sqrt(n - 3),  p = 2 * (1 - Φ(|z|))
+    This is accurate for moderate/large n (typical when aggregating many block groups).
+    """
+    x = pd.to_numeric(x, errors="coerce")
+    y = pd.to_numeric(y, errors="coerce")
+    mask = x.notna() & y.notna()
+    n = int(mask.sum())
+    if n < 4:
+        return None, None, n
+    r = float(x[mask].corr(y[mask]))
+    if not math.isfinite(r):
+        return None, None, n
+    # Perfect correlation => p ~= 0
+    if abs(r) >= 1.0:
+        return float(np.clip(r, -1.0, 1.0)), 0.0, n
+    z = math.atanh(r) * math.sqrt(max(1, n - 3))
+    p = 2.0 * (1.0 - NormalDist().cdf(abs(z)))
+    return float(np.clip(r, -1.0, 1.0)), float(max(0.0, min(1.0, p))), n
+
+
+def compute_module_sensitivity(gdf: pd.DataFrame) -> pd.DataFrame:
+    """
+    Experiment 1 — Weight sensitivity analysis proxy:
+    Pearson correlations between each module score and final risk score.
+
+    Stored as a JSON blob repeated across rows so the static UI can read it from any feature.
+    """
+    gdf = gdf.copy()
+    risk = _safe_series(gdf, "risk_score", 0.0)
+
+    modules = {
+        "hazard": _safe_series(gdf, "hazard_score", 0.0),
+        "exposure": _safe_series(gdf, "exposure_score", 0.0),
+        "vulnerability": _safe_series(gdf, "vulnerability_score", 0.0),
+        "resilience": _safe_series(gdf, "resilience_score", 0.0),
+    }
+
+    out: dict[str, dict[str, float | int | None]] = {}
+    for name, s in modules.items():
+        r, p, n = _pearson_r_and_p_fisher_z(s, risk)
+        out[name] = {"r": r, "p": p, "n": n}
+
+    counties = None
+    if "county_fips" in gdf.columns:
+        try:
+            counties = sorted(gdf["county_fips"].astype(str).str.zfill(5).dropna().unique().tolist())
+        except Exception:
+            counties = None
+
+    summary = {
+        "method": "pearson_r_fisher_z_normal_approx",
+        "scope": "all_rows_in_frame",
+        "counties": counties,
+        "risk": {"field": "risk_score"},
+        "modules": out,
+    }
+    gdf["module_sensitivity"] = json.dumps(summary)
     return gdf
 
 
@@ -218,6 +285,7 @@ def apply_validation_metrics(gdf: pd.DataFrame) -> pd.DataFrame:
     gdf = compute_county_risk_from_blocks(gdf)
     gdf = compute_county_eal_from_blocks(gdf)
     gdf = compare_with_fema_nri(gdf)
+    gdf = compute_module_sensitivity(gdf)
     gdf = compute_historical_fire_overlap(gdf)
     gdf = compute_auc_fire_prediction(gdf)
     gdf = compute_risk_concentration(gdf)
