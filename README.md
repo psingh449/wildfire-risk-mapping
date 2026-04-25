@@ -31,8 +31,8 @@ The final output is a **Risk Score** (0-1 range) and **Expected Annual Loss (EAL
 |-----------|---------|----------|----------|
 | **Hazard** | Fire likelihood & intensity | Wildfire probability, vegetation density, distance to forests | Forest cover, fuel moisture, historical burn patterns |
 | **Exposure** | People and assets at risk | Population count, housing units, building value | Census data, property assessments, infrastructure |
-| **Vulnerability** | Social fragility & sensitivity | Poverty rate, elderly percentage, vehicle access | ACS socioeconomic data, demographic characteristics |
-| **Resilience** | Response and recovery capacity | Fire station proximity, hospital access, road connectivity | Emergency services locations, network access |
+| **Vulnerability** | Social fragility & sensitivity | Poverty rate, elderly ratio, uninsured rate | ACS socioeconomic data, demographic characteristics |
+| **Resilience** | Response and recovery capacity | Vehicle access share, median household income, internet access share | ACS capacity and connectedness proxies |
 
 ### 1.1.1 How each value is built (plain language)
 
@@ -139,7 +139,12 @@ Each row lists the **GeoJSON property** name, the **calculation** (as implemente
 
 3. **Download and process data** (Census, ACS, rasters, OSM). See **[DATA_REFRESH.md](DATA_REFRESH.md)** for the full ordered checklist and troubleshooting.
    ```bash
+   # Preferred importer (writes data/real_cache/…)
+   python scripts/real_import.py --county 06073 --all
+
+   # Legacy wrapper (DEPRECATED; calls real_import under the hood)
    python scripts/refresh_real_data.py
+
    python scripts/download_environmental_data.py
    python scripts/extract_geospatial_zips.py
    python scripts/process_whp_zonal_stats.py
@@ -1381,7 +1386,7 @@ Detailed explanation:
 1. Verify internet connectivity
 2. Check for rate limiting (Census API limit ~500 calls/day)
 3. Check API credentials
-4. Run `python scripts/refresh_real_data.py` to force fresh downloads
+4. Run `python scripts/real_import.py --county <FIPS> --all --refresh` to force fresh downloads (or `refresh_real_data.py --refresh`)
 
 ### 5.5 Running Validation Manually
 
@@ -1514,7 +1519,7 @@ cat calculations.csv | column -t -s, | less
 
 See **[DATA_REFRESH.md](DATA_REFRESH.md)** for the full sequence (Census, ACS, NLCD, WHP, OSM, facility distances). Short version:
 
-1. `python scripts/refresh_real_data.py`
+1. `python scripts/real_import.py --county 06073 --all`
 2. `python scripts/download_environmental_data.py` then `python scripts/extract_geospatial_zips.py`
 3. `python scripts/process_whp_zonal_stats.py`, `process_nlcd_vegetation.py`, `process_nlcd_forest_distance.py`
 4. `python scripts/build_hifld_distances_arcgis.py`, `python scripts/process_osm_road_length.py`

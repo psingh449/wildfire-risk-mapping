@@ -41,15 +41,21 @@ If you only need geometry and already have raw block groups:
 
 This project uses **2020 Decennial PL at the block-group level** for population and housing (12-digit GEOIDs that match `block_groups.geojson`).
 
-It uses **ACS 2021 5-year** tables at the block-group level for poverty, elderly, vehicle access, and median home value.
+It uses **ACS 2021 5-year** tables at the block-group level for poverty, elderly, vehicle access, uninsured rate, median home value, median household income, and internet access.
 
-**Single command:**
+**Preferred command (writes `data/real_cache/…`):**
+
+```bash
+python scripts/real_import.py --county <5-digit FIPS> --all
+```
+
+**Legacy wrapper (DEPRECATED; calls `real_import.py` under the hood):**
 
 ```bash
 python scripts/refresh_real_data.py
 ```
 
-**Expected files:**
+**Legacy flat-file outputs (optional / fallback paths):**
 
 | File | Source |
 |------|--------|
@@ -59,6 +65,9 @@ python scripts/refresh_real_data.py
 | `acs_elderly.csv` | ACS B01001 |
 | `acs_vehicle_access.csv` | ACS B08201 |
 | `acs_building_value.csv` | ACS B25077 |
+| `acs_uninsured.csv` | ACS B27010 |
+| `acs_median_household_income.csv` | ACS B19013 |
+| `acs_internet_access.csv` | ACS B28002 |
 
 **Requirements:** Internet access to `api.census.gov`. No API key is required for typical volume; if you see HTTP 429, wait and retry or use off-peak hours.
 
@@ -150,7 +159,7 @@ Check `data/real/diagnostics_report.csv` and feature `*_source` columns in `data
 ```text
 $env:PYTHONPATH="."   # PowerShell
 python -m src.pipeline.run_pipeline
-python scripts/refresh_real_data.py
+python scripts/real_import.py --county 06073 --all
 python scripts/download_environmental_data.py
 python scripts/extract_geospatial_zips.py
 python scripts/process_whp_zonal_stats.py
