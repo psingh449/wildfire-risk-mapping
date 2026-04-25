@@ -15,11 +15,15 @@
         <div class="controls">
             <label for="county">County:</label>
             <select id="county" class="county-select" title="Bold options are priority demo counties (browser-prefetched when packaged)."></select>
+            <label class="map-detail-control" for="mapDetail">
+                <input type="checkbox" id="mapDetail" class="map-detail-control__input" />
+                <span>Detail</span>
+            </label>
         </div>
 
         <p id="countyMessage" class="county-message" aria-live="polite"></p>
         <p class="description">
-            Six block-group maps in a 3×2 matrix. Drag to pan, scroll or pinch to zoom (all six stay in sync). Double-click any map to reset. Each panel lists calculation details below the map. Metrics:
+            Six block-group maps in a 3×2 matrix. Drag to pan, scroll or pinch to zoom (all six stay in sync). Double-click any map to reset. Check <strong>Detail</strong> to show per-panel calculation notes and a shared legend key below. Metrics:
             <span class="metric-accent metric-accent-el"><strong>Expected Annual Loss</strong></span>
             (map uses <code>eal_norm</code>) and
             <span class="metric-accent metric-accent-risk"><strong>Risk</strong></span>;
@@ -56,6 +60,7 @@
             </div>
         </section>
 
+        <div class="map-viz" id="mapViz" aria-label="Choropleth block-group maps">
         <div class="map-grid" id="mapGrid">
             <div class="map-cell map-cell--result" id="map-panel-eal">
                 <h3 class="map-title metric-accent metric-accent-el">Expected Annual Loss</h3>
@@ -123,6 +128,21 @@
                 </div>
                 <div class="map-calc" data-metric="resilience_score" aria-label="Resilience calculation details"></div>
             </div>
+        </div>
+
+        <section class="map-detail-legend" id="mapDetailLegend" hidden aria-label="Quality and provenance notes">
+            <h3 class="map-detail-legend__title metric-accent metric-accent-risk">Quality / stars</h3>
+            <ul class="map-detail-legend__bullets" role="list">
+                <li>If the building value uses an estimate (e.g., county-mean median value), the UI may show a <code>*</code>.</li>
+                <li>Turn on <code>?debug=1</code> (or use the debug toggle) to see tags like <code>[src:acs]</code>, <code>[est:county-mean]</code>, <code>[missing]</code>.</li>
+            </ul>
+            <div class="map-detail-legend__subhead"><b>Why you may see “ESTIMATED”</b></div>
+            <ul class="map-detail-legend__bullets" role="list">
+                <li>Some ACS tables come back as all-null at block group for a county.</li>
+                <li>When that happens, we use tract-level values and assign them to block groups in that tract.</li>
+                <li>The UI marks those as <code>*</code> and, in debug mode, tags like <code>[est:tract]</code>.</li>
+            </ul>
+        </section>
         </div>
     </div>
 

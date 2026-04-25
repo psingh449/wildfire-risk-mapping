@@ -17,6 +17,34 @@ body {
 
 .controls {
     margin-bottom: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 12px;
+}
+
+.map-detail-control {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: 12px;
+    font-size: 14px;
+    cursor: pointer;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+.map-detail-control__input {
+    width: 1rem;
+    height: 1rem;
+    margin: 0;
+    cursor: pointer;
+}
+
+/* Wrapper for grid + bottom legend; toggles .map-viz--detail in JS for visibility */
+.map-viz {
+    display: block;
+    width: 100%;
 }
 
 select, button {
@@ -185,6 +213,61 @@ button {
     color: #4b5563;
 }
 
+/* Shared legend / scale explainer: only with Detail (see [hidden] on element) */
+.map-detail-legend {
+    margin: 0;
+    padding: 12px 14px 14px;
+    border: 1px solid #e5e7eb;
+    border-top: none;
+    border-radius: 0 0 6px 6px;
+    background: #fbfbfc;
+    font-size: 13px;
+    line-height: 1.45;
+    color: #1e293b;
+}
+
+.map-detail-legend__title {
+    margin: 0 0 6px 0;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.map-detail-legend__bullets {
+    margin: 0 0 10px 0;
+    padding-left: 1.15rem;
+}
+
+.map-detail-legend__bullets li {
+    margin: 0 0 0.35rem 0;
+}
+
+.map-detail-legend__bullets li:last-child {
+    margin-bottom: 0;
+}
+
+.map-detail-legend code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-size: 0.95em;
+    background: rgba(15, 23, 42, 0.06);
+    padding: 0.1em 0.3em;
+    border-radius: 3px;
+}
+
+.map-detail-legend__subhead {
+    margin: 6px 0 6px 0;
+    color: #0f172a;
+}
+
+/* When bottom legend is visible, square off grid bottom; otherwise full round corners on grid */
+.map-viz:has(.map-detail-legend:not([hidden])) .map-grid {
+    border-radius: 6px 6px 0 0;
+}
+
+.map-viz:not(:has(.map-detail-legend:not([hidden]))) .map-grid {
+    border-radius: 6px;
+}
+
 /* 3×2 map grid: equal-size cells; each cell: title, map+legend, then fixed-height text block */
 .map-grid {
     display: grid;
@@ -221,8 +304,9 @@ button {
     overflow: hidden;
 }
 
-/* Same font block height under every map (scroll if content exceeds) */
+/* Per-panel formula notes: hidden until Detail is checked */
 .map-calc {
+    display: none;
     flex: 0 0 10rem;
     width: 100%;
     min-height: 10rem;
@@ -237,9 +321,30 @@ button {
     color: #1e293b;
     overflow: auto;
 }
+
+.map-viz--detail .map-calc {
+    display: block;
+}
 .map-calc__list {
     margin: 0;
     padding-left: 1.1rem;
+}
+
+.map-calc__list--tight {
+    margin-top: 0.25rem;
+}
+
+.map-calc__sublist {
+    margin: 0.35rem 0 0.1rem 0;
+    padding-left: 1.1rem;
+}
+
+.map-calc__section-title {
+    margin: 0 0 6px 0;
+    padding: 2px 0 0;
+    font-size: 12.25px;
+    font-weight: 800;
+    letter-spacing: 0.01em;
 }
 .map-calc__item {
     margin: 0 0 0.4rem 0;
