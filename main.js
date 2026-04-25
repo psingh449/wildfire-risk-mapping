@@ -11,9 +11,8 @@ const MAP_PANELS = [
 // HTML is authored here so we can mix bullets + inline <code> + bold/colored section headers.
 const PANEL_DETAIL_HTML = {
     eal_norm: `
-        <div class="map-calc__section-title metric-accent metric-accent-el"><b>Expected Annual Loss</b></div>
-        <ul class="map-calc__list">
-            <li class="map-calc__item">Expected Annual Loss is our “economic consequence” view: how much $ loss we expect in a typical year for each block group.</li>
+        <p class="map-calc__lede"><span class="metric-accent metric-accent-el"><b>Expected Annual Loss</b></span> is our “economic consequence” view: how much $ loss we expect in a typical year for each block group.</p>
+        <ul class="map-calc__list map-calc__list--tight">
             <li class="map-calc__item">Two numbers exist: <code class="map-calc__inline">eal</code> (USD) and <code class="map-calc__inline">eal_norm</code> (0–1).</li>
             <li class="map-calc__item">This panel maps <code class="map-calc__inline">eal_norm</code> so the choropleth has contrast even when dollar values span huge ranges.</li>
             <li class="map-calc__item">Interpretation: darker = higher expected annual loss (relative within the run), not “guaranteed loss.”</li>
@@ -41,10 +40,7 @@ const PANEL_DETAIL_HTML = {
         </ul>
     `,
     risk_score: `
-        <div class="map-calc__section-title metric-accent metric-accent-risk"><b>Risk</b></div>
-        <ul class="map-calc__list">
-            <li class="map-calc__item">Risk is the “overall ranking” score: where is wildfire risk comparatively higher inside a county?</li>
-        </ul>
+        <p class="map-calc__lede"><span class="metric-accent metric-accent-risk"><b>Risk</b></span> is the “overall ranking” score: where is wildfire risk comparatively higher inside a county?</p>
         <ul class="map-calc__list map-calc__list--tight">
             <li class="map-calc__item"><b>Conceptual model</b>
                 <ul class="map-calc__sublist">
@@ -84,10 +80,7 @@ const PANEL_DETAIL_HTML = {
         </ul>
     `,
     hazard_score: `
-        <div class="map-calc__section-title metric-accent metric-accent-hazard"><b>Hazard</b></div>
-        <ul class="map-calc__list">
-            <li class="map-calc__item">Hazard asks: is this place physically conducive to wildfire?</li>
-        </ul>
+        <p class="map-calc__lede"><span class="metric-accent metric-accent-hazard"><b>Hazard</b></span> asks: is this place physically conducive to wildfire?</p>
         <ul class="map-calc__list map-calc__list--tight">
             <li class="map-calc__item"><b>Three building blocks</b>
                 <ul class="map-calc__sublist">
@@ -122,10 +115,7 @@ const PANEL_DETAIL_HTML = {
         </ul>
     `,
     exposure_score: `
-        <div class="map-calc__section-title metric-accent metric-accent-exposure"><b>Exposure</b></div>
-        <ul class="map-calc__list">
-            <li class="map-calc__item">Exposure asks: how much is in the way if a fire happens?</li>
-        </ul>
+        <p class="map-calc__lede"><span class="metric-accent metric-accent-exposure"><b>Exposure</b></span> asks: how much is in the way if a fire happens?</p>
         <ul class="map-calc__list map-calc__list--tight">
             <li class="map-calc__item"><b>What counts as “exposed” here</b>
                 <ul class="map-calc__sublist">
@@ -159,10 +149,7 @@ const PANEL_DETAIL_HTML = {
         </ul>
     `,
     vulnerability_score: `
-        <div class="map-calc__section-title metric-accent metric-accent-vulnerability"><b>Vulnerability</b></div>
-        <ul class="map-calc__list">
-            <li class="map-calc__item">Vulnerability asks: if a fire happens, who might face a harder time responding?</li>
-        </ul>
+        <p class="map-calc__lede"><span class="metric-accent metric-accent-vulnerability"><b>Vulnerability</b></span> asks: if a fire happens, who might face a harder time responding?</p>
         <ul class="map-calc__list map-calc__list--tight">
             <li class="map-calc__item"><b>The three signals</b>
                 <ul class="map-calc__sublist">
@@ -193,10 +180,7 @@ const PANEL_DETAIL_HTML = {
         </ul>
     `,
     resilience_score: `
-        <div class="map-calc__section-title metric-accent metric-accent-resilience"><b>Resilience</b></div>
-        <ul class="map-calc__list">
-            <li class="map-calc__item">Resilience asks: how much response capacity is nearby, and how connected is the area?</li>
-        </ul>
+        <p class="map-calc__lede"><span class="metric-accent metric-accent-resilience"><b>Resilience</b></span> asks: how much response capacity is nearby, and how connected is the area?</p>
         <ul class="map-calc__list map-calc__list--tight">
             <li class="map-calc__item"><b>Three pieces of “capacity”</b>
                 <ul class="map-calc__sublist">

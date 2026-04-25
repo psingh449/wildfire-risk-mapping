@@ -230,6 +230,13 @@ button {
     margin: 0 0 6px 0;
     font-size: 1rem;
     font-weight: 700;
+    color: #000;
+}
+
+.map-detail-legend__section-title {
+    margin: 0 0 8px 0;
+    font-size: 1rem;
+    font-weight: 700;
     color: #0f172a;
 }
 
@@ -332,6 +339,13 @@ button {
 
 .map-calc__list--tight {
     margin-top: 0.25rem;
+}
+
+.map-calc__lede {
+    margin: 0 0 6px 0;
+    font-size: 11.5px;
+    line-height: 1.35;
+    color: #0f172a;
 }
 
 .map-calc__sublist {
