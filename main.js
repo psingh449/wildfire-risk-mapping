@@ -7,50 +7,50 @@ const MAP_PANELS = [
     { panelId: "map-panel-resilience", metric: "resilience_score" },
 ];
 
-// Calculation copy under each map: 2–4 bullets; each **bold** lead, colon, then formula on a new line in <code>.
+// Calculation copy under each map: 2–4 bullets; <b>Label</b>: <code>formula</code> on one line (formula may wrap).
 const PANEL_DOCS = {
     eal_norm: {
         bullets: [
             { lead: "Dollar amount", formula: "eal = risk_score × exposure_building_value" },
-            { lead: "Value at stake (exposure)", formula: "exposure_building_value = housing_units × median_home_value\n(ACS B25077 at block group; county mean if BG median missing)" },
-            { lead: "Choropleth field", formula: "eal_norm = (eal − min) / (max − min)\n(range is over block groups in the loaded county; min–max scaling for color contrast)" },
-            { lead: "Stars and tags in tooltips", formula: "Quality of eal and eal_norm follows exposure_building_value\n(* = ESTIMATED/PROXY; e.g. [src:acs], [est:acs], [missing])" }
+            { lead: "Value at stake (exposure)", formula: "exposure_building_value = housing_units × median_home_value (ACS B25077; county mean if BG median missing)" },
+            { lead: "Choropleth field", formula: "eal_norm = (eal − min) / (max − min) over loaded county; min–max for color only" },
+            { lead: "Stars / tags", formula: "eal tooltip quality follows exposure_building_value (* = ESTIMATED/PROXY; e.g. [src:acs], [est:acs], [missing])" }
         ]
     },
     risk_score: {
         bullets: [
-            { lead: "Composite (all factors [0,1])", formula: "risk_score = hazard_score × exposure_score × vulnerability_score × (1 − resilience_score)" },
-            { lead: "Why values look tiny", formula: "Multiplication: if any component is near 0, the product shrinks (uninhabited blocks often drive exposure to 0)" },
-            { lead: "Color scale for this map", formula: "domain = [ min(risk_score), max(risk_score) ] in county\n(see main.js: _computeDomainForMetric — not a new database column)" }
+            { lead: "Composite ([0,1] factors)", formula: "risk_score = hazard_score × exposure_score × vulnerability_score × (1 − resilience_score)" },
+            { lead: "Small values", formula: "product shrinks if any term ≈ 0; uninhabited areas often have exposure → 0" },
+            { lead: "Color scale", formula: "domain = [min(risk_score), max(risk_score)] in county (main.js: _computeDomainForMetric; not a new DB field)" }
         ]
     },
     hazard_score: {
         bullets: [
             { lead: "Inputs", formula: "hazard_wildfire, hazard_vegetation, hazard_forest_distance" },
-            { lead: "Composite", formula: "hazard_score = Σ wᵢ × norm(input_i)\n(weights from calculations.csv or config; each input min–max normalized in the pipeline)" },
-            { lead: "Provenance in tooltips", formula: "e.g. [src:whp] = USFS raster path; [px:osm] = proxy when primary raster/NLCD path missing" }
+            { lead: "Composite", formula: "hazard_score = Σ wᵢ × norm(input_i) (weights: calculations.csv / config; per-input min–max in pipeline)" },
+            { lead: "Provenance", formula: "e.g. [src:whp] = USFS; [px:osm] = proxy if primary raster/NLCD missing" }
         ]
     },
     exposure_score: {
         bullets: [
             { lead: "Building value (USD proxy)", formula: "exposure_building_value = housing_units × median_home_value" },
             { lead: "Composite", formula: "exposure_score = Σ w × norm(population, housing_units, exposure_building_value)" },
-            { lead: "Missing BG medians", formula: "impute with county mean → * and tags like [est:acs] in tooltips" }
+            { lead: "Missing medians", formula: "county-mean imputation → * and [est:acs] in tooltips" }
         ]
     },
     vulnerability_score: {
         bullets: [
-            { lead: "Raw inputs (ACS, block group)", formula: "vuln_poverty, vuln_elderly, vuln_vehicle_access" },
-            { lead: "Vehicle access direction", formula: "vuln_vehicle_access_norm = 1 − norm(vehicle_access_raw)\n(higher car access → lower vulnerability component)" },
+            { lead: "Raw inputs (ACS, BG)", formula: "vuln_poverty, vuln_elderly, vuln_vehicle_access" },
+            { lead: "Vehicle direction", formula: "vuln_vehicle_access_norm = 1 − norm(vehicle_access_raw) (higher car access → lower vulnerability score)" },
             { lead: "Composite", formula: "vulnerability_score = Σ w × norm(poverty, elderly, vehicle_access)" },
-            { lead: "Tract fallback", formula: "If BG ACS is all-null, tract values assigned to BGs → * and [est:tract]" }
+            { lead: "Tract fallback", formula: "if BG null → tract to BG; * and [est:tract]" }
         ]
     },
     resilience_score: {
         bullets: [
-            { lead: "Distance features (HIFLD, OSM)", formula: "res_fire_station_dist, res_hospital_dist, res_road_access\n(nearness = 1 / (1 + d_km) so closer is better)" },
+            { lead: "Distance features", formula: "res_fire_station_dist, res_hospital_dist, res_road_access; nearness = 1/(1+d_km)" },
             { lead: "Composite", formula: "resilience_score = Σ w × norm(fire_station, hospital, road_access)" },
-            { lead: "How this lowers Risk", formula: "risk uses factor (1 − resilience_score)\nso higher resilience → lower risk_score" }
+            { lead: "In Risk", formula: "risk uses (1 − resilience_score) so higher resilience → lower risk_score" }
         ]
     }
 };
@@ -59,11 +59,15 @@ function _escapeCalcFormula(s) {
     return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
+function _formulaOneLine(s) {
+    return String(s).replace(/\s*\n\s*/g, " ").replace(/\s{2,}/g, " ").trim();
+}
+
 function renderCalcBulletsHtml(bullets) {
     if (!bullets || !bullets.length) return "";
     const items = bullets.map((b) => {
-        const code = _escapeCalcFormula(b.formula);
-        return `<li><b>${_escapeCalcFormula(b.lead)}</b>:<br><code class="map-calc__code">${code}</code></li>`;
+        const code = _escapeCalcFormula(_formulaOneLine(b.formula));
+        return `<li class="map-calc__item"><b>${_escapeCalcFormula(b.lead)}</b>: <code class="map-calc__inline">${code}</code></li>`;
     });
     return `<ul class="map-calc__list">${items.join("")}</ul>`;
 }
