@@ -11,9 +11,9 @@ const MAP_PANELS = [
 // HTML is authored here so we can mix bullets + inline <code> + bold/colored section headers.
 const PANEL_DETAIL_HTML = {
     eal_norm: `
-        <p class="map-calc__lede"><span class="metric-accent metric-accent-el"><b>Expected Annual Loss is our “economic consequence” view:</b></span></p>
-        <div class="map-calc__heading">how much $ loss we expect in a typical year for each block group</div>
-        <ul class="map-calc__list map-calc__list--tight">
+        <p class="map-calc__lede"><span class="metric-accent metric-accent-el"><b>Expected Annual Loss is our “economic consequence” view:</b></span> how much $ loss we expect in a typical year for each block group</p>
+        <div class="map-calc__subhead"><b>Calculation</b></div>
+        <ul class="map-calc__sublist">
             <li class="map-calc__item">Two numbers exist: <code class="map-calc__inline">eal</code> (USD) and <code class="map-calc__inline">eal_norm</code> (0–1).</li>
             <li class="map-calc__item">This panel maps <code class="map-calc__inline">eal_norm</code> so the choropleth has contrast even when dollar values span huge ranges.</li>
             <li class="map-calc__item">Interpretation: darker = higher expected annual loss (relative within the run), not “guaranteed loss.”</li>

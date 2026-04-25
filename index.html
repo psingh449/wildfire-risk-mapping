@@ -131,8 +131,7 @@
         </div>
 
         <section class="map-detail-legend" id="mapDetailLegend" hidden aria-label="Quality and provenance notes">
-            <h3 class="map-detail-legend__title">Legend</h3>
-            <div class="map-detail-legend__section-title"><b>Quality / stars</b></div>
+            <div class="map-detail-legend__subhead"><b>Quality / stars</b></div>
             <ul class="map-detail-legend__bullets" role="list">
                 <li>If the building value uses an estimate (e.g., county-mean median value), the UI may show a <code>*</code>.</li>
                 <li>Turn on <code>?debug=1</code> (or use the debug toggle) to see tags like <code>[src:acs]</code>, <code>[est:county-mean]</code>, <code>[missing]</code>.</li>
@@ -142,6 +141,18 @@
                 <li>Some ACS tables come back as all-null at block group for a county.</li>
                 <li>When that happens, we use tract-level values and assign them to block groups in that tract.</li>
                 <li>The UI marks those as <code>*</code> and, in debug mode, tags like <code>[est:tract]</code>.</li>
+            </ul>
+            <div class="map-detail-legend__subhead"><b>Data source</b></div>
+            <ul class="map-detail-legend__bullets" role="list">
+                <li><code>[src:census]</code>: value comes from decennial Census inputs (e.g., population / housing baselines).</li>
+                <li><code>[src:acs]</code>: value comes from ACS tables (e.g., median home value, poverty, elderly, vehicle access).</li>
+                <li><code>[src:whp]</code>: hazard signal sourced from wildfire probability / hazard products (USFS/related).</li>
+                <li><code>[src:hifld]</code>: access-distance inputs sourced from HIFLD (e.g., hospitals, fire stations).</li>
+                <li><code>[src:osm]</code>: access/connectivity proxy sourced from OpenStreetMap-derived features (roads / connectivity).</li>
+                <li><code>[px:…]</code>: “proxy path” used when a primary dataset is missing at build time (still informative, but flagged).</li>
+                <li><code>[est:county-mean]</code>: county-mean imputation used (e.g., missing block-group median).</li>
+                <li><code>[est:tract]</code>: tract-level value assigned down to block groups when block-group ACS is missing.</li>
+                <li><code>[missing]</code>: both primary and proxy paths are missing → shown as <code>—</code>.</li>
             </ul>
         </section>
         </div>
