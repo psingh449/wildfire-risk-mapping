@@ -47,6 +47,9 @@ Q_ELDERLY = "elderly"
 Q_VEHICLE_ACCESS = "vehicle_access"
 Q_VEHICLE_ACCESS_TRACT = "vehicle_access_tract"
 Q_MEDIAN_HOME_VALUE = "median_home_value"
+Q_UNINSURED = "uninsured"
+Q_MEDIAN_HOUSEHOLD_INCOME = "median_household_income"
+Q_INTERNET_ACCESS = "internet_access"
 Q_WILDFIRE = "wildfire"
 Q_VEGETATION = "vegetation"
 Q_FOREST_DISTANCE = "forest_distance"
@@ -427,6 +430,76 @@ def import_acs_median_home_value(county_fips: str, *, refresh: bool) -> None:
     _write_if_needed(ref, df, response_json=raw, request={"api": resp.url.split("?")[0], "params": params}, overwrite=refresh)
 
 
+def import_acs_uninsured(county_fips: str, *, refresh: bool) -> None:
+    county_fips = normalize_county_fips(county_fips)
+    st, co = split_county_fips(county_fips)
+    inc = f"state:{st} county:{co}"
+    params = {
+        "get": "B27010_001E,B27010_017E,B27010_033E,B27010_050E,B27010_066E",
+        "for": "block group:*",
+        "in": inc,
+    }
+    resp = requests.get("https://api.census.gov/data/2021/acs/acs5", params=params, timeout=180, headers=HTTP_HEADERS)
+    resp.raise_for_status()
+    raw = _response_to_json(resp)
+    header = raw[0]
+    rows = raw[1:]
+    df = pd.DataFrame(rows, columns=header)
+    df["GEOID"] = (
+        df["state"].astype(str).str.zfill(2)
+        + df["county"].astype(str).str.zfill(3)
+        + df["tract"].astype(str).str.zfill(6)
+        + df["block group"].astype(str).str.strip()
+    )
+    _zfill_geoid_12(df, "GEOID")
+    ref = DatasetRef(county_fips=county_fips, source_id=SOURCE_ACS_2021_5YR, quantity_id=Q_UNINSURED)
+    _write_if_needed(ref, df, response_json=raw, request={"api": resp.url.split("?")[0], "params": params}, overwrite=refresh)
+
+
+def import_acs_median_household_income(county_fips: str, *, refresh: bool) -> None:
+    county_fips = normalize_county_fips(county_fips)
+    st, co = split_county_fips(county_fips)
+    inc = f"state:{st} county:{co}"
+    params = {"get": "B19013_001E", "for": "block group:*", "in": inc}
+    resp = requests.get("https://api.census.gov/data/2021/acs/acs5", params=params, timeout=180, headers=HTTP_HEADERS)
+    resp.raise_for_status()
+    raw = _response_to_json(resp)
+    header = raw[0]
+    rows = raw[1:]
+    df = pd.DataFrame(rows, columns=header)
+    df["GEOID"] = (
+        df["state"].astype(str).str.zfill(2)
+        + df["county"].astype(str).str.zfill(3)
+        + df["tract"].astype(str).str.zfill(6)
+        + df["block group"].astype(str).str.strip()
+    )
+    _zfill_geoid_12(df, "GEOID")
+    ref = DatasetRef(county_fips=county_fips, source_id=SOURCE_ACS_2021_5YR, quantity_id=Q_MEDIAN_HOUSEHOLD_INCOME)
+    _write_if_needed(ref, df, response_json=raw, request={"api": resp.url.split("?")[0], "params": params}, overwrite=refresh)
+
+
+def import_acs_internet_access(county_fips: str, *, refresh: bool) -> None:
+    county_fips = normalize_county_fips(county_fips)
+    st, co = split_county_fips(county_fips)
+    inc = f"state:{st} county:{co}"
+    params = {"get": "B28002_001E,B28002_013E", "for": "block group:*", "in": inc}
+    resp = requests.get("https://api.census.gov/data/2021/acs/acs5", params=params, timeout=180, headers=HTTP_HEADERS)
+    resp.raise_for_status()
+    raw = _response_to_json(resp)
+    header = raw[0]
+    rows = raw[1:]
+    df = pd.DataFrame(rows, columns=header)
+    df["GEOID"] = (
+        df["state"].astype(str).str.zfill(2)
+        + df["county"].astype(str).str.zfill(3)
+        + df["tract"].astype(str).str.zfill(6)
+        + df["block group"].astype(str).str.strip()
+    )
+    _zfill_geoid_12(df, "GEOID")
+    ref = DatasetRef(county_fips=county_fips, source_id=SOURCE_ACS_2021_5YR, quantity_id=Q_INTERNET_ACCESS)
+    _write_if_needed(ref, df, response_json=raw, request={"api": resp.url.split("?")[0], "params": params}, overwrite=refresh)
+
+
 def import_whp_wildfire(county_fips: str, *, refresh: bool) -> None:
     _require_blocks_for_county(county_fips)
     whp_dir = Path("data") / "geospatial" / "whp"
@@ -559,6 +632,9 @@ IMPORTERS: dict[str, dict[str, Callable[[str], None]]] = {
         Q_ELDERLY: lambda c, refresh=False: import_acs_elderly(c, refresh=refresh),  # type: ignore[misc]
         Q_VEHICLE_ACCESS: lambda c, refresh=False: import_acs_vehicle_access(c, refresh=refresh),  # type: ignore[misc]
         Q_MEDIAN_HOME_VALUE: lambda c, refresh=False: import_acs_median_home_value(c, refresh=refresh),  # type: ignore[misc]
+        Q_UNINSURED: lambda c, refresh=False: import_acs_uninsured(c, refresh=refresh),  # type: ignore[misc]
+        Q_MEDIAN_HOUSEHOLD_INCOME: lambda c, refresh=False: import_acs_median_household_income(c, refresh=refresh),  # type: ignore[misc]
+        Q_INTERNET_ACCESS: lambda c, refresh=False: import_acs_internet_access(c, refresh=refresh),  # type: ignore[misc]
     },
     SOURCE_WHP: {
         Q_WILDFIRE: lambda c, refresh=False: import_whp_wildfire(c, refresh=refresh),  # type: ignore[misc]

@@ -32,7 +32,8 @@ NORMALIZED_FIELDS = [
     "hazard_wildfire", "hazard_vegetation", "hazard_forest_distance",
     "hazard_score", "exposure_score", "vulnerability_score", "resilience_score",
     "vuln_poverty", "vuln_elderly", "vuln_uninsured",
-    "res_vehicle_access", "res_median_household_income", "res_internet_access",
+    # Note: res_median_household_income is in USD (not 0-1); only its *_norm column is 0-1.
+    "res_vehicle_access", "res_internet_access",
     "eal_norm", "risk_score"
 ]
 
