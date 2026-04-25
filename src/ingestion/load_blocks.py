@@ -36,12 +36,12 @@ def generate_mock_blocks(n=49):
                 # Vulnerability
                 "vuln_poverty": np.random.rand(),
                 "vuln_elderly": np.random.rand(),
-                "vuln_vehicle_access": np.random.rand(),
+                "vuln_uninsured": np.random.rand(),
 
                 # Resilience
-                "res_fire_station_dist": np.random.uniform(0, 30),
-                "res_hospital_dist": np.random.uniform(0, 50),
-                "res_road_access": np.random.rand(),
+                "res_vehicle_access": np.random.rand(),
+                "res_median_household_income": np.random.uniform(30000, 140000),
+                "res_internet_access": np.random.rand(),
             }
 
             data.append(row)

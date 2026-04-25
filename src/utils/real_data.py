@@ -409,6 +409,9 @@ def fetch_acs_bg_local(filename: str) -> Optional[pd.DataFrame]:
         "acs_elderly.csv": "elderly",
         "acs_vehicle_access.csv": "vehicle_access",
         "acs_building_value.csv": "median_home_value",
+        "acs_uninsured.csv": "uninsured",
+        "acs_median_household_income.csv": "median_household_income",
+        "acs_internet_access.csv": "internet_access",
     }
     ref = None
     if filename in quantity_map:
@@ -655,6 +658,162 @@ def compute_vuln_vehicle_access_real(gdf: pd.DataFrame) -> pd.DataFrame:
     county_mean = float(pd.to_numeric(acs["vehicle_access"], errors="coerce").dropna().mean()) if acs["vehicle_access"].notna().any() else 0.0
     gdf["vuln_vehicle_access"] = gdf["vuln_vehicle_access"].fillna(county_mean).clip(lower=0.0, upper=1.0)
     return mark_real(gdf, "vuln_vehicle_access", source=provenance)
+
+
+# Uninsured rate (sum no-insurance by age / total)
+def compute_vuln_uninsured_real(gdf: pd.DataFrame) -> pd.DataFrame:
+    """
+    Compute vulnerability based on health insurance coverage using ACS B27010.
+    We treat higher uninsured share as higher vulnerability.
+
+    Formula:
+      uninsured_rate = (B27010_017E + B27010_033E + B27010_050E + B27010_066E) / B27010_001E
+    """
+    if "GEOID" not in gdf.columns:
+        gdf["vuln_uninsured"] = fallback_uniform(gdf, "vuln_uninsured", reason="No GEOID column")
+        return mark_dummy(gdf, "vuln_uninsured", reason="No GEOID column")
+    bg_col = block_group_geoid_series(gdf)
+    if USE_STORED_REAL_DATA:
+        acs = fetch_acs_bg_local("acs_uninsured.csv")
+        provenance = "local_acs_uninsured.csv"
+    else:
+        fields = ["B27010_001E", "B27010_017E", "B27010_033E", "B27010_050E", "B27010_066E", "GEOID"]
+        st, co = _get_state_county_codes()
+        acs = fetch_acs_blockgroup(fields, "block group:*", f"state:{st} county:{co}")
+        provenance = "ACS API"
+        if acs is not None:
+            county_fips = _get_county_fips()
+            write_dataset(
+                DatasetRef(county_fips=county_fips, source_id="acs_2021_5yr", quantity_id="uninsured"),
+                acs,
+                response_json=json.loads(acs.to_json(orient="records")),
+                request={"api": ACS_URL, "params": {"in": f"state:{st} county:{co}"}},
+                overwrite=True,
+            )
+    if acs is None:
+        gdf["vuln_uninsured"] = fallback_uniform(gdf, "vuln_uninsured", reason="No real data available")
+        return mark_dummy(gdf, "vuln_uninsured", reason="No real data available")
+    for c in ["B27010_001E", "B27010_017E", "B27010_033E", "B27010_050E", "B27010_066E"]:
+        if c in acs.columns:
+            acs[c] = pd.to_numeric(acs[c], errors="coerce")
+    denom = acs["B27010_001E"].replace({0: np.nan})
+    uninsured = (
+        acs["B27010_017E"].fillna(0)
+        + acs["B27010_033E"].fillna(0)
+        + acs["B27010_050E"].fillna(0)
+        + acs["B27010_066E"].fillna(0)
+    )
+    acs["uninsured_rate"] = uninsured / denom
+    uninsured_map = dict(zip(acs["GEOID"].astype(str), acs["uninsured_rate"]))
+    gdf["blockgroup"] = bg_col
+    gdf["vuln_uninsured"] = pd.to_numeric(gdf["blockgroup"].map(uninsured_map), errors="coerce")
+    county_mean = float(pd.to_numeric(acs["uninsured_rate"], errors="coerce").dropna().mean()) if acs["uninsured_rate"].notna().any() else 0.0
+    had_missing = gdf["vuln_uninsured"].isna().any()
+    gdf["vuln_uninsured"] = gdf["vuln_uninsured"].fillna(county_mean).clip(lower=0.0, upper=1.0)
+    if had_missing:
+        return mark_estimated(gdf, "vuln_uninsured", method=f"{provenance}; fill missing with county mean")
+    return mark_real(gdf, "vuln_uninsured", source=provenance)
+
+
+def compute_res_vehicle_access_real(gdf: pd.DataFrame) -> pd.DataFrame:
+    """Resilience input: vehicle access share (higher = more evacuation capacity)."""
+    tmp = compute_vuln_vehicle_access_real(gdf.copy())
+    # The helper already marks/copies provenance for vuln_vehicle_access. Mirror into res_vehicle_access.
+    gdf["res_vehicle_access"] = pd.to_numeric(tmp.get("vuln_vehicle_access"), errors="coerce")
+    if "vuln_vehicle_access_source" in tmp.columns:
+        gdf["res_vehicle_access_source"] = tmp["vuln_vehicle_access_source"]
+    if "vuln_vehicle_access_provenance" in tmp.columns:
+        gdf["res_vehicle_access_provenance"] = tmp["vuln_vehicle_access_provenance"]
+    # If vehicle access is missing entirely, fall back to dummy.
+    if gdf["res_vehicle_access"].notna().sum() == 0:
+        gdf["res_vehicle_access"] = fallback_uniform(gdf, "res_vehicle_access", reason="No vehicle access available")
+        return mark_dummy(gdf, "res_vehicle_access", reason="No vehicle access available")
+    return gdf
+
+
+def compute_res_median_household_income_real(gdf: pd.DataFrame) -> pd.DataFrame:
+    """Resilience input: ACS median household income (B19013_001E)."""
+    if "GEOID" not in gdf.columns:
+        gdf["res_median_household_income"] = fallback_uniform(gdf, "res_median_household_income", reason="No GEOID column")
+        return mark_dummy(gdf, "res_median_household_income", reason="No GEOID column")
+    bg_col = block_group_geoid_series(gdf)
+    if USE_STORED_REAL_DATA:
+        acs = fetch_acs_bg_local("acs_median_household_income.csv")
+        provenance = "local_acs_median_household_income.csv"
+    else:
+        fields = ["B19013_001E", "GEOID"]
+        st, co = _get_state_county_codes()
+        acs = fetch_acs_blockgroup(fields, "block group:*", f"state:{st} county:{co}")
+        provenance = "ACS API"
+        if acs is not None:
+            county_fips = _get_county_fips()
+            write_dataset(
+                DatasetRef(county_fips=county_fips, source_id="acs_2021_5yr", quantity_id="median_household_income"),
+                acs,
+                response_json=json.loads(acs.to_json(orient="records")),
+                request={"api": ACS_URL, "params": {"in": f"state:{st} county:{co}"}},
+                overwrite=True,
+            )
+    if acs is None:
+        gdf["res_median_household_income"] = fallback_uniform(gdf, "res_median_household_income", reason="No real data available")
+        return mark_dummy(gdf, "res_median_household_income", reason="No real data available")
+    if "B19013_001E" in acs.columns:
+        acs["B19013_001E"] = pd.to_numeric(acs["B19013_001E"], errors="coerce")
+        acs.loc[acs["B19013_001E"] == -666666666, "B19013_001E"] = np.nan
+    income_map = dict(zip(acs["GEOID"].astype(str), acs["B19013_001E"]))
+    gdf["blockgroup"] = bg_col
+    gdf["res_median_household_income"] = pd.to_numeric(gdf["blockgroup"].map(income_map), errors="coerce").astype("float64")
+    county_mean = float(pd.to_numeric(acs["B19013_001E"], errors="coerce").dropna().mean()) if acs["B19013_001E"].notna().any() else 0.0
+    had_missing = gdf["res_median_household_income"].isna().any()
+    gdf["res_median_household_income"] = gdf["res_median_household_income"].fillna(county_mean).clip(lower=0.0)
+    if had_missing:
+        return mark_estimated(gdf, "res_median_household_income", method=f"{provenance}; fill missing with county mean")
+    return mark_real(gdf, "res_median_household_income", source=provenance)
+
+
+def compute_res_internet_access_real(gdf: pd.DataFrame) -> pd.DataFrame:
+    """
+    Resilience input: internet access share from ACS B28002.
+      internet_access = 1 - (B28002_013E / B28002_001E)
+    """
+    if "GEOID" not in gdf.columns:
+        gdf["res_internet_access"] = fallback_uniform(gdf, "res_internet_access", reason="No GEOID column")
+        return mark_dummy(gdf, "res_internet_access", reason="No GEOID column")
+    bg_col = block_group_geoid_series(gdf)
+    if USE_STORED_REAL_DATA:
+        acs = fetch_acs_bg_local("acs_internet_access.csv")
+        provenance = "local_acs_internet_access.csv"
+    else:
+        fields = ["B28002_001E", "B28002_013E", "GEOID"]
+        st, co = _get_state_county_codes()
+        acs = fetch_acs_blockgroup(fields, "block group:*", f"state:{st} county:{co}")
+        provenance = "ACS API"
+        if acs is not None:
+            county_fips = _get_county_fips()
+            write_dataset(
+                DatasetRef(county_fips=county_fips, source_id="acs_2021_5yr", quantity_id="internet_access"),
+                acs,
+                response_json=json.loads(acs.to_json(orient="records")),
+                request={"api": ACS_URL, "params": {"in": f"state:{st} county:{co}"}},
+                overwrite=True,
+            )
+    if acs is None:
+        gdf["res_internet_access"] = fallback_uniform(gdf, "res_internet_access", reason="No real data available")
+        return mark_dummy(gdf, "res_internet_access", reason="No real data available")
+    for c in ["B28002_001E", "B28002_013E"]:
+        if c in acs.columns:
+            acs[c] = pd.to_numeric(acs[c], errors="coerce")
+    denom = acs["B28002_001E"].replace({0: np.nan})
+    acs["internet_access"] = 1 - (acs["B28002_013E"] / denom)
+    ia_map = dict(zip(acs["GEOID"].astype(str), acs["internet_access"]))
+    gdf["blockgroup"] = bg_col
+    gdf["res_internet_access"] = pd.to_numeric(gdf["blockgroup"].map(ia_map), errors="coerce")
+    county_mean = float(pd.to_numeric(acs["internet_access"], errors="coerce").dropna().mean()) if acs["internet_access"].notna().any() else 0.0
+    had_missing = gdf["res_internet_access"].isna().any()
+    gdf["res_internet_access"] = gdf["res_internet_access"].fillna(county_mean).clip(lower=0.0, upper=1.0)
+    if had_missing:
+        return mark_estimated(gdf, "res_internet_access", method=f"{provenance}; fill missing with county mean")
+    return mark_real(gdf, "res_internet_access", source=provenance)
 
 # Building value (B25077_001E * housing units)
 def compute_exposure_building_value_real(gdf: pd.DataFrame) -> pd.DataFrame:

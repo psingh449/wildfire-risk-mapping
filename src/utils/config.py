@@ -26,11 +26,11 @@ EXPOSURE_WEIGHTS = {
 VULNERABILITY_WEIGHTS = {
     "vuln_poverty_norm": 1/3,
     "vuln_elderly_norm": 1/3,
-    "vuln_vehicle_access_norm": 1/3
+    "vuln_uninsured_norm": 1/3
 }
 
 RESILIENCE_WEIGHTS = {
-    "res_fire_station_dist_norm": 1/3,
-    "res_hospital_dist_norm": 1/3,
-    "res_road_access_norm": 1/3
+    "res_vehicle_access_norm": 1/3,
+    "res_median_household_income_norm": 1/3,
+    "res_internet_access_norm": 1/3
 }

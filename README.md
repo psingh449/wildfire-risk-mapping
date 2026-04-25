@@ -56,15 +56,15 @@ The following list follows every numbered row in [`calculations.csv`](calculatio
 
 9. **Poverty share.** The share of people in poverty for the small area, using the latest small-area social survey. When the survey does not release that detail for every tiny zone, a slightly larger **tract** neighborhood is used and the same value is shared across the smaller areas that sit in it, marked as an **estimate.**
 10. **Older adult share.** The share of people roughly 65 and older, with missing pockets filled from the county average so gaps do not break the map.
-11. **Vehicle access (then flipped in the final blend).** We start from the share of homes that have a vehicle available. Before building the overall vulnerability score, the direction is adjusted so that **less** access to a vehicle counts as **higher** vulnerability, because evacuating is harder when fewer people have a car. Tract-based sharing applies when the finest geography is not published, same as poverty.
-12. **Combined vulnerability score.** The three pieces above are scaled to 0–1 and combined with default equal weighting, after the direction fix for the vehicle item.
+11. **Uninsured share.** We compute the share of people without health insurance coverage from ACS table `B27010` (summing “No health insurance coverage” bins across age groups). Higher uninsured share increases vulnerability.
+12. **Combined vulnerability score.** Poverty, elderly share, and uninsured share are scaled to 0–1 and combined with default equal weighting.
 
 **Resilience — help that is close by**
 
-13. **Fire station nearness.** From distance to the nearest fire station, we form a 0–1 “how close is help” score.
-14. **Hospital nearness.** Same idea for hospitals: closer facilities yield a higher score in this building block of resilience.
-15. **Road access.** We relate total road length inside the small area to its land area to describe how “connected” the street network is, scaled to 0–1.
-16. **Combined resilience score.** The three nearness/road items are scaled and averaged with default equal weighting. Higher here means *more* capacity to respond, which *lowers* overall risk in the final formula below.
+13. **Vehicle access.** We use the share of households with a vehicle available (ACS `B08201`) as an evacuation-capacity signal (higher = more resilience).
+14. **Median household income.** We use ACS `B19013_001E` as a capacity proxy (higher = more resilience).
+15. **Internet access.** We compute internet access share from ACS `B28002` (higher = more connected / resilient).
+16. **Combined resilience score.** The three ACS capacity signals are scaled and averaged with default equal weighting. Higher here means *more* capacity to respond, which *lowers* overall risk in the final formula below.
 
 **Model outputs**
 
@@ -101,12 +101,12 @@ Each row lists the **GeoJSON property** name, the **calculation** (as implemente
 | 8 | `exposure_score` | Weighted sum of `exposure_population_norm`, `exposure_housing_norm`, `exposure_building_value_norm` | `build_features:weighted_sum` |
 | 9 | `vuln_poverty` | `B17001_002E/B17001_001E` at BG, else tract `poverty_tract` assigned by tract GEOID | `compute_vuln_poverty_real`, `scripts/real_import.py:import_acs_poverty` |
 | 10 | `vuln_elderly` | 65+ share from `B01001` bands; county-mean fill | `compute_vuln_elderly_real` |
-| 11 | `vuln_vehicle_access` | `1 - B08201_002E/B08201_001E` (vehicle-availability); tract fallback; then `vuln_vehicle_access_norm = 1 - norm` before vulnerability score | `compute_vuln_vehicle_access_real` |
-| 12 | `vulnerability_score` | Weighted sum of `vuln_poverty_norm`, `vuln_elderly_norm`, `vuln_vehicle_access_norm` | `build_features:weighted_sum` |
-| 13 | `res_fire_station_dist` | `1/(1+d_km)` to nearest fire station from cache | `compute_res_fire_station_dist_real` |
-| 14 | `res_hospital_dist` | `1/(1+d_km)` to nearest hospital from cache | `compute_res_hospital_dist_real` |
-| 15 | `res_road_access` | `road_length/area` from OSM-derived table, scaled 0–1 in feature layer | `compute_res_road_access_real` |
-| 16 | `resilience_score` | Weighted sum of `res_fire_station_dist_norm`, `res_hospital_dist_norm`, `res_road_access_norm` | `build_features:weighted_sum` |
+| 11 | `vuln_uninsured` | `(B27010_017E+B27010_033E+B27010_050E+B27010_066E)/B27010_001E` (uninsured share) | `compute_vuln_uninsured_real` |
+| 12 | `vulnerability_score` | Weighted sum of `vuln_poverty_norm`, `vuln_elderly_norm`, `vuln_uninsured_norm` | `build_features:weighted_sum` |
+| 13 | `res_vehicle_access` | `1 - B08201_002E/B08201_001E` (vehicle-availability share) | `compute_res_vehicle_access_real` |
+| 14 | `res_median_household_income` | `B19013_001E` (median household income, USD) | `compute_res_median_household_income_real` |
+| 15 | `res_internet_access` | `1 - (B28002_013E/B28002_001E)` (internet access share) | `compute_res_internet_access_real` |
+| 16 | `resilience_score` | Weighted sum of `res_vehicle_access_norm`, `res_median_household_income_norm`, `res_internet_access_norm` | `build_features:weighted_sum` |
 | 17 | `risk_score` | `hazard_score * exposure_score * vulnerability_score * (1 - resilience_score)` clipped to `[0,1]` | `src/models/risk_model.py:compute_risk` |
 | 18 | `eal` | `risk_score * exposure_building_value` | `src/models/risk_model.py` |
 | 19 | `eal_norm` | min–max of `eal` across all rows in the processed frame | `src/models/risk_model.py` (EAL map uses `eal_norm` in `main.js`) |
@@ -370,8 +370,8 @@ def run():
 1. **Component Scores:** Weighted averages of constituent features
    - Hazard Score = weighted average of (hazard_wildfire, hazard_vegetation, hazard_forest_distance)
    - Exposure Score = weighted average of (exposure_population, exposure_housing, exposure_building_value)
-   - Vulnerability Score = weighted average of (vuln_poverty, vuln_elderly, vuln_vehicle_access)
-   - Resilience Score = weighted average of (res_fire_station_dist, res_hospital_dist, res_road_access)
+   - Vulnerability Score = weighted average of (vuln_poverty, vuln_elderly, vuln_uninsured)
+   - Resilience Score = weighted average of (res_vehicle_access, res_median_household_income, res_internet_access)
 
 2. **Risk Score:** Multiplicative model
    - `risk_score = hazard_score × exposure_score × vulnerability_score × (1 - resilience_score)`
@@ -485,10 +485,10 @@ Runtime Behavior (Actual calculations)
 | exposure_building_value | calculations.csv row 7 | `src/features/exposure.py` | ACS API |
 | vuln_poverty | calculations.csv row 9 | `src/features/vulnerability.py` | ACS API |
 | vuln_elderly | calculations.csv row 10 | `src/features/vulnerability.py` | ACS API |
-| vuln_vehicle_access | calculations.csv row 11 | `src/features/vulnerability.py` | ACS API |
-| res_fire_station_dist | calculations.csv row 13 | `src/features/resilience.py` | HIFLD data |
-| res_hospital_dist | calculations.csv row 14 | `src/features/resilience.py` | HIFLD data |
-| res_road_access | calculations.csv row 15 | `src/features/resilience.py` | OSM data |
+| vuln_uninsured | calculations.csv row 11 | `src/features/vulnerability.py` | ACS API |
+| res_vehicle_access | calculations.csv row 13 | `src/features/resilience.py` | ACS API |
+| res_median_household_income | calculations.csv row 14 | `src/features/resilience.py` | ACS API |
+| res_internet_access | calculations.csv row 15 | `src/features/resilience.py` | ACS API |
 | hazard_score | calculations.csv row 4 | `src/features/build_features.py` | Composite |
 | exposure_score | calculations.csv row 8 | `src/features/build_features.py` | Composite |
 | vulnerability_score | calculations.csv row 12 | `src/features/build_features.py` | Composite |
@@ -517,7 +517,7 @@ The program retrieves information from **9 external sources**. Each source is fe
 - **Cached locally:** `data/real/whp_butte.csv` or `data/real/whp_butte.tif` (raster)
 - **Output column:** `hazard_wildfire` (range: 0-1)
 
-**How calculations.csv Directs This:**
+**How calculations.csv Directs This (legacy):**
 
 | CSV Column | Value |
 |------------|-------|
@@ -637,7 +637,7 @@ The program retrieves information from **9 external sources**. Each source is fe
 
 ### 3.5 ACS (American Community Survey)
 
-**What it measures:** Socioeconomic characteristics (poverty, elderly, vehicle ownership, building value)
+**What it measures:** Socioeconomic characteristics (poverty, elderly, uninsured, building value)
 
 **Source:** US Census Bureau, 2021 American Community Survey (5-year)  
 **API:** https://api.census.gov/data/2021/acs/acs5
@@ -647,7 +647,10 @@ The program retrieves information from **9 external sources**. Each source is fe
   - `fetch_acs_blockgroup()` — Generic ACS fetcher
   - `compute_vuln_poverty_real()` → poverty rate
   - `compute_vuln_elderly_real()` → elderly percentage
-  - `compute_vuln_vehicle_access_real()` → vehicle access
+  - `compute_vuln_uninsured_real()` → uninsured share
+  - `compute_res_vehicle_access_real()` → vehicle access (resilience)
+  - `compute_res_median_household_income_real()` → income (resilience)
+  - `compute_res_internet_access_real()` → internet access (resilience)
   - `compute_exposure_building_value_real()` → building value
 - Features: `src/features/vulnerability.py` and `src/features/exposure.py`
 
@@ -655,13 +658,19 @@ The program retrieves information from **9 external sources**. Each source is fe
 - **Cached locally:** Multiple CSVs in `data/real/`:
   - `acs_poverty.csv`
   - `acs_elderly.csv`
-  - `acs_vehicle.csv`
+  - `acs_uninsured.csv`
+  - `acs_vehicle_access.csv`
+  - `acs_median_household_income.csv`
+  - `acs_internet_access.csv`
   - `acs_building_value.csv`
 - **Output columns:**
   - `vuln_poverty` (poverty rate, 0-1)
   - `vuln_elderly` (elderly percentage, 0-1)
-  - `vuln_vehicle_access` (households without vehicles, 0-1)
+  - `vuln_uninsured` (uninsured share, 0-1)
   - `exposure_building_value` (median home value in dollars)
+  - `res_vehicle_access` (vehicle access share, 0-1)
+  - `res_median_household_income` (USD)
+  - `res_internet_access` (internet access share, 0-1)
 
 **How calculations.csv Directs This (Example: Poverty):**
 
@@ -682,24 +691,22 @@ The program retrieves information from **9 external sources**. Each source is fe
 
 **Fallback Behavior:** If API fails, generate random values in [0, 1]
 
-### 3.6 HIFLD (Homeland Infrastructure Foundation-Level Data)
+### 3.6 HIFLD (Homeland Infrastructure Foundation-Level Data) (legacy)
 
-**What it measures:** Locations of fire stations and hospitals
+**What it measures:** Locations of fire stations and hospitals (previous resilience inputs; now deprecated)
 
 **Source:** HIFLD via ArcGIS Open Data  
 **URL:** https://hifld-geoplatform.opendata.arcgis.com
 
 **Python Files:**
 - Fetcher: `src/utils/real_data.py` → `fetch_hifld_data()`
-- Features: `src/features/resilience.py` → Distance features
+- Features: `src/features/resilience.py` → **no longer uses HIFLD** in the current ACS-only resilience model.
 
 **Data Storage:**
 - **Cached locally:**
   - `data/real/fire_stations.csv` (lat, lon, name)
   - `data/real/hospitals.csv` (lat, lon, name)
-- **Output columns:**
-  - `res_fire_station_dist` (inverted distance, 0-1, closer = higher)
-  - `res_hospital_dist` (inverted distance, 0-1, closer = higher)
+**Note:** The codepaths for `res_fire_station_dist` / `res_hospital_dist` remain in `src/utils/real_data.py` for backwards-compatibility and can be removed later.
 
 **How calculations.csv Directs This:**
 
@@ -717,24 +724,24 @@ The program retrieves information from **9 external sources**. Each source is fe
    - Calculate distance to nearest fire station (in km)
    - Apply inversion formula: `1 / (1 + distance_km)` → normalize to 0-1
    - Store in `res_fire_station_dist`
-4. Repeat for hospitals → `res_hospital_dist`
+4. Repeat for hospitals → `res_hospital_dist` (legacy)
 
 **Fallback Behavior:** If download fails, generate random values in [0, 1]
 
-### 3.7 OpenStreetMap (OSM) Roads
+### 3.7 OpenStreetMap (OSM) Roads (legacy resilience input)
 
 **What it measures:** Road network connectivity and accessibility
 
 **Source:** OpenStreetMap via Overpass API  
 **URL:** https://overpass-api.de/api/interpreter
 
-**Python Files:**
+**Python Files (legacy):**
 - Fetcher: `src/utils/real_data.py` → `fetch_osm_roads()`, `compute_res_road_access_real()`
-- Feature: `src/features/resilience.py` → Road access feature
+- Feature: `src/features/resilience.py` → Road access feature (deprecated)
 
 **Data Storage:**
 - **Cached locally:** `data/real/osm_roads.geojson` (road network geometries)
-- **Output column:** `res_road_access` (road density or network accessibility, 0-1)
+- **Output column (legacy):** `res_road_access` (road density or network accessibility, 0-1)
 
 **How calculations.csv Directs This:**
 
@@ -1002,11 +1009,11 @@ Marked: exposure_population_source = "DUMMY"
 | 8 | exposure_score | Exposure | weights: 0.333 ea | formula | Composite |
 | 9 | vuln_poverty | Vulnerability | weight: 0.333, min/max | source_url, API | Direct feature |
 | 10 | vuln_elderly | Vulnerability | weight: 0.333, min/max | source_url, API | Direct feature |
-| 11 | vuln_vehicle_access | Vulnerability | weight: 0.333, min/max | source_url, API | Direct feature |
+| 11 | vuln_uninsured | Vulnerability | weight: 0.333, min/max | source_url, API | Direct feature |
 | 12 | vulnerability_score | Vulnerability | weights: 0.333 ea | formula | Composite |
-| 13 | res_fire_station_dist | Resilience | weight: 0.333, min/max | source_url | Direct feature |
-| 14 | res_hospital_dist | Resilience | weight: 0.333, min/max | source_url | Direct feature |
-| 15 | res_road_access | Resilience | weight: 0.333, min/max | source_url, API | Direct feature |
+| 13 | res_vehicle_access | Resilience | weight: 0.333, min/max | source_url, API | Direct feature |
+| 14 | res_median_household_income | Resilience | weight: 0.333, min/max | source_url, API | Direct feature |
+| 15 | res_internet_access | Resilience | weight: 0.333, min/max | source_url, API | Direct feature |
 | 16 | resilience_score | Resilience | weights: 0.333 ea | formula | Composite |
 | 17 | risk_score | Model | min/max | formula | Output metric |
 | 18 | eal | Model | min/max | formula | Output metric |
@@ -1142,7 +1149,7 @@ def validate_ranges(gdf):
 - Risk score: [0, 1]
 
 **Known Issues:**
-- res_fire_station_dist, res_hospital_dist occasionally exceed 1.0 (distance formula issue)
+- (legacy) res_fire_station_dist, res_hospital_dist occasionally exceed 1.0 (distance formula issue; deprecated metrics)
 - hazard_forest_distance occasionally exceeds 1.0
 
 #### 4. validate_types()
@@ -1348,13 +1355,13 @@ Detailed explanation:
 #### Issue: Out-of-Range Scores (>1.0 or <0)
 **Symptom:** Validation warns "out_of_range_resilience_score"
 **Possible Causes:**
-1. Distance normalization formula error
+1. Distance normalization / scaling error (legacy distance-based resilience)
 2. Missing min/max bounds in calculations.csv
 3. Floating-point precision edge cases
 
 **Affected Columns:**
-- res_fire_station_dist
-- res_hospital_dist
+- (legacy) res_fire_station_dist
+- (legacy) res_hospital_dist
 - hazard_forest_distance
 **Status:** Under investigation
 

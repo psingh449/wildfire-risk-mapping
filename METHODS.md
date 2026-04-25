@@ -12,8 +12,8 @@ For each block group, three hazard features, three exposure features, three vuln
 
 - **Hazard score:** Weighted sum of `hazard_wildfire_norm`, `hazard_vegetation_norm`, `hazard_forest_distance_norm`.
 - **Exposure score:** Weighted sum of `exposure_population_norm`, `exposure_housing_norm`, `exposure_building_value_norm` (note: building value is in USD *before* normalization; normalization is applied in the `*_norm` copy).
-- **Vulnerability score:** Weighted sum of `vuln_poverty_norm`, `vuln_elderly_norm`, and `vuln_vehicle_access_norm`. The **vehicle** field is stored in “access” form (`1 - no_vehicle/total` from ACS table B08201); after normalization, `vuln_vehicle_access_norm` is **inverted** again (`1 - norm`) so that lower vehicle access maps to *higher* vulnerability in the score (`src/features/build_features.py`).
-- **Resilience score:** Weighted sum of `res_fire_station_dist_norm`, `res_hospital_dist_norm`, `res_road_access_norm` (distances and road density are expressed so that larger values mean higher resilience *before* the weighted sum).
+- **Vulnerability score:** Weighted sum of `vuln_poverty_norm`, `vuln_elderly_norm`, and `vuln_uninsured_norm` (uninsured share from ACS `B27010`). Higher values mean higher vulnerability (no inversion step required).
+- **Resilience score:** Weighted sum of `res_vehicle_access_norm`, `res_median_household_income_norm`, `res_internet_access_norm` (all expressed so that larger values mean higher resilience before the weighted sum).
 
 **ACS block-group sparsity:** For some American Community Survey (ACS) 5-year tables, the Census returns null estimates at *block group* for every row in a county. In that case, **tract**-level estimates are fetched or read from per-county cache (`*_tract` quantities), joined by tract `GEOID`, and attached to every block group in that tract; those fields are marked **ESTIMATED** in provenance. This is implemented for **poverty** and **vehicle access** in `src/utils/real_data.py` and `scripts/real_import.py` (stale all-null block-group files are not persisted).
 

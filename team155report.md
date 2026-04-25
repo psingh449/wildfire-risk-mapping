@@ -138,10 +138,10 @@ Table 1 summarizes the core variables from `calculations.csv` used directly in t
 | Exposure | `exposure_building_value` | Housing units × median property value | ACS / derived |
 | Vulnerability | `vuln_poverty` | Poverty proxy allocated to blocks | ACS |
 | Vulnerability | `vuln_elderly` | Elderly share allocated to blocks | ACS |
-| Vulnerability | `vuln_vehicle_access` | Vehicle-access proxy | ACS |
-| Resilience | `res_fire_station_dist` | Access to fire stations | HIFLD / derived |
-| Resilience | `res_hospital_dist` | Access to hospitals | HIFLD / derived |
-| Resilience | `res_road_access` | Road connectivity proxy | OSM / derived |
+| Vulnerability | `vuln_uninsured` | Uninsured share proxy | ACS (B27010) |
+| Resilience | `res_vehicle_access` | Vehicle access proxy | ACS (B08201) |
+| Resilience | `res_median_household_income` | Income capacity proxy | ACS (B19013) |
+| Resilience | `res_internet_access` | Connectivity proxy | ACS (B28002) |
 | Model | `risk_score` | Composite wildfire risk | Derived |
 | Model | `eal` | Expected annual loss estimate | Derived |
 
@@ -315,11 +315,11 @@ The vulnerability component captures social conditions that may worsen wildfire 
 
 - **Poverty (`vuln_poverty`)** is derived from ACS poverty counts/rates at block-group scale and allocated to blocks using population-based weighting.
 - **Elderly Population (`vuln_elderly`)** is derived similarly from ACS age tables.
-- **Vehicle Access (`vuln_vehicle_access`)** uses ACS vehicle-ownership statistics as a mobility and evacuation proxy.
+- **Uninsured Share (`vuln_uninsured`)** uses ACS health insurance coverage statistics as a vulnerability proxy.
 
 The implementation combines normalized vulnerability features through a weighted sum:
 
-**VulnerabilityScore = w1·vuln_poverty + w2·vuln_elderly + w3·vuln_vehicle_access**
+**VulnerabilityScore = w1·vuln_poverty + w2·vuln_elderly + w3·vuln_uninsured**
 
 This structure is motivated by the literature showing that age, poverty, and transportation constraints strongly affect disaster response and recovery.
 
@@ -327,13 +327,13 @@ This structure is motivated by the literature showing that age, poverty, and tra
 
 The resilience component measures community access to emergency services and evacuation-supporting infrastructure.
 
-- **Fire Station Access (`res_fire_station_dist`)** is computed from nearest distance to HIFLD fire stations and transformed by inversion.
-- **Hospital Access (`res_hospital_dist`)** is computed analogously for HIFLD hospitals.
-- **Road Access (`res_road_access`)** is computed from OSM road network length relative to block area or a related road-connectivity proxy.
+- **Vehicle Access (`res_vehicle_access`)** uses ACS vehicle-availability statistics as an evacuation capacity proxy.
+- **Median household income (`res_median_household_income`)** uses ACS income as a capacity proxy.
+- **Internet access (`res_internet_access`)** uses ACS internet access as a connectivity / information proxy.
 
 These features are combined by weighted normalized sum:
 
-**ResilienceScore = w1·res_fire_station_dist + w2·res_hospital_dist + w3·res_road_access**
+**ResilienceScore = w1·res_vehicle_access + w2·res_median_household_income + w3·res_internet_access**
 
 Higher resilience values lower final risk in the implemented model.
 

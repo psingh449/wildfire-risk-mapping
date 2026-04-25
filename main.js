@@ -125,21 +125,19 @@ const PANEL_DETAIL_HTML = {
         <ul class="map-calc__sublist">
             <li class="map-calc__item">Poverty share (<code class="map-calc__inline">vuln_poverty</code>)</li>
             <li class="map-calc__item">Older adult share (<code class="map-calc__inline">vuln_elderly</code>)</li>
-            <li class="map-calc__item">Vehicle access (<code class="map-calc__inline">vuln_vehicle_access</code>)</li>
+            <li class="map-calc__item">Uninsured share (<code class="map-calc__inline">vuln_uninsured</code>)</li>
         </ul>
-        <div class="map-calc__subhead"><b>Important direction rule (vehicle access)</b></div>
+        <div class="map-calc__subhead"><b>Important direction rule (insurance)</b></div>
         <ul class="map-calc__sublist">
-            <li class="map-calc__item">The raw “vehicle access” concept means: higher = more households can evacuate by car.</li>
-            <li class="map-calc__item">But vulnerability should increase when evacuation is harder, so we flip the normalized value:</li>
-            <li class="map-calc__item"><code class="map-calc__inline">vehicle_vulnerability_component = 1 − norm(vehicle_access)</code></li>
-            <li class="map-calc__item">This is why the model can treat vehicle access as a vulnerability signal without changing the meaning of the source data.</li>
+            <li class="map-calc__item">We use <code class="map-calc__inline">vuln_uninsured</code> (share without health insurance) so that higher values naturally mean higher vulnerability.</li>
+            <li class="map-calc__item">No inversion step is required for this component.</li>
         </ul>
         <div class="map-calc__subhead"><b>Relevant code / fields</b></div>
         <ul class="map-calc__sublist">
-            <li class="map-calc__item">GeoJSON fields: <code class="map-calc__inline">vuln_poverty</code>, <code class="map-calc__inline">vuln_elderly</code>, <code class="map-calc__inline">vuln_vehicle_access</code>, <code class="map-calc__inline">vulnerability_score</code></li>
-            <li class="map-calc__item">ACS import + tract fallback: <code class="map-calc__inline">scripts/real_import.py</code> (writes <code class="map-calc__inline">poverty_tract</code>, <code class="map-calc__inline">vehicle_access_tract</code>)</li>
+            <li class="map-calc__item">GeoJSON fields: <code class="map-calc__inline">vuln_poverty</code>, <code class="map-calc__inline">vuln_elderly</code>, <code class="map-calc__inline">vuln_uninsured</code>, <code class="map-calc__inline">vulnerability_score</code></li>
+            <li class="map-calc__item">ACS imports: <code class="map-calc__inline">src/utils/real_data.py</code> (pulls ACS tables and caches under <code class="map-calc__inline">data/real_cache/…</code>)</li>
             <li class="map-calc__item">Feature assembly: <code class="map-calc__inline">src/utils/real_data.py</code> (applies tract→block group assignment + provenance)</li>
-            <li class="map-calc__item">Normalization + combine: <code class="map-calc__inline">src/features/build_features.py</code> (including the vehicle inversion)</li>
+            <li class="map-calc__item">Normalization + combine: <code class="map-calc__inline">src/features/build_features.py</code></li>
             <li class="map-calc__item"><code class="map-calc__inline">Vulnerability</code></li>
         </ul>
     `,
@@ -147,15 +145,14 @@ const PANEL_DETAIL_HTML = {
         <p class="map-calc__lede"><span class="metric-accent metric-accent-resilience"><b>Resilience asks:</b></span> how much response capacity is nearby, and how connected is the area?</p>
         <div class="map-calc__subhead"><b>Three pieces of “capacity”</b></div>
         <ul class="map-calc__sublist">
-            <li class="map-calc__item">Fire station access (<code class="map-calc__inline">res_fire_station_dist</code>)</li>
-            <li class="map-calc__item">Hospital access (<code class="map-calc__inline">res_hospital_dist</code>)</li>
-            <li class="map-calc__item">Road connectivity (<code class="map-calc__inline">res_road_access</code>)</li>
+            <li class="map-calc__item">Vehicle access (<code class="map-calc__inline">res_vehicle_access</code>)</li>
+            <li class="map-calc__item">Median household income (<code class="map-calc__inline">res_median_household_income</code>)</li>
+            <li class="map-calc__item">Internet access (<code class="map-calc__inline">res_internet_access</code>)</li>
         </ul>
-        <div class="map-calc__subhead"><b>Distance is converted to a 0–1 “nearness” score</b></div>
+        <div class="map-calc__subhead"><b>How to interpret the direction</b></div>
         <ul class="map-calc__sublist">
-            <li class="map-calc__item">We turn distance into “closer is better” using an inverse transform:</li>
-            <li class="map-calc__item"><code class="map-calc__inline">nearness = 1 / (1 + distance_km)</code></li>
-            <li class="map-calc__item">That keeps values bounded and makes the metric comparable across counties.</li>
+            <li class="map-calc__item">All three inputs are “higher = more capacity”, so no inversion is needed.</li>
+            <li class="map-calc__item">They are min–max normalized within the run before forming <code class="map-calc__inline">resilience_score</code>.</li>
         </ul>
         <div class="map-calc__subhead"><b>Why it reduces risk</b></div>
         <ul class="map-calc__sublist">
@@ -164,8 +161,8 @@ const PANEL_DETAIL_HTML = {
         </ul>
         <div class="map-calc__subhead"><b>Relevant code / fields</b></div>
         <ul class="map-calc__sublist">
-            <li class="map-calc__item">GeoJSON fields: <code class="map-calc__inline">res_fire_station_dist</code>, <code class="map-calc__inline">res_hospital_dist</code>, <code class="map-calc__inline">res_road_access</code>, <code class="map-calc__inline">resilience_score</code></li>
-            <li class="map-calc__item">Distance/access features: <code class="map-calc__inline">src/utils/real_data.py</code> (HIFLD + OSM cache readers)</li>
+            <li class="map-calc__item">GeoJSON fields: <code class="map-calc__inline">res_vehicle_access</code>, <code class="map-calc__inline">res_median_household_income</code>, <code class="map-calc__inline">res_internet_access</code>, <code class="map-calc__inline">resilience_score</code></li>
+            <li class="map-calc__item">ACS readers: <code class="map-calc__inline">src/utils/real_data.py</code></li>
             <li class="map-calc__item">Normalization + combine: <code class="map-calc__inline">src/features/build_features.py</code></li>
         </ul>
     `
@@ -531,13 +528,13 @@ function buildTooltip(p) {
     const vulnDebug = [
         rowFromFormatted("vulnerability_score", "vuln_poverty:", _formatValue(p, "vuln_poverty", v => Number(v).toFixed(1)), false),
         rowFromFormatted("vulnerability_score", "vuln_elderly:", _formatValue(p, "vuln_elderly", v => Number(v).toFixed(1)), false),
-        rowFromFormatted("vulnerability_score", "vuln_vehicle_access:", _formatValue(p, "vuln_vehicle_access", v => Number(v).toFixed(1)), false),
+        rowFromFormatted("vulnerability_score", "vuln_uninsured:", _formatValue(p, "vuln_uninsured", v => Number(v).toFixed(1)), false),
     ].join("");
 
     const resDebug = [
-        rowFromFormatted("resilience_score", "res_fire_station_dist:", _formatValue(p, "res_fire_station_dist", v => Number(v).toFixed(1)), false),
-        rowFromFormatted("resilience_score", "res_hospital_dist:", _formatValue(p, "res_hospital_dist", v => Number(v).toFixed(1)), false),
-        rowFromFormatted("resilience_score", "res_road_access:", _formatValue(p, "res_road_access", v => Number(v).toFixed(1)), false),
+        rowFromFormatted("resilience_score", "res_vehicle_access:", _formatValue(p, "res_vehicle_access", v => Number(v).toFixed(1)), false),
+        rowFromFormatted("resilience_score", "res_median_household_income:", _formatValue(p, "res_median_household_income", v => Number(v).toFixed(0)), false),
+        rowFromFormatted("resilience_score", "res_internet_access:", _formatValue(p, "res_internet_access", v => Number(v).toFixed(1)), false),
     ].join("");
 
     parts.push(

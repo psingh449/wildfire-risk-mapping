@@ -18,11 +18,11 @@ def run_feature_pipeline(gdf):
     # Vulnerability
     gdf = compute_vuln_poverty(gdf)
     gdf = compute_vuln_elderly(gdf)
-    gdf = compute_vuln_vehicle_access(gdf)
+    gdf = compute_vuln_uninsured(gdf)
 
     # Resilience
-    gdf = compute_res_fire_station_dist(gdf)
-    gdf = compute_res_hospital_dist(gdf)
-    gdf = compute_res_road_access(gdf)
+    gdf = compute_res_vehicle_access(gdf)
+    gdf = compute_res_median_household_income(gdf)
+    gdf = compute_res_internet_access(gdf)
 
     return gdf

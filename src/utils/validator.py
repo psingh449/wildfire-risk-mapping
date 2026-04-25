@@ -21,18 +21,18 @@ REQUIRED_COLUMNS = [
     # Vulnerability
     "vuln_poverty",
     "vuln_elderly",
-    "vuln_vehicle_access",
+    "vuln_uninsured",
     # Resilience
-    "res_fire_station_dist",
-    "res_hospital_dist",
-    "res_road_access",
+    "res_vehicle_access",
+    "res_median_household_income",
+    "res_internet_access",
 ]
 
 NORMALIZED_FIELDS = [
     "hazard_wildfire", "hazard_vegetation", "hazard_forest_distance",
     "hazard_score", "exposure_score", "vulnerability_score", "resilience_score",
-    "vuln_poverty", "vuln_elderly", "vuln_vehicle_access",
-    "res_fire_station_dist", "res_hospital_dist", "res_road_access",
+    "vuln_poverty", "vuln_elderly", "vuln_uninsured",
+    "res_vehicle_access", "res_median_household_income", "res_internet_access",
     "eal_norm", "risk_score"
 ]
 

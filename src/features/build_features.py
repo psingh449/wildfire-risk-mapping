@@ -105,11 +105,9 @@ def build_features(gdf):
 
     # 2. Direction fixes on normalized fields (single inversion per feature)
     # hazard_forest_distance raw: 1/(1+d_km) — higher = closer to forest = higher hazard (keep norm).
-    # res_fire_station_dist / res_hospital_dist raw: 1/(1+d_km) — higher = closer = higher resilience (keep norm).
-    # vuln_vehicle_access raw: ACS "vehicle access" share — higher = more vehicles = lower vulnerability:
-    # invert so higher normalized score = higher vulnerability.
-    if "vuln_vehicle_access_norm" in gdf:
-        gdf["vuln_vehicle_access_norm"] = 1 - gdf["vuln_vehicle_access_norm"]
+    # Legacy note: older resilience used distances (1/(1+d_km)) to stations/hospitals.
+    # Note: previously we inverted vehicle access when used as a vulnerability signal.
+    # In the current model vehicle access is part of resilience (higher = more capacity), so no inversion here.
 
     # 3. Component scores (read weights from calculations.csv when available)
     gdf["hazard_score"] = weighted_sum(gdf, component_weights["hazard_score"])

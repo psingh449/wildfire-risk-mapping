@@ -36,32 +36,32 @@ def test_vulnerability_features():
     gdf = pd.DataFrame({"block_id": [1, 2, 3]})
     gdf = vulnerability.compute_vuln_poverty(gdf)
     gdf = vulnerability.compute_vuln_elderly(gdf)
-    gdf = vulnerability.compute_vuln_vehicle_access(gdf)
+    gdf = vulnerability.compute_vuln_uninsured(gdf)
     assert "vuln_poverty" in gdf
     assert gdf["vuln_poverty"].between(0, 1).all()
     assert "vuln_elderly" in gdf
     assert gdf["vuln_elderly"].between(0, 1).all()
-    assert "vuln_vehicle_access" in gdf
-    assert gdf["vuln_vehicle_access"].between(0, 1).all()
+    assert "vuln_uninsured" in gdf
+    assert gdf["vuln_uninsured"].between(0, 1).all()
 
 
 def test_resilience_features():
     gdf = pd.DataFrame({"block_id": ["1", "2", "3"], "geometry": [None, None, None]})
-    gdf = resilience.compute_res_fire_station_dist(gdf)
-    gdf = resilience.compute_res_hospital_dist(gdf)
-    gdf = resilience.compute_res_road_access(gdf)
-    assert "res_fire_station_dist" in gdf
-    assert gdf["res_fire_station_dist"].between(0, 1).all() or gdf["res_fire_station_dist"].min() >= 0
-    assert "res_fire_station_dist_source" in gdf
-    assert "res_fire_station_dist_provenance" in gdf
-    assert "res_hospital_dist" in gdf
-    assert gdf["res_hospital_dist"].between(0, 1).all() or gdf["res_hospital_dist"].min() >= 0
-    assert "res_hospital_dist_source" in gdf
-    assert "res_hospital_dist_provenance" in gdf
-    assert "res_road_access" in gdf
-    assert gdf["res_road_access"].between(0, 1).all()
-    assert "res_road_access_source" in gdf
-    assert "res_road_access_provenance" in gdf
+    gdf = resilience.compute_res_vehicle_access(gdf)
+    gdf = resilience.compute_res_median_household_income(gdf)
+    gdf = resilience.compute_res_internet_access(gdf)
+    assert "res_vehicle_access" in gdf
+    assert gdf["res_vehicle_access"].between(0, 1).all()
+    assert "res_vehicle_access_source" in gdf
+    assert "res_vehicle_access_provenance" in gdf
+    assert "res_median_household_income" in gdf
+    assert (gdf["res_median_household_income"] >= 0).all()
+    assert "res_median_household_income_source" in gdf
+    assert "res_median_household_income_provenance" in gdf
+    assert "res_internet_access" in gdf
+    assert gdf["res_internet_access"].between(0, 1).all()
+    assert "res_internet_access_source" in gdf
+    assert "res_internet_access_provenance" in gdf
 
 
 def test_component_weights_loaded_from_calculations_csv():
@@ -73,4 +73,4 @@ def test_component_weights_loaded_from_calculations_csv():
     assert np.isclose(sum(weights["resilience_score"].values()), 1.0)
     assert "hazard_wildfire_norm" in weights["hazard_score"]
     assert "vuln_poverty_norm" in weights["vulnerability_score"]
-    assert "res_fire_station_dist_norm" in weights["resilience_score"]
+    assert "res_vehicle_access_norm" in weights["resilience_score"]
