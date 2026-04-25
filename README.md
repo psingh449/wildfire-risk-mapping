@@ -43,28 +43,28 @@ The following list follows every numbered row in [`calculations.csv`](calculatio
 1. **Wildfire hazard (fuel map or backup blend).** We average the national “wildfire fuel” map across your small area. If that map is missing, we use a stand-in that mixes how wooded the area is with how close homes are to forest-like land. If nothing is available, the value is left blank in the data.
 2. **Vegetation and brush as fuel (stand-in from open map data).** We measure how much of the small area is covered by tree- or forest-like land from an open, volunteer-maintained map when that table exists; otherwise a placeholder is used. This is a **proxy**, not a satellite land cover product.
 3. **Distance to forest-like land.** We use how many miles or kilometers the center of the area is from the nearest patch of forest-like land, then turn that into a 0–1 “closeness to fuel” score (closer to fuel usually means a higher number here).
-4. **Combined hazard score.** The three pieces above are each scaled to the same 0–1 range across all small areas in the run, then combined with equal weighting by default (one-third each). The weights can be read from the tracking sheet; see the technical table below.
+4. **Combined hazard score.** The three pieces above are each scaled to the same 0–1 range across all small areas in the run, then combined using the per-feature weights recorded in [`calculations.csv`](calculations.csv) (PCA-derived in our current model).
 
 **Exposure — who and what is in the way**
 
 5. **Population count.** The official once-a-decade head count of people in that small area.
 6. **Housing unit count.** How many homes and apartments the census records for the same small area.
 7. **Total home value (rough dollar exposure).** We multiply the number of homes by a typical home value for the surrounding neighborhood area. If a typical value is missing for a pocket, the county’s average is used so the number does not collapse to zero. Quality flags mark “real,” “estimate,” or “missing.”
-8. **Combined exposure score.** The three items above (population, homes, and total home value) are scaled to 0–1 and then averaged with default equal weights, similar to hazard.
+8. **Combined exposure score.** The three items above (population, homes, and total home value) are scaled to 0–1 and then combined using the weights in [`calculations.csv`](calculations.csv).
 
 **Vulnerability — who may have a harder time in an emergency**
 
 9. **Poverty share.** The share of people in poverty for the small area, using the latest small-area social survey. When the survey does not release that detail for every tiny zone, a slightly larger **tract** neighborhood is used and the same value is shared across the smaller areas that sit in it, marked as an **estimate.**
 10. **Older adult share.** The share of people roughly 65 and older, with missing pockets filled from the county average so gaps do not break the map.
 11. **Uninsured share.** We compute the share of people without health insurance coverage from ACS table `B27010` (summing “No health insurance coverage” bins across age groups). Higher uninsured share increases vulnerability.
-12. **Combined vulnerability score.** Poverty, elderly share, and uninsured share are scaled to 0–1 and combined with default equal weighting.
+12. **Combined vulnerability score.** Poverty, elderly share, and uninsured share are scaled to 0–1 and combined using the weights in [`calculations.csv`](calculations.csv) (PCA-derived in our current model).
 
 **Resilience — help that is close by**
 
 13. **Vehicle access.** We use the share of households with a vehicle available (ACS `B08201`) as an evacuation-capacity signal (higher = more resilience).
 14. **Median household income.** We use ACS `B19013_001E` as a capacity proxy (higher = more resilience).
 15. **Internet access.** We compute internet access share from ACS `B28002` (higher = more connected / resilient).
-16. **Combined resilience score.** The three ACS capacity signals are scaled and averaged with default equal weighting. Higher here means *more* capacity to respond, which *lowers* overall risk in the final formula below.
+16. **Combined resilience score.** The three ACS capacity signals are scaled and combined using the weights in [`calculations.csv`](calculations.csv) (PCA-derived in our current model). Higher here means *more* capacity to respond, which *lowers* overall risk in the final formula below.
 
 **Model outputs**
 

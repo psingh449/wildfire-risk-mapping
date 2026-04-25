@@ -33,3 +33,9 @@ cache/
 # Generated validation reports (do not commit)
 reports/
 calculations - Copy.csv
+
+# Generated pipeline outputs (keep untracked locally)
+data/processed/blocks.geojson
+data/processed/counties/06007/blocks.geojson
+data/processed/run_summary.json
+data/real_cache/counties/06007/acs_2021_5yr/vehicle_access_tract/manifest.json
