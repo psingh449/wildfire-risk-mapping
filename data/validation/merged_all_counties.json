@@ -1,30 +1,126 @@
 {
   "county_fips": [],
   "metrics": {
-    "auc_score": 0.4216380394565583,
-    "block_rows": 2258,
+    "auc_score": 0.9081068601852647,
+    "block_rows": 25607,
     "calfire_validation": {
       "by_county": {
+        "06001": {
+          "top_k": 8,
+          "top_k_metrics": {
+            "accuracy": 0.9858906525573192,
+            "auc": 0.31216696269982236,
+            "burned_total": 8,
+            "f1": 0.0,
+            "fn": 8,
+            "fp": 8,
+            "n_total": 1134,
+            "precision": 0.0,
+            "predicted_high_risk": 8,
+            "recall": 0.0,
+            "tn": 1118,
+            "tp": 0
+          },
+          "top_pct": 0.1,
+          "top_pct_metrics": {
+            "accuracy": 0.892416225749559,
+            "auc": 0.31216696269982236,
+            "burned_total": 8,
+            "f1": 0.0,
+            "fn": 8,
+            "fp": 114,
+            "n_total": 1134,
+            "precision": 0.0,
+            "predicted_high_risk": 114,
+            "recall": 0.0,
+            "tn": 1012,
+            "tp": 0
+          }
+        },
+        "06003": {
+          "top_k": 1,
+          "top_k_metrics": {
+            "accuracy": 1.0,
+            "auc": 0.5,
+            "burned_total": 1,
+            "f1": 1.0,
+            "fn": 0,
+            "fp": 0,
+            "n_total": 1,
+            "precision": 1.0,
+            "predicted_high_risk": 1,
+            "recall": 1.0,
+            "tn": 0,
+            "tp": 1
+          },
+          "top_pct": 0.1,
+          "top_pct_metrics": {
+            "accuracy": 1.0,
+            "auc": 0.5,
+            "burned_total": 1,
+            "f1": 1.0,
+            "fn": 0,
+            "fp": 0,
+            "n_total": 1,
+            "precision": 1.0,
+            "predicted_high_risk": 1,
+            "recall": 1.0,
+            "tn": 0,
+            "tp": 1
+          }
+        },
+        "06005": {
+          "top_k": 13,
+          "top_k_metrics": {
+            "accuracy": 0.6,
+            "auc": 0.583710407239819,
+            "burned_total": 13,
+            "f1": 0.5384615384615384,
+            "fn": 6,
+            "fp": 6,
+            "n_total": 30,
+            "precision": 0.5384615384615384,
+            "predicted_high_risk": 13,
+            "recall": 0.5384615384615384,
+            "tn": 11,
+            "tp": 7
+          },
+          "top_pct": 0.1,
+          "top_pct_metrics": {
+            "accuracy": 0.5333333333333333,
+            "auc": 0.583710407239819,
+            "burned_total": 13,
+            "f1": 0.125,
+            "fn": 12,
+            "fp": 2,
+            "n_total": 30,
+            "precision": 0.3333333333333333,
+            "predicted_high_risk": 3,
+            "recall": 0.07692307692307693,
+            "tn": 15,
+            "tp": 1
+          }
+        },
         "06007": {
           "top_k": 69,
           "top_k_metrics": {
-            "accuracy": 0.46,
-            "auc": 0.29848434561345283,
+            "accuracy": 0.47,
+            "auc": 0.299037504148689,
             "burned_total": 69,
-            "f1": 0.21739130434782608,
-            "fn": 54,
-            "fp": 54,
+            "f1": 0.2318840579710145,
+            "fn": 53,
+            "fp": 53,
             "n_total": 200,
-            "precision": 0.21739130434782608,
+            "precision": 0.2318840579710145,
             "predicted_high_risk": 69,
-            "recall": 0.21739130434782608,
-            "tn": 77,
-            "tp": 15
+            "recall": 0.2318840579710145,
+            "tn": 78,
+            "tp": 16
           },
           "top_pct": 0.1,
           "top_pct_metrics": {
             "accuracy": 0.645,
-            "auc": 0.29848434561345283,
+            "auc": 0.299037504148689,
             "burned_total": 69,
             "f1": 0.20224719101123598,
             "fn": 60,
@@ -37,70 +133,1766 @@
             "tp": 9
           }
         },
+        "06009": {
+          "top_k": 20,
+          "top_k_metrics": {
+            "accuracy": 0.4444444444444444,
+            "auc": 0.5,
+            "burned_total": 20,
+            "f1": 0.5,
+            "fn": 10,
+            "fp": 10,
+            "n_total": 36,
+            "precision": 0.5,
+            "predicted_high_risk": 20,
+            "recall": 0.5,
+            "tn": 6,
+            "tp": 10
+          },
+          "top_pct": 0.1,
+          "top_pct_metrics": {
+            "accuracy": 0.5555555555555556,
+            "auc": 0.5,
+            "burned_total": 20,
+            "f1": 0.7142857142857143,
+            "fn": 0,
+            "fp": 16,
+            "n_total": 36,
+            "precision": 0.5555555555555556,
+            "predicted_high_risk": 36,
+            "recall": 1.0,
+            "tn": 0,
+            "tp": 20
+          }
+        },
+        "06011": {
+          "top_k": 1,
+          "top_k_metrics": {
+            "accuracy": 1.0,
+            "auc": 0.5,
+            "burned_total": 1,
+            "f1": 1.0,
+            "fn": 0,
+            "fp": 0,
+            "n_total": 20,
+            "precision": 1.0,
+            "predicted_high_risk": 1,
+            "recall": 1.0,
+            "tn": 19,
+            "tp": 1
+          },
+          "top_pct": 0.1,
+          "top_pct_metrics": {
+            "accuracy": 0.05,
+            "auc": 0.5,
+            "burned_total": 1,
+            "f1": 0.09523809523809523,
+            "fn": 0,
+            "fp": 19,
+            "n_total": 20,
+            "precision": 0.05,
+            "predicted_high_risk": 20,
+            "recall": 1.0,
+            "tn": 0,
+            "tp": 1
+          }
+        },
+        "06013": {
+          "top_k": 11,
+          "top_k_metrics": {
+            "accuracy": 0.9689265536723164,
+            "auc": 0.5,
+            "burned_total": 11,
+            "f1": 0.0,
+            "fn": 11,
+            "fp": 11,
+            "n_total": 708,
+            "precision": 0.0,
+            "predicted_high_risk": 11,
+            "recall": 0.0,
+            "tn": 686,
+            "tp": 0
+          },
+          "top_pct": 0.1,
+          "top_pct_metrics": {
+            "accuracy": 0.015536723163841809,
+            "auc": 0.5,
+            "burned_total": 11,
+            "f1": 0.030598052851182195,
+            "fn": 0,
+            "fp": 697,
+            "n_total": 708,
+            "precision": 0.015536723163841809,
+            "predicted_high_risk": 708,
+            "recall": 1.0,
+            "tn": 0,
+            "tp": 11
+          }
+        },
+        "06015": {
+          "top_k": 1,
+          "top_k_metrics": {
+            "accuracy": 0.9473684210526315,
+            "auc": 0.5,
+            "burned_total": 0,
+            "f1": 0.0,
+            "fn": 0,
+            "fp": 1,
+            "n_total": 19,
+            "precision": 0.0,
+            "predicted_high_risk": 1,
+            "recall": 0.0,
+            "tn": 18,
+            "tp": 0
+          },
+          "top_pct": 0.1,
+          "top_pct_metrics": {
+            "accuracy": 0.0,
+            "auc": 0.5,
+            "burned_total": 0,
+            "f1": 0.0,
+            "fn": 0,
+            "fp": 19,
+            "n_total": 19,
+            "precision": 0.0,
+            "predicted_high_risk": 19,
+            "recall": 0.0,
+            "tn": 0,
+            "tp": 0
+          }
+        },
+        "06017": {
+          "top_k": 35,
+          "top_k_metrics": {
+            "accuracy": 0.7012987012987013,
+            "auc": 0.5,
+            "burned_total": 35,
+            "f1": 0.34285714285714286,
+            "fn": 23,
+            "fp": 23,
+            "n_total": 154,
+            "precision": 0.34285714285714286,
+            "predicted_high_risk": 35,
+            "recall": 0.34285714285714286,
+            "tn": 96,
+            "tp": 12
+          },
+          "top_pct": 0.1,
+          "top_pct_metrics": {
+            "accuracy": 0.22727272727272727,
+            "auc": 0.5,
+            "burned_total": 35,
+            "f1": 0.37037037037037035,
+            "fn": 0,
+            "fp": 119,
+            "n_total": 154,
+            "precision": 0.22727272727272727,
+            "predicted_high_risk": 154,
+            "recall": 1.0,
+            "tn": 0,
+            "tp": 35
+          }
+        },
+        "06019": {
+          "top_k": 26,
+          "top_k_metrics": {
+            "accuracy": 0.9183673469387755,
+            "auc": 0.5,
+            "burned_total": 26,
+            "f1": 0.0,
+            "fn": 26,
+            "fp": 26,
+            "n_total": 637,
+            "precision": 0.0,
+            "predicted_high_risk": 26,
+            "recall": 0.0,
+            "tn": 585,
+            "tp": 0
+          },
+          "top_pct": 0.1,
+          "top_pct_metrics": {
+            "accuracy": 0.04081632653061224,
+            "auc": 0.5,
+            "burned_total": 26,
+            "f1": 0.07843137254901959,
+            "fn": 0,
+            "fp": 611,
+            "n_total": 637,
+            "precision": 0.04081632653061224,
+            "predicted_high_risk": 637,
+            "recall": 1.0,
+            "tn": 0,
+            "tp": 26
+          }
+        },
+        "06021": {
+          "top_k": 3,
+          "top_k_metrics": {
+            "accuracy": 0.8518518518518519,
+            "auc": 0.5,
+            "burned_total": 3,
+            "f1": 0.3333333333333333,
+            "fn": 2,
+            "fp": 2,
+            "n_total": 27,
+            "precision": 0.3333333333333333,
+            "predicted_high_risk": 3,
+            "recall": 0.3333333333333333,
+            "tn": 22,
+            "tp": 1
+          },
+          "top_pct": 0.1,
+          "top_pct_metrics": {
+            "accuracy": 0.1111111111111111,
+            "auc": 0.5,
+            "burned_total": 3,
+            "f1": 0.19999999999999998,
+            "fn": 0,
+            "fp": 24,
+            "n_total": 27,
+            "precision": 0.1111111111111111,
+            "predicted_high_risk": 27,
+            "recall": 1.0,
+            "tn": 0,
+            "tp": 3
+          }
+        },
+        "06023": {
+          "top_k": 1,
+          "top_k_metrics": {
+            "accuracy": 0.991304347826087,
+            "auc": 0.5,
+            "burned_total": 0,
+            "f1": 0.0,
+            "fn": 0,
+            "fp": 1,
+            "n_total": 115,
+            "precision": 0.0,
+            "predicted_high_risk": 1,
+            "recall": 0.0,
+            "tn": 114,
+            "tp": 0
+          },
+          "top_pct": 0.1,
+          "top_pct_metrics": {
+            "accuracy": 0.0,
+            "auc": 0.5,
+            "burned_total": 0,
+            "f1": 0.0,
+            "fn": 0,
+            "fp": 115,
+            "n_total": 115,
+            "precision": 0.0,
+            "predicted_high_risk": 115,
+            "recall": 0.0,
+            "tn": 0,
+            "tp": 0
+          }
+        },
+        "06025": {
+          "top_k": 1,
+          "top_k_metrics": {
+            "accuracy": 0.9824561403508771,
+            "auc": 0.5,
+            "burned_total": 1,
+            "f1": 0.0,
+            "fn": 1,
+            "fp": 1,
+            "n_total": 114,
+            "precision": 0.0,
+            "predicted_high_risk": 1,
+            "recall": 0.0,
+            "tn": 112,
+            "tp": 0
+          },
+          "top_pct": 0.1,
+          "top_pct_metrics": {
+            "accuracy": 0.008771929824561403,
+            "auc": 0.5,
+            "burned_total": 1,
+            "f1": 0.017391304347826087,
+            "fn": 0,
+            "fp": 113,
+            "n_total": 114,
+            "precision": 0.008771929824561403,
+            "predicted_high_risk": 114,
+            "recall": 1.0,
+            "tn": 0,
+            "tp": 1
+          }
+        },
+        "06027": {
+          "top_k": 8,
+          "top_k_metrics": {
+            "accuracy": 0.625,
+            "auc": 0.5,
+            "burned_total": 8,
+            "f1": 0.625,
+            "fn": 3,
+            "fp": 3,
+            "n_total": 16,
+            "precision": 0.625,
+            "predicted_high_risk": 8,
+            "recall": 0.625,
+            "tn": 5,
+            "tp": 5
+          },
+          "top_pct": 0.1,
+          "top_pct_metrics": {
+            "accuracy": 0.5,
+            "auc": 0.5,
+            "burned_total": 8,
+            "f1": 0.6666666666666666,
+            "fn": 0,
+            "fp": 8,
+            "n_total": 16,
+            "precision": 0.5,
+            "predicted_high_risk": 16,
+            "recall": 1.0,
+            "tn": 0,
+            "tp": 8
+          }
+        },
+        "06029": {
+          "top_k": 79,
+          "top_k_metrics": {
+            "accuracy": 0.75,
+            "auc": 0.5,
+            "burned_total": 79,
+            "f1": 0.05063291139240506,
+            "fn": 75,
+            "fp": 75,
+            "n_total": 600,
+            "precision": 0.05063291139240506,
+            "predicted_high_risk": 79,
+            "recall": 0.05063291139240506,
+            "tn": 446,
+            "tp": 4
+          },
+          "top_pct": 0.1,
+          "top_pct_metrics": {
+            "accuracy": 0.13166666666666665,
+            "auc": 0.5,
+            "burned_total": 79,
+            "f1": 0.23269513991163474,
+            "fn": 0,
+            "fp": 521,
+            "n_total": 600,
+            "precision": 0.13166666666666665,
+            "predicted_high_risk": 600,
+            "recall": 1.0,
+            "tn": 0,
+            "tp": 79
+          }
+        },
+        "06031": {
+          "top_k": 1,
+          "top_k_metrics": {
+            "accuracy": 0.9761904761904762,
+            "auc": 0.5,
+            "burned_total": 1,
+            "f1": 0.0,
+            "fn": 1,
+            "fp": 1,
+            "n_total": 84,
+            "precision": 0.0,
+            "predicted_high_risk": 1,
+            "recall": 0.0,
+            "tn": 82,
+            "tp": 0
+          },
+          "top_pct": 0.1,
+          "top_pct_metrics": {
+            "accuracy": 0.011904761904761904,
+            "auc": 0.5,
+            "burned_total": 1,
+            "f1": 0.023529411764705882,
+            "fn": 0,
+            "fp": 83,
+            "n_total": 84,
+            "precision": 0.011904761904761904,
+            "predicted_high_risk": 84,
+            "recall": 1.0,
+            "tn": 0,
+            "tp": 1
+          }
+        },
+        "06033": {
+          "top_k": 3,
+          "top_k_metrics": {
+            "accuracy": 0.8983050847457628,
+            "auc": 0.5,
+            "burned_total": 3,
+            "f1": 0.0,
+            "fn": 3,
+            "fp": 3,
+            "n_total": 59,
+            "precision": 0.0,
+            "predicted_high_risk": 3,
+            "recall": 0.0,
+            "tn": 53,
+            "tp": 0
+          },
+          "top_pct": 0.1,
+          "top_pct_metrics": {
+            "accuracy": 0.05084745762711865,
+            "auc": 0.5,
+            "burned_total": 3,
+            "f1": 0.0967741935483871,
+            "fn": 0,
+            "fp": 56,
+            "n_total": 59,
+            "precision": 0.05084745762711865,
+            "predicted_high_risk": 59,
+            "recall": 1.0,
+            "tn": 0,
+            "tp": 3
+          }
+        },
+        "06035": {
+          "top_k": 8,
+          "top_k_metrics": {
+            "accuracy": 0.4166666666666667,
+            "auc": 0.5,
+            "burned_total": 8,
+            "f1": 0.125,
+            "fn": 7,
+            "fp": 7,
+            "n_total": 24,
+            "precision": 0.125,
+            "predicted_high_risk": 8,
+            "recall": 0.125,
+            "tn": 9,
+            "tp": 1
+          },
+          "top_pct": 0.1,
+          "top_pct_metrics": {
+            "accuracy": 0.3333333333333333,
+            "auc": 0.5,
+            "burned_total": 8,
+            "f1": 0.5,
+            "fn": 0,
+            "fp": 16,
+            "n_total": 24,
+            "precision": 0.3333333333333333,
+            "predicted_high_risk": 24,
+            "recall": 1.0,
+            "tn": 0,
+            "tp": 8
+          }
+        },
+        "06037": {
+          "top_k": 186,
+          "top_k_metrics": {
+            "accuracy": 0.9468972841753907,
+            "auc": 0.5,
+            "burned_total": 186,
+            "f1": 0.05913978494623656,
+            "fn": 175,
+            "fp": 175,
+            "n_total": 6591,
+            "precision": 0.05913978494623656,
+            "predicted_high_risk": 186,
+            "recall": 0.05913978494623656,
+            "tn": 6230,
+            "tp": 11
+          },
+          "top_pct": 0.1,
+          "top_pct_metrics": {
+            "accuracy": 0.028220300409649523,
+            "auc": 0.5,
+            "burned_total": 186,
+            "f1": 0.05489154493138557,
+            "fn": 0,
+            "fp": 6405,
+            "n_total": 6591,
+            "precision": 0.028220300409649523,
+            "predicted_high_risk": 6591,
+            "recall": 1.0,
+            "tn": 0,
+            "tp": 186
+          }
+        },
+        "06039": {
+          "top_k": 11,
+          "top_k_metrics": {
+            "accuracy": 0.8571428571428571,
+            "auc": 0.5,
+            "burned_total": 11,
+            "f1": 0.36363636363636365,
+            "fn": 7,
+            "fp": 7,
+            "n_total": 98,
+            "precision": 0.36363636363636365,
+            "predicted_high_risk": 11,
+            "recall": 0.36363636363636365,
+            "tn": 80,
+            "tp": 4
+          },
+          "top_pct": 0.1,
+          "top_pct_metrics": {
+            "accuracy": 0.11224489795918367,
+            "auc": 0.5,
+            "burned_total": 11,
+            "f1": 0.20183486238532108,
+            "fn": 0,
+            "fp": 87,
+            "n_total": 98,
+            "precision": 0.11224489795918367,
+            "predicted_high_risk": 98,
+            "recall": 1.0,
+            "tn": 0,
+            "tp": 11
+          }
+        },
+        "06041": {
+          "top_k": 1,
+          "top_k_metrics": {
+            "accuracy": 0.994475138121547,
+            "auc": 0.5,
+            "burned_total": 0,
+            "f1": 0.0,
+            "fn": 0,
+            "fp": 1,
+            "n_total": 181,
+            "precision": 0.0,
+            "predicted_high_risk": 1,
+            "recall": 0.0,
+            "tn": 180,
+            "tp": 0
+          },
+          "top_pct": 0.1,
+          "top_pct_metrics": {
+            "accuracy": 0.0,
+            "auc": 0.5,
+            "burned_total": 0,
+            "f1": 0.0,
+            "fn": 0,
+            "fp": 181,
+            "n_total": 181,
+            "precision": 0.0,
+            "predicted_high_risk": 181,
+            "recall": 0.0,
+            "tn": 0,
+            "tp": 0
+          }
+        },
+        "06043": {
+          "top_k": 17,
+          "top_k_metrics": {
+            "accuracy": 1.0,
+            "auc": 0.5,
+            "burned_total": 17,
+            "f1": 1.0,
+            "fn": 0,
+            "fp": 0,
+            "n_total": 17,
+            "precision": 1.0,
+            "predicted_high_risk": 17,
+            "recall": 1.0,
+            "tn": 0,
+            "tp": 17
+          },
+          "top_pct": 0.1,
+          "top_pct_metrics": {
+            "accuracy": 1.0,
+            "auc": 0.5,
+            "burned_total": 17,
+            "f1": 1.0,
+            "fn": 0,
+            "fp": 0,
+            "n_total": 17,
+            "precision": 1.0,
+            "predicted_high_risk": 17,
+            "recall": 1.0,
+            "tn": 0,
+            "tp": 17
+          }
+        },
+        "06045": {
+          "top_k": 1,
+          "top_k_metrics": {
+            "accuracy": 0.9883720930232558,
+            "auc": 0.5,
+            "burned_total": 0,
+            "f1": 0.0,
+            "fn": 0,
+            "fp": 1,
+            "n_total": 86,
+            "precision": 0.0,
+            "predicted_high_risk": 1,
+            "recall": 0.0,
+            "tn": 85,
+            "tp": 0
+          },
+          "top_pct": 0.1,
+          "top_pct_metrics": {
+            "accuracy": 0.0,
+            "auc": 0.5,
+            "burned_total": 0,
+            "f1": 0.0,
+            "fn": 0,
+            "fp": 86,
+            "n_total": 86,
+            "precision": 0.0,
+            "predicted_high_risk": 86,
+            "recall": 0.0,
+            "tn": 0,
+            "tp": 0
+          }
+        },
+        "06047": {
+          "top_k": 5,
+          "top_k_metrics": {
+            "accuracy": 0.9390243902439024,
+            "auc": 0.5,
+            "burned_total": 5,
+            "f1": 0.0,
+            "fn": 5,
+            "fp": 5,
+            "n_total": 164,
+            "precision": 0.0,
+            "predicted_high_risk": 5,
+            "recall": 0.0,
+            "tn": 154,
+            "tp": 0
+          },
+          "top_pct": 0.1,
+          "top_pct_metrics": {
+            "accuracy": 0.03048780487804878,
+            "auc": 0.5,
+            "burned_total": 5,
+            "f1": 0.05917159763313609,
+            "fn": 0,
+            "fp": 159,
+            "n_total": 164,
+            "precision": 0.03048780487804878,
+            "predicted_high_risk": 164,
+            "recall": 1.0,
+            "tn": 0,
+            "tp": 5
+          }
+        },
+        "06049": {
+          "top_k": 1,
+          "top_k_metrics": {
+            "accuracy": 0.9090909090909091,
+            "auc": 0.5,
+            "burned_total": 0,
+            "f1": 0.0,
+            "fn": 0,
+            "fp": 1,
+            "n_total": 11,
+            "precision": 0.0,
+            "predicted_high_risk": 1,
+            "recall": 0.0,
+            "tn": 10,
+            "tp": 0
+          },
+          "top_pct": 0.1,
+          "top_pct_metrics": {
+            "accuracy": 0.0,
+            "auc": 0.5,
+            "burned_total": 0,
+            "f1": 0.0,
+            "fn": 0,
+            "fp": 11,
+            "n_total": 11,
+            "precision": 0.0,
+            "predicted_high_risk": 11,
+            "recall": 0.0,
+            "tn": 0,
+            "tp": 0
+          }
+        },
+        "06051": {
+          "top_k": 8,
+          "top_k_metrics": {
+            "accuracy": 1.0,
+            "auc": 0.5,
+            "burned_total": 8,
+            "f1": 1.0,
+            "fn": 0,
+            "fp": 0,
+            "n_total": 16,
+            "precision": 1.0,
+            "predicted_high_risk": 8,
+            "recall": 1.0,
+            "tn": 8,
+            "tp": 8
+          },
+          "top_pct": 0.1,
+          "top_pct_metrics": {
+            "accuracy": 0.5,
+            "auc": 0.5,
+            "burned_total": 8,
+            "f1": 0.6666666666666666,
+            "fn": 0,
+            "fp": 8,
+            "n_total": 16,
+            "precision": 0.5,
+            "predicted_high_risk": 16,
+            "recall": 1.0,
+            "tn": 0,
+            "tp": 8
+          }
+        },
+        "06053": {
+          "top_k": 26,
+          "top_k_metrics": {
+            "accuracy": 0.8382352941176471,
+            "auc": 0.5,
+            "burned_total": 26,
+            "f1": 0.15384615384615385,
+            "fn": 22,
+            "fp": 22,
+            "n_total": 272,
+            "precision": 0.15384615384615385,
+            "predicted_high_risk": 26,
+            "recall": 0.15384615384615385,
+            "tn": 224,
+            "tp": 4
+          },
+          "top_pct": 0.1,
+          "top_pct_metrics": {
+            "accuracy": 0.09558823529411764,
+            "auc": 0.5,
+            "burned_total": 26,
+            "f1": 0.17449664429530198,
+            "fn": 0,
+            "fp": 246,
+            "n_total": 272,
+            "precision": 0.09558823529411764,
+            "predicted_high_risk": 272,
+            "recall": 1.0,
+            "tn": 0,
+            "tp": 26
+          }
+        },
+        "06055": {
+          "top_k": 6,
+          "top_k_metrics": {
+            "accuracy": 0.9074074074074074,
+            "auc": 0.5,
+            "burned_total": 6,
+            "f1": 0.16666666666666666,
+            "fn": 5,
+            "fp": 5,
+            "n_total": 108,
+            "precision": 0.16666666666666666,
+            "predicted_high_risk": 6,
+            "recall": 0.16666666666666666,
+            "tn": 97,
+            "tp": 1
+          },
+          "top_pct": 0.1,
+          "top_pct_metrics": {
+            "accuracy": 0.05555555555555555,
+            "auc": 0.5,
+            "burned_total": 6,
+            "f1": 0.10526315789473684,
+            "fn": 0,
+            "fp": 102,
+            "n_total": 108,
+            "precision": 0.05555555555555555,
+            "predicted_high_risk": 108,
+            "recall": 1.0,
+            "tn": 0,
+            "tp": 6
+          }
+        },
+        "06057": {
+          "top_k": 22,
+          "top_k_metrics": {
+            "accuracy": 0.625,
+            "auc": 0.5,
+            "burned_total": 22,
+            "f1": 0.3181818181818182,
+            "fn": 15,
+            "fp": 15,
+            "n_total": 80,
+            "precision": 0.3181818181818182,
+            "predicted_high_risk": 22,
+            "recall": 0.3181818181818182,
+            "tn": 43,
+            "tp": 7
+          },
+          "top_pct": 0.1,
+          "top_pct_metrics": {
+            "accuracy": 0.275,
+            "auc": 0.5,
+            "burned_total": 22,
+            "f1": 0.4313725490196079,
+            "fn": 0,
+            "fp": 58,
+            "n_total": 80,
+            "precision": 0.275,
+            "predicted_high_risk": 80,
+            "recall": 1.0,
+            "tn": 0,
+            "tp": 22
+          }
+        },
+        "06059": {
+          "top_k": 86,
+          "top_k_metrics": {
+            "accuracy": 0.9170326988775013,
+            "auc": 0.5,
+            "burned_total": 86,
+            "f1": 0.011627906976744184,
+            "fn": 85,
+            "fp": 85,
+            "n_total": 2049,
+            "precision": 0.011627906976744186,
+            "predicted_high_risk": 86,
+            "recall": 0.011627906976744186,
+            "tn": 1878,
+            "tp": 1
+          },
+          "top_pct": 0.1,
+          "top_pct_metrics": {
+            "accuracy": 0.041971693509028796,
+            "auc": 0.5,
+            "burned_total": 86,
+            "f1": 0.08056206088992975,
+            "fn": 0,
+            "fp": 1963,
+            "n_total": 2049,
+            "precision": 0.041971693509028796,
+            "predicted_high_risk": 2049,
+            "recall": 1.0,
+            "tn": 0,
+            "tp": 86
+          }
+        },
+        "06061": {
+          "top_k": 19,
+          "top_k_metrics": {
+            "accuracy": 0.849802371541502,
+            "auc": 0.5,
+            "burned_total": 19,
+            "f1": 0.0,
+            "fn": 19,
+            "fp": 19,
+            "n_total": 253,
+            "precision": 0.0,
+            "predicted_high_risk": 19,
+            "recall": 0.0,
+            "tn": 215,
+            "tp": 0
+          },
+          "top_pct": 0.1,
+          "top_pct_metrics": {
+            "accuracy": 0.07509881422924901,
+            "auc": 0.5,
+            "burned_total": 19,
+            "f1": 0.13970588235294118,
+            "fn": 0,
+            "fp": 234,
+            "n_total": 253,
+            "precision": 0.07509881422924901,
+            "predicted_high_risk": 253,
+            "recall": 1.0,
+            "tn": 0,
+            "tp": 19
+          }
+        },
+        "06063": {
+          "top_k": 18,
+          "top_k_metrics": {
+            "accuracy": 0.7272727272727273,
+            "auc": 0.5,
+            "burned_total": 18,
+            "f1": 0.8333333333333334,
+            "fn": 3,
+            "fp": 3,
+            "n_total": 22,
+            "precision": 0.8333333333333334,
+            "predicted_high_risk": 18,
+            "recall": 0.8333333333333334,
+            "tn": 1,
+            "tp": 15
+          },
+          "top_pct": 0.1,
+          "top_pct_metrics": {
+            "accuracy": 0.8181818181818182,
+            "auc": 0.5,
+            "burned_total": 18,
+            "f1": 0.9,
+            "fn": 0,
+            "fp": 4,
+            "n_total": 22,
+            "precision": 0.8181818181818182,
+            "predicted_high_risk": 22,
+            "recall": 1.0,
+            "tn": 0,
+            "tp": 18
+          }
+        },
+        "06065": {
+          "top_k": 97,
+          "top_k_metrics": {
+            "accuracy": 0.8694404591104734,
+            "auc": 0.5,
+            "burned_total": 97,
+            "f1": 0.061855670103092786,
+            "fn": 91,
+            "fp": 91,
+            "n_total": 1394,
+            "precision": 0.061855670103092786,
+            "predicted_high_risk": 97,
+            "recall": 0.061855670103092786,
+            "tn": 1206,
+            "tp": 6
+          },
+          "top_pct": 0.1,
+          "top_pct_metrics": {
+            "accuracy": 0.06958393113342898,
+            "auc": 0.5,
+            "burned_total": 97,
+            "f1": 0.13011401743796108,
+            "fn": 0,
+            "fp": 1297,
+            "n_total": 1394,
+            "precision": 0.06958393113342898,
+            "predicted_high_risk": 1394,
+            "recall": 1.0,
+            "tn": 0,
+            "tp": 97
+          }
+        },
+        "06067": {
+          "top_k": 8,
+          "top_k_metrics": {
+            "accuracy": 0.984375,
+            "auc": 0.5,
+            "burned_total": 8,
+            "f1": 0.0,
+            "fn": 8,
+            "fp": 8,
+            "n_total": 1024,
+            "precision": 0.0,
+            "predicted_high_risk": 8,
+            "recall": 0.0,
+            "tn": 1008,
+            "tp": 0
+          },
+          "top_pct": 0.1,
+          "top_pct_metrics": {
+            "accuracy": 0.0078125,
+            "auc": 0.5,
+            "burned_total": 8,
+            "f1": 0.015503875968992248,
+            "fn": 0,
+            "fp": 1016,
+            "n_total": 1024,
+            "precision": 0.0078125,
+            "predicted_high_risk": 1024,
+            "recall": 1.0,
+            "tn": 0,
+            "tp": 8
+          }
+        },
+        "06069": {
+          "top_k": 10,
+          "top_k_metrics": {
+            "accuracy": 0.7391304347826086,
+            "auc": 0.5,
+            "burned_total": 10,
+            "f1": 0.4000000000000001,
+            "fn": 6,
+            "fp": 6,
+            "n_total": 46,
+            "precision": 0.4,
+            "predicted_high_risk": 10,
+            "recall": 0.4,
+            "tn": 30,
+            "tp": 4
+          },
+          "top_pct": 0.1,
+          "top_pct_metrics": {
+            "accuracy": 0.21739130434782608,
+            "auc": 0.5,
+            "burned_total": 10,
+            "f1": 0.3571428571428571,
+            "fn": 0,
+            "fp": 36,
+            "n_total": 46,
+            "precision": 0.21739130434782608,
+            "predicted_high_risk": 46,
+            "recall": 1.0,
+            "tn": 0,
+            "tp": 10
+          }
+        },
+        "06071": {
+          "top_k": 58,
+          "top_k_metrics": {
+            "accuracy": 0.9137254901960784,
+            "auc": 0.5,
+            "burned_total": 58,
+            "f1": 0.05172413793103448,
+            "fn": 55,
+            "fp": 55,
+            "n_total": 1275,
+            "precision": 0.05172413793103448,
+            "predicted_high_risk": 58,
+            "recall": 0.05172413793103448,
+            "tn": 1162,
+            "tp": 3
+          },
+          "top_pct": 0.1,
+          "top_pct_metrics": {
+            "accuracy": 0.04549019607843137,
+            "auc": 0.5,
+            "burned_total": 58,
+            "f1": 0.08702175543885972,
+            "fn": 0,
+            "fp": 1217,
+            "n_total": 1275,
+            "precision": 0.04549019607843137,
+            "predicted_high_risk": 1275,
+            "recall": 1.0,
+            "tn": 0,
+            "tp": 58
+          }
+        },
         "06073": {
           "top_k": 66,
           "top_k_metrics": {
-            "accuracy": 0.9378036929057337,
-            "auc": 0.5443212242911039,
+            "accuracy": 0.9416909620991254,
+            "auc": 0.6345990020688815,
             "burned_total": 66,
-            "f1": 0.030303030303030304,
-            "fn": 64,
-            "fp": 64,
+            "f1": 0.09090909090909091,
+            "fn": 60,
+            "fp": 60,
             "n_total": 2058,
-            "precision": 0.030303030303030304,
+            "precision": 0.09090909090909091,
             "predicted_high_risk": 66,
-            "recall": 0.030303030303030304,
-            "tn": 1928,
+            "recall": 0.09090909090909091,
+            "tn": 1932,
+            "tp": 6
+          },
+          "top_pct": 0.1,
+          "top_pct_metrics": {
+            "accuracy": 0.8814382896015549,
+            "auc": 0.6345990020688815,
+            "burned_total": 66,
+            "f1": 0.10294117647058824,
+            "fn": 52,
+            "fp": 192,
+            "n_total": 2058,
+            "precision": 0.06796116504854369,
+            "predicted_high_risk": 206,
+            "recall": 0.21212121212121213,
+            "tn": 1800,
+            "tp": 14
+          }
+        },
+        "06075": {
+          "top_k": 1,
+          "top_k_metrics": {
+            "accuracy": 0.9985315712187959,
+            "auc": 0.5,
+            "burned_total": 0,
+            "f1": 0.0,
+            "fn": 0,
+            "fp": 1,
+            "n_total": 681,
+            "precision": 0.0,
+            "predicted_high_risk": 1,
+            "recall": 0.0,
+            "tn": 680,
+            "tp": 0
+          },
+          "top_pct": 0.1,
+          "top_pct_metrics": {
+            "accuracy": 0.0,
+            "auc": 0.5,
+            "burned_total": 0,
+            "f1": 0.0,
+            "fn": 0,
+            "fp": 681,
+            "n_total": 681,
+            "precision": 0.0,
+            "predicted_high_risk": 681,
+            "recall": 0.0,
+            "tn": 0,
+            "tp": 0
+          }
+        },
+        "06077": {
+          "top_k": 7,
+          "top_k_metrics": {
+            "accuracy": 0.9720558882235529,
+            "auc": 0.5,
+            "burned_total": 7,
+            "f1": 0.0,
+            "fn": 7,
+            "fp": 7,
+            "n_total": 501,
+            "precision": 0.0,
+            "predicted_high_risk": 7,
+            "recall": 0.0,
+            "tn": 487,
+            "tp": 0
+          },
+          "top_pct": 0.1,
+          "top_pct_metrics": {
+            "accuracy": 0.013972055888223553,
+            "auc": 0.5,
+            "burned_total": 7,
+            "f1": 0.02755905511811024,
+            "fn": 0,
+            "fp": 494,
+            "n_total": 501,
+            "precision": 0.013972055888223553,
+            "predicted_high_risk": 501,
+            "recall": 1.0,
+            "tn": 0,
+            "tp": 7
+          }
+        },
+        "06079": {
+          "top_k": 44,
+          "top_k_metrics": {
+            "accuracy": 0.6795580110497238,
+            "auc": 0.5,
+            "burned_total": 44,
+            "f1": 0.3409090909090909,
+            "fn": 29,
+            "fp": 29,
+            "n_total": 181,
+            "precision": 0.3409090909090909,
+            "predicted_high_risk": 44,
+            "recall": 0.3409090909090909,
+            "tn": 108,
+            "tp": 15
+          },
+          "top_pct": 0.1,
+          "top_pct_metrics": {
+            "accuracy": 0.2430939226519337,
+            "auc": 0.5,
+            "burned_total": 44,
+            "f1": 0.3911111111111111,
+            "fn": 0,
+            "fp": 137,
+            "n_total": 181,
+            "precision": 0.2430939226519337,
+            "predicted_high_risk": 181,
+            "recall": 1.0,
+            "tn": 0,
+            "tp": 44
+          }
+        },
+        "06081": {
+          "top_k": 1,
+          "top_k_metrics": {
+            "accuracy": 0.998,
+            "auc": 0.5,
+            "burned_total": 0,
+            "f1": 0.0,
+            "fn": 0,
+            "fp": 1,
+            "n_total": 500,
+            "precision": 0.0,
+            "predicted_high_risk": 1,
+            "recall": 0.0,
+            "tn": 499,
+            "tp": 0
+          },
+          "top_pct": 0.1,
+          "top_pct_metrics": {
+            "accuracy": 0.0,
+            "auc": 0.5,
+            "burned_total": 0,
+            "f1": 0.0,
+            "fn": 0,
+            "fp": 500,
+            "n_total": 500,
+            "precision": 0.0,
+            "predicted_high_risk": 500,
+            "recall": 0.0,
+            "tn": 0,
+            "tp": 0
+          }
+        },
+        "06083": {
+          "top_k": 29,
+          "top_k_metrics": {
+            "accuracy": 0.834920634920635,
+            "auc": 0.5,
+            "burned_total": 29,
+            "f1": 0.10344827586206896,
+            "fn": 26,
+            "fp": 26,
+            "n_total": 315,
+            "precision": 0.10344827586206896,
+            "predicted_high_risk": 29,
+            "recall": 0.10344827586206896,
+            "tn": 260,
+            "tp": 3
+          },
+          "top_pct": 0.1,
+          "top_pct_metrics": {
+            "accuracy": 0.09206349206349207,
+            "auc": 0.5,
+            "burned_total": 29,
+            "f1": 0.1686046511627907,
+            "fn": 0,
+            "fp": 286,
+            "n_total": 315,
+            "precision": 0.09206349206349207,
+            "predicted_high_risk": 315,
+            "recall": 1.0,
+            "tn": 0,
+            "tp": 29
+          }
+        },
+        "06085": {
+          "top_k": 15,
+          "top_k_metrics": {
+            "accuracy": 0.9744245524296675,
+            "auc": 0.5,
+            "burned_total": 15,
+            "f1": 0.0,
+            "fn": 15,
+            "fp": 15,
+            "n_total": 1173,
+            "precision": 0.0,
+            "predicted_high_risk": 15,
+            "recall": 0.0,
+            "tn": 1143,
+            "tp": 0
+          },
+          "top_pct": 0.1,
+          "top_pct_metrics": {
+            "accuracy": 0.01278772378516624,
+            "auc": 0.5,
+            "burned_total": 15,
+            "f1": 0.02525252525252525,
+            "fn": 0,
+            "fp": 1158,
+            "n_total": 1173,
+            "precision": 0.01278772378516624,
+            "predicted_high_risk": 1173,
+            "recall": 1.0,
+            "tn": 0,
+            "tp": 15
+          }
+        },
+        "06087": {
+          "top_k": 6,
+          "top_k_metrics": {
+            "accuracy": 0.9333333333333333,
+            "auc": 0.5,
+            "burned_total": 6,
+            "f1": 0.16666666666666666,
+            "fn": 5,
+            "fp": 5,
+            "n_total": 150,
+            "precision": 0.16666666666666666,
+            "predicted_high_risk": 6,
+            "recall": 0.16666666666666666,
+            "tn": 139,
+            "tp": 1
+          },
+          "top_pct": 0.1,
+          "top_pct_metrics": {
+            "accuracy": 0.04,
+            "auc": 0.5,
+            "burned_total": 6,
+            "f1": 0.07692307692307693,
+            "fn": 0,
+            "fp": 144,
+            "n_total": 150,
+            "precision": 0.04,
+            "predicted_high_risk": 150,
+            "recall": 1.0,
+            "tn": 0,
+            "tp": 6
+          }
+        },
+        "06089": {
+          "top_k": 2,
+          "top_k_metrics": {
+            "accuracy": 0.9699248120300752,
+            "auc": 0.5,
+            "burned_total": 2,
+            "f1": 0.0,
+            "fn": 2,
+            "fp": 2,
+            "n_total": 133,
+            "precision": 0.0,
+            "predicted_high_risk": 2,
+            "recall": 0.0,
+            "tn": 129,
+            "tp": 0
+          },
+          "top_pct": 0.1,
+          "top_pct_metrics": {
+            "accuracy": 0.015037593984962405,
+            "auc": 0.5,
+            "burned_total": 2,
+            "f1": 0.029629629629629624,
+            "fn": 0,
+            "fp": 131,
+            "n_total": 133,
+            "precision": 0.015037593984962405,
+            "predicted_high_risk": 133,
+            "recall": 1.0,
+            "tn": 0,
+            "tp": 2
+          }
+        },
+        "06091": {
+          "top_k": 3,
+          "top_k_metrics": {
+            "accuracy": 0.2,
+            "auc": 0.5,
+            "burned_total": 3,
+            "f1": 0.3333333333333333,
+            "fn": 2,
+            "fp": 2,
+            "n_total": 5,
+            "precision": 0.3333333333333333,
+            "predicted_high_risk": 3,
+            "recall": 0.3333333333333333,
+            "tn": 0,
+            "tp": 1
+          },
+          "top_pct": 0.1,
+          "top_pct_metrics": {
+            "accuracy": 0.6,
+            "auc": 0.5,
+            "burned_total": 3,
+            "f1": 0.7499999999999999,
+            "fn": 0,
+            "fp": 2,
+            "n_total": 5,
+            "precision": 0.6,
+            "predicted_high_risk": 5,
+            "recall": 1.0,
+            "tn": 0,
+            "tp": 3
+          }
+        },
+        "06093": {
+          "top_k": 1,
+          "top_k_metrics": {
+            "accuracy": 0.9777777777777777,
+            "auc": 0.5,
+            "burned_total": 0,
+            "f1": 0.0,
+            "fn": 0,
+            "fp": 1,
+            "n_total": 45,
+            "precision": 0.0,
+            "predicted_high_risk": 1,
+            "recall": 0.0,
+            "tn": 44,
+            "tp": 0
+          },
+          "top_pct": 0.1,
+          "top_pct_metrics": {
+            "accuracy": 0.0,
+            "auc": 0.5,
+            "burned_total": 0,
+            "f1": 0.0,
+            "fn": 0,
+            "fp": 45,
+            "n_total": 45,
+            "precision": 0.0,
+            "predicted_high_risk": 45,
+            "recall": 0.0,
+            "tn": 0,
+            "tp": 0
+          }
+        },
+        "06095": {
+          "top_k": 18,
+          "top_k_metrics": {
+            "accuracy": 0.8926174496644296,
+            "auc": 0.5,
+            "burned_total": 18,
+            "f1": 0.1111111111111111,
+            "fn": 16,
+            "fp": 16,
+            "n_total": 298,
+            "precision": 0.1111111111111111,
+            "predicted_high_risk": 18,
+            "recall": 0.1111111111111111,
+            "tn": 264,
             "tp": 2
           },
           "top_pct": 0.1,
           "top_pct_metrics": {
-            "accuracy": 0.8736637512147716,
-            "auc": 0.5443212242911039,
-            "burned_total": 66,
-            "f1": 0.04411764705882353,
-            "fn": 60,
-            "fp": 200,
-            "n_total": 2058,
-            "precision": 0.02912621359223301,
-            "predicted_high_risk": 206,
+            "accuracy": 0.06040268456375839,
+            "auc": 0.5,
+            "burned_total": 18,
+            "f1": 0.11392405063291139,
+            "fn": 0,
+            "fp": 280,
+            "n_total": 298,
+            "precision": 0.06040268456375839,
+            "predicted_high_risk": 298,
+            "recall": 1.0,
+            "tn": 0,
+            "tp": 18
+          }
+        },
+        "06097": {
+          "top_k": 1,
+          "top_k_metrics": {
+            "accuracy": 0.9975247524752475,
+            "auc": 0.5,
+            "burned_total": 0,
+            "f1": 0.0,
+            "fn": 0,
+            "fp": 1,
+            "n_total": 404,
+            "precision": 0.0,
+            "predicted_high_risk": 1,
+            "recall": 0.0,
+            "tn": 403,
+            "tp": 0
+          },
+          "top_pct": 0.1,
+          "top_pct_metrics": {
+            "accuracy": 0.0,
+            "auc": 0.5,
+            "burned_total": 0,
+            "f1": 0.0,
+            "fn": 0,
+            "fp": 404,
+            "n_total": 404,
+            "precision": 0.0,
+            "predicted_high_risk": 404,
+            "recall": 0.0,
+            "tn": 0,
+            "tp": 0
+          }
+        },
+        "06099": {
+          "top_k": 11,
+          "top_k_metrics": {
+            "accuracy": 0.9411764705882353,
+            "auc": 0.5,
+            "burned_total": 11,
+            "f1": 0.09090909090909091,
+            "fn": 10,
+            "fp": 10,
+            "n_total": 340,
+            "precision": 0.09090909090909091,
+            "predicted_high_risk": 11,
             "recall": 0.09090909090909091,
-            "tn": 1792,
+            "tn": 319,
+            "tp": 1
+          },
+          "top_pct": 0.1,
+          "top_pct_metrics": {
+            "accuracy": 0.03235294117647059,
+            "auc": 0.5,
+            "burned_total": 11,
+            "f1": 0.06267806267806268,
+            "fn": 0,
+            "fp": 329,
+            "n_total": 340,
+            "precision": 0.03235294117647059,
+            "predicted_high_risk": 340,
+            "recall": 1.0,
+            "tn": 0,
+            "tp": 11
+          }
+        },
+        "06101": {
+          "top_k": 4,
+          "top_k_metrics": {
+            "accuracy": 0.8840579710144928,
+            "auc": 0.5,
+            "burned_total": 4,
+            "f1": 0.0,
+            "fn": 4,
+            "fp": 4,
+            "n_total": 69,
+            "precision": 0.0,
+            "predicted_high_risk": 4,
+            "recall": 0.0,
+            "tn": 61,
+            "tp": 0
+          },
+          "top_pct": 0.1,
+          "top_pct_metrics": {
+            "accuracy": 0.057971014492753624,
+            "auc": 0.5,
+            "burned_total": 4,
+            "f1": 0.1095890410958904,
+            "fn": 0,
+            "fp": 65,
+            "n_total": 69,
+            "precision": 0.057971014492753624,
+            "predicted_high_risk": 69,
+            "recall": 1.0,
+            "tn": 0,
+            "tp": 4
+          }
+        },
+        "06103": {
+          "top_k": 3,
+          "top_k_metrics": {
+            "accuracy": 0.8666666666666667,
+            "auc": 0.5,
+            "burned_total": 3,
+            "f1": 0.0,
+            "fn": 3,
+            "fp": 3,
+            "n_total": 45,
+            "precision": 0.0,
+            "predicted_high_risk": 3,
+            "recall": 0.0,
+            "tn": 39,
+            "tp": 0
+          },
+          "top_pct": 0.1,
+          "top_pct_metrics": {
+            "accuracy": 0.06666666666666667,
+            "auc": 0.5,
+            "burned_total": 3,
+            "f1": 0.125,
+            "fn": 0,
+            "fp": 42,
+            "n_total": 45,
+            "precision": 0.06666666666666667,
+            "predicted_high_risk": 45,
+            "recall": 1.0,
+            "tn": 0,
+            "tp": 3
+          }
+        },
+        "06105": {
+          "top_k": 1,
+          "top_k_metrics": {
+            "accuracy": 0.9166666666666666,
+            "auc": 0.5,
+            "burned_total": 0,
+            "f1": 0.0,
+            "fn": 0,
+            "fp": 1,
+            "n_total": 12,
+            "precision": 0.0,
+            "predicted_high_risk": 1,
+            "recall": 0.0,
+            "tn": 11,
+            "tp": 0
+          },
+          "top_pct": 0.1,
+          "top_pct_metrics": {
+            "accuracy": 0.0,
+            "auc": 0.5,
+            "burned_total": 0,
+            "f1": 0.0,
+            "fn": 0,
+            "fp": 12,
+            "n_total": 12,
+            "precision": 0.0,
+            "predicted_high_risk": 12,
+            "recall": 0.0,
+            "tn": 0,
+            "tp": 0
+          }
+        },
+        "06107": {
+          "top_k": 14,
+          "top_k_metrics": {
+            "accuracy": 0.9147540983606557,
+            "auc": 0.5,
+            "burned_total": 14,
+            "f1": 0.07142857142857142,
+            "fn": 13,
+            "fp": 13,
+            "n_total": 305,
+            "precision": 0.07142857142857142,
+            "predicted_high_risk": 14,
+            "recall": 0.07142857142857142,
+            "tn": 278,
+            "tp": 1
+          },
+          "top_pct": 0.1,
+          "top_pct_metrics": {
+            "accuracy": 0.04590163934426229,
+            "auc": 0.5,
+            "burned_total": 14,
+            "f1": 0.08777429467084638,
+            "fn": 0,
+            "fp": 291,
+            "n_total": 305,
+            "precision": 0.04590163934426229,
+            "predicted_high_risk": 305,
+            "recall": 1.0,
+            "tn": 0,
+            "tp": 14
+          }
+        },
+        "06109": {
+          "top_k": 17,
+          "top_k_metrics": {
+            "accuracy": 0.6,
+            "auc": 0.5,
+            "burned_total": 17,
+            "f1": 0.35294117647058826,
+            "fn": 11,
+            "fp": 11,
+            "n_total": 55,
+            "precision": 0.35294117647058826,
+            "predicted_high_risk": 17,
+            "recall": 0.35294117647058826,
+            "tn": 27,
             "tp": 6
+          },
+          "top_pct": 0.1,
+          "top_pct_metrics": {
+            "accuracy": 0.3090909090909091,
+            "auc": 0.5,
+            "burned_total": 17,
+            "f1": 0.4722222222222222,
+            "fn": 0,
+            "fp": 38,
+            "n_total": 55,
+            "precision": 0.3090909090909091,
+            "predicted_high_risk": 55,
+            "recall": 1.0,
+            "tn": 0,
+            "tp": 17
+          }
+        },
+        "06111": {
+          "top_k": 123,
+          "top_k_metrics": {
+            "accuracy": 0.6534446764091858,
+            "auc": 0.5,
+            "burned_total": 123,
+            "f1": 0.3252032520325203,
+            "fn": 83,
+            "fp": 83,
+            "n_total": 479,
+            "precision": 0.3252032520325203,
+            "predicted_high_risk": 123,
+            "recall": 0.3252032520325203,
+            "tn": 273,
+            "tp": 40
+          },
+          "top_pct": 0.1,
+          "top_pct_metrics": {
+            "accuracy": 0.2567849686847599,
+            "auc": 0.5,
+            "burned_total": 123,
+            "f1": 0.40863787375415284,
+            "fn": 0,
+            "fp": 356,
+            "n_total": 479,
+            "precision": 0.2567849686847599,
+            "predicted_high_risk": 479,
+            "recall": 1.0,
+            "tn": 0,
+            "tp": 123
+          }
+        },
+        "06113": {
+          "top_k": 4,
+          "top_k_metrics": {
+            "accuracy": 0.9416058394160584,
+            "auc": 0.5,
+            "burned_total": 4,
+            "f1": 0.0,
+            "fn": 4,
+            "fp": 4,
+            "n_total": 137,
+            "precision": 0.0,
+            "predicted_high_risk": 4,
+            "recall": 0.0,
+            "tn": 129,
+            "tp": 0
+          },
+          "top_pct": 0.1,
+          "top_pct_metrics": {
+            "accuracy": 0.029197080291970802,
+            "auc": 0.5,
+            "burned_total": 4,
+            "f1": 0.05673758865248227,
+            "fn": 0,
+            "fp": 133,
+            "n_total": 137,
+            "precision": 0.029197080291970802,
+            "predicted_high_risk": 137,
+            "recall": 1.0,
+            "tn": 0,
+            "tp": 4
+          }
+        },
+        "06115": {
+          "top_k": 23,
+          "top_k_metrics": {
+            "accuracy": 0.42857142857142855,
+            "auc": 0.5,
+            "burned_total": 23,
+            "f1": 0.30434782608695654,
+            "fn": 16,
+            "fp": 16,
+            "n_total": 56,
+            "precision": 0.30434782608695654,
+            "predicted_high_risk": 23,
+            "recall": 0.30434782608695654,
+            "tn": 17,
+            "tp": 7
+          },
+          "top_pct": 0.1,
+          "top_pct_metrics": {
+            "accuracy": 0.4107142857142857,
+            "auc": 0.5,
+            "burned_total": 23,
+            "f1": 0.5822784810126582,
+            "fn": 0,
+            "fp": 33,
+            "n_total": 56,
+            "precision": 0.4107142857142857,
+            "predicted_high_risk": 56,
+            "recall": 1.0,
+            "tn": 0,
+            "tp": 23
           }
         }
       },
       "method": "intersects(perimeter_union) + threshold(risk_score)",
       "overall": {
-        "top_k": 135,
+        "top_k": 1253,
         "top_k_metrics": {
-          "accuracy": 0.8981399468556245,
-          "auc": 0.5293208422742102,
-          "burned_total": 135,
-          "f1": 0.14814814814814814,
-          "fn": 115,
-          "fp": 115,
-          "n_total": 2258,
-          "precision": 0.14814814814814814,
-          "predicted_high_risk": 135,
-          "recall": 0.14814814814814814,
-          "tn": 2008,
-          "tp": 20
+          "accuracy": 0.908540633420549,
+          "auc": 0.4970345294640158,
+          "burned_total": 1253,
+          "f1": 0.06544293695131684,
+          "fn": 1171,
+          "fp": 1171,
+          "n_total": 25607,
+          "precision": 0.06544293695131684,
+          "predicted_high_risk": 1253,
+          "recall": 0.06544293695131684,
+          "tn": 23183,
+          "tp": 82
         },
         "top_pct": 0.1,
         "top_pct_metrics": {
-          "accuracy": 0.8622674933569531,
-          "auc": 0.5293208422742102,
-          "burned_total": 135,
-          "f1": 0.13850415512465375,
-          "fn": 110,
-          "fp": 201,
-          "n_total": 2258,
-          "precision": 0.11061946902654868,
-          "predicted_high_risk": 226,
-          "recall": 0.18518518518518517,
-          "tn": 1922,
-          "tp": 25
+          "accuracy": 0.860506892646542,
+          "auc": 0.4970345294640158,
+          "burned_total": 1253,
+          "f1": 0.06345044572627163,
+          "fn": 1132,
+          "fp": 2440,
+          "n_total": 25607,
+          "precision": 0.04724716907458024,
+          "predicted_high_risk": 2561,
+          "recall": 0.0965682362330407,
+          "tn": 21914,
+          "tp": 121
         }
       },
       "perimeters_path": "data/external/calfire_perimeters_2015_2024.geojson",
@@ -110,54 +1902,558 @@
     },
     "experiments": {
       "experiment1_fema_nri": {
-        "counties_compared": 2,
+        "counties_compared": 58,
         "pearson_pop_weighted": {
-          "n": 2,
-          "p": 0.0,
-          "r": -1.0
+          "n": 58,
+          "p": 0.8230682293331217,
+          "r": -0.030141143174959747
         },
         "pearson_unweighted": {
-          "n": 2,
-          "p": 0.0,
-          "r": -1.0
+          "n": 58,
+          "p": 0.7949542968672738,
+          "r": -0.035028232192067035
         }
       },
       "experiment2_county_eal_top10": [
         {
           "county_fips": "06073",
           "county_name": "San Diego",
-          "mean_risk": 0.0015025405879108725,
-          "mean_risk_popw": 0.0017175784375208015,
-          "sum_eal": 1359695038.7223117
+          "mean_risk": 0.0011653808005029466,
+          "mean_risk_popw": 0.0013766795431784603,
+          "sum_eal": 1093261470.979708
+        },
+        {
+          "county_fips": "06001",
+          "county_name": "Alameda",
+          "mean_risk": 0.0017656904699511597,
+          "mean_risk_popw": 0.0018688506520120503,
+          "sum_eal": 969091137.9802
         },
         {
           "county_fips": "06007",
           "county_name": "Butte",
-          "mean_risk": 0.007903355368318873,
-          "mean_risk_popw": 0.009228084871898223,
-          "sum_eal": 268842014.2382978
+          "mean_risk": 0.008672116777733142,
+          "mean_risk_popw": 0.010125208470655296,
+          "sum_eal": 292681039.8095362
+        },
+        {
+          "county_fips": "06005",
+          "county_name": "Amador",
+          "mean_risk": 0.017489548790191028,
+          "mean_risk_popw": 0.017702451366602423,
+          "sum_eal": 139183819.93801466
+        },
+        {
+          "county_fips": "06009",
+          "county_name": "Calaveras",
+          "mean_risk": 0.0,
+          "mean_risk_popw": 0.0,
+          "sum_eal": 0.0
+        },
+        {
+          "county_fips": "06003",
+          "county_name": "Alpine",
+          "mean_risk": 0.0,
+          "mean_risk_popw": 0.0,
+          "sum_eal": 0.0
+        },
+        {
+          "county_fips": "06013",
+          "county_name": "Contra Costa",
+          "mean_risk": 0.0,
+          "mean_risk_popw": 0.0,
+          "sum_eal": 0.0
+        },
+        {
+          "county_fips": "06015",
+          "county_name": "Del Norte",
+          "mean_risk": 0.0,
+          "mean_risk_popw": 0.0,
+          "sum_eal": 0.0
+        },
+        {
+          "county_fips": "06017",
+          "county_name": "El Dorado",
+          "mean_risk": 0.0,
+          "mean_risk_popw": 0.0,
+          "sum_eal": 0.0
+        },
+        {
+          "county_fips": "06011",
+          "county_name": "Colusa",
+          "mean_risk": 0.0,
+          "mean_risk_popw": 0.0,
+          "sum_eal": 0.0
         }
       ],
-      "experiment3_fire_overlap_ratio": 0.08333333333333333,
-      "experiment4_auc_score": 0.4216380394565583,
-      "experiment5_concentration": 0.45586284841628777,
-      "experiment5_gini": 0.5671599758693953,
+      "experiment3_fire_overlap_ratio": 0.6758620689655173,
+      "experiment4_auc_score": 0.9081068601852647,
+      "experiment5_concentration": 0.9720975405726046,
+      "experiment5_gini": 0.9511343086647663,
       "experiment5_heterogeneity_by_county": [
         {
           "county_fips": "06007",
           "county_name": "Butte",
-          "max_mean_ratio": 12.336272223089535,
-          "max_risk": 0.09749794329939768,
-          "mean_risk": 0.007903355368318873,
-          "top10_share": 0.4442596951441014
+          "max_mean_ratio": 12.305192731912333,
+          "max_risk": 0.10671206834365687,
+          "mean_risk": 0.008672116777733142,
+          "top10_share": 0.44726790208993134
+        },
+        {
+          "county_fips": "06005",
+          "county_name": "Amador",
+          "max_mean_ratio": 10.30551071718684,
+          "max_risk": 0.18023873249607578,
+          "mean_risk": 0.017489548790191028,
+          "top10_share": 0.5711668974378877
+        },
+        {
+          "county_fips": "06001",
+          "county_name": "Alameda",
+          "max_mean_ratio": 9.693646175680618,
+          "max_risk": 0.017115978671477773,
+          "mean_risk": 0.0017656904699511597,
+          "top10_share": 0.4252686108967846
         },
         {
           "county_fips": "06073",
           "county_name": "San Diego",
-          "max_mean_ratio": 8.718531036869713,
-          "max_risk": 0.013099946749857407,
-          "mean_risk": 0.0015025405879108725,
-          "top10_share": 0.32067103791811435
+          "max_mean_ratio": 7.04975493709283,
+          "max_risk": 0.008215649051938842,
+          "mean_risk": 0.0011653808005029466,
+          "top10_share": 0.3224481829356048
+        },
+        {
+          "county_fips": "06003",
+          "county_name": "Alpine",
+          "max_mean_ratio": null,
+          "max_risk": 0.0,
+          "mean_risk": 0.0,
+          "top10_share": 0.0
+        },
+        {
+          "county_fips": "06009",
+          "county_name": "Calaveras",
+          "max_mean_ratio": null,
+          "max_risk": 0.0,
+          "mean_risk": 0.0,
+          "top10_share": 0.0
+        },
+        {
+          "county_fips": "06011",
+          "county_name": "Colusa",
+          "max_mean_ratio": null,
+          "max_risk": 0.0,
+          "mean_risk": 0.0,
+          "top10_share": 0.0
+        },
+        {
+          "county_fips": "06013",
+          "county_name": "Contra Costa",
+          "max_mean_ratio": null,
+          "max_risk": 0.0,
+          "mean_risk": 0.0,
+          "top10_share": 0.0
+        },
+        {
+          "county_fips": "06015",
+          "county_name": "Del Norte",
+          "max_mean_ratio": null,
+          "max_risk": 0.0,
+          "mean_risk": 0.0,
+          "top10_share": 0.0
+        },
+        {
+          "county_fips": "06017",
+          "county_name": "El Dorado",
+          "max_mean_ratio": null,
+          "max_risk": 0.0,
+          "mean_risk": 0.0,
+          "top10_share": 0.0
+        },
+        {
+          "county_fips": "06019",
+          "county_name": "Fresno",
+          "max_mean_ratio": null,
+          "max_risk": 0.0,
+          "mean_risk": 0.0,
+          "top10_share": 0.0
+        },
+        {
+          "county_fips": "06021",
+          "county_name": "Glenn",
+          "max_mean_ratio": null,
+          "max_risk": 0.0,
+          "mean_risk": 0.0,
+          "top10_share": 0.0
+        },
+        {
+          "county_fips": "06023",
+          "county_name": "Humboldt",
+          "max_mean_ratio": null,
+          "max_risk": 0.0,
+          "mean_risk": 0.0,
+          "top10_share": 0.0
+        },
+        {
+          "county_fips": "06025",
+          "county_name": "Imperial",
+          "max_mean_ratio": null,
+          "max_risk": 0.0,
+          "mean_risk": 0.0,
+          "top10_share": 0.0
+        },
+        {
+          "county_fips": "06027",
+          "county_name": "Inyo",
+          "max_mean_ratio": null,
+          "max_risk": 0.0,
+          "mean_risk": 0.0,
+          "top10_share": 0.0
+        },
+        {
+          "county_fips": "06029",
+          "county_name": "Kern",
+          "max_mean_ratio": null,
+          "max_risk": 0.0,
+          "mean_risk": 0.0,
+          "top10_share": 0.0
+        },
+        {
+          "county_fips": "06031",
+          "county_name": "Kings",
+          "max_mean_ratio": null,
+          "max_risk": 0.0,
+          "mean_risk": 0.0,
+          "top10_share": 0.0
+        },
+        {
+          "county_fips": "06033",
+          "county_name": "Lake",
+          "max_mean_ratio": null,
+          "max_risk": 0.0,
+          "mean_risk": 0.0,
+          "top10_share": 0.0
+        },
+        {
+          "county_fips": "06035",
+          "county_name": "Lassen",
+          "max_mean_ratio": null,
+          "max_risk": 0.0,
+          "mean_risk": 0.0,
+          "top10_share": 0.0
+        },
+        {
+          "county_fips": "06037",
+          "county_name": "Los Angeles",
+          "max_mean_ratio": null,
+          "max_risk": 0.0,
+          "mean_risk": 0.0,
+          "top10_share": 0.0
+        },
+        {
+          "county_fips": "06039",
+          "county_name": "Madera",
+          "max_mean_ratio": null,
+          "max_risk": 0.0,
+          "mean_risk": 0.0,
+          "top10_share": 0.0
+        },
+        {
+          "county_fips": "06041",
+          "county_name": "Marin",
+          "max_mean_ratio": null,
+          "max_risk": 0.0,
+          "mean_risk": 0.0,
+          "top10_share": 0.0
+        },
+        {
+          "county_fips": "06043",
+          "county_name": "Mariposa",
+          "max_mean_ratio": null,
+          "max_risk": 0.0,
+          "mean_risk": 0.0,
+          "top10_share": 0.0
+        },
+        {
+          "county_fips": "06045",
+          "county_name": "Mendocino",
+          "max_mean_ratio": null,
+          "max_risk": 0.0,
+          "mean_risk": 0.0,
+          "top10_share": 0.0
+        },
+        {
+          "county_fips": "06047",
+          "county_name": "Merced",
+          "max_mean_ratio": null,
+          "max_risk": 0.0,
+          "mean_risk": 0.0,
+          "top10_share": 0.0
+        },
+        {
+          "county_fips": "06049",
+          "county_name": "Modoc",
+          "max_mean_ratio": null,
+          "max_risk": 0.0,
+          "mean_risk": 0.0,
+          "top10_share": 0.0
+        },
+        {
+          "county_fips": "06051",
+          "county_name": "Mono",
+          "max_mean_ratio": null,
+          "max_risk": 0.0,
+          "mean_risk": 0.0,
+          "top10_share": 0.0
+        },
+        {
+          "county_fips": "06053",
+          "county_name": "Monterey",
+          "max_mean_ratio": null,
+          "max_risk": 0.0,
+          "mean_risk": 0.0,
+          "top10_share": 0.0
+        },
+        {
+          "county_fips": "06055",
+          "county_name": "Napa",
+          "max_mean_ratio": null,
+          "max_risk": 0.0,
+          "mean_risk": 0.0,
+          "top10_share": 0.0
+        },
+        {
+          "county_fips": "06057",
+          "county_name": "Nevada",
+          "max_mean_ratio": null,
+          "max_risk": 0.0,
+          "mean_risk": 0.0,
+          "top10_share": 0.0
+        },
+        {
+          "county_fips": "06059",
+          "county_name": "Orange",
+          "max_mean_ratio": null,
+          "max_risk": 0.0,
+          "mean_risk": 0.0,
+          "top10_share": 0.0
+        },
+        {
+          "county_fips": "06061",
+          "county_name": "Placer",
+          "max_mean_ratio": null,
+          "max_risk": 0.0,
+          "mean_risk": 0.0,
+          "top10_share": 0.0
+        },
+        {
+          "county_fips": "06063",
+          "county_name": "Plumas",
+          "max_mean_ratio": null,
+          "max_risk": 0.0,
+          "mean_risk": 0.0,
+          "top10_share": 0.0
+        },
+        {
+          "county_fips": "06065",
+          "county_name": "Riverside",
+          "max_mean_ratio": null,
+          "max_risk": 0.0,
+          "mean_risk": 0.0,
+          "top10_share": 0.0
+        },
+        {
+          "county_fips": "06067",
+          "county_name": "Sacramento",
+          "max_mean_ratio": null,
+          "max_risk": 0.0,
+          "mean_risk": 0.0,
+          "top10_share": 0.0
+        },
+        {
+          "county_fips": "06069",
+          "county_name": "San Benito",
+          "max_mean_ratio": null,
+          "max_risk": 0.0,
+          "mean_risk": 0.0,
+          "top10_share": 0.0
+        },
+        {
+          "county_fips": "06071",
+          "county_name": "San Bernardino",
+          "max_mean_ratio": null,
+          "max_risk": 0.0,
+          "mean_risk": 0.0,
+          "top10_share": 0.0
+        },
+        {
+          "county_fips": "06075",
+          "county_name": "San Francisco",
+          "max_mean_ratio": null,
+          "max_risk": 0.0,
+          "mean_risk": 0.0,
+          "top10_share": 0.0
+        },
+        {
+          "county_fips": "06077",
+          "county_name": "San Joaquin",
+          "max_mean_ratio": null,
+          "max_risk": 0.0,
+          "mean_risk": 0.0,
+          "top10_share": 0.0
+        },
+        {
+          "county_fips": "06079",
+          "county_name": "San Luis Obispo",
+          "max_mean_ratio": null,
+          "max_risk": 0.0,
+          "mean_risk": 0.0,
+          "top10_share": 0.0
+        },
+        {
+          "county_fips": "06081",
+          "county_name": "San Mateo",
+          "max_mean_ratio": null,
+          "max_risk": 0.0,
+          "mean_risk": 0.0,
+          "top10_share": 0.0
+        },
+        {
+          "county_fips": "06083",
+          "county_name": "Santa Barbara",
+          "max_mean_ratio": null,
+          "max_risk": 0.0,
+          "mean_risk": 0.0,
+          "top10_share": 0.0
+        },
+        {
+          "county_fips": "06085",
+          "county_name": "Santa Clara",
+          "max_mean_ratio": null,
+          "max_risk": 0.0,
+          "mean_risk": 0.0,
+          "top10_share": 0.0
+        },
+        {
+          "county_fips": "06087",
+          "county_name": "Santa Cruz",
+          "max_mean_ratio": null,
+          "max_risk": 0.0,
+          "mean_risk": 0.0,
+          "top10_share": 0.0
+        },
+        {
+          "county_fips": "06089",
+          "county_name": "Shasta",
+          "max_mean_ratio": null,
+          "max_risk": 0.0,
+          "mean_risk": 0.0,
+          "top10_share": 0.0
+        },
+        {
+          "county_fips": "06091",
+          "county_name": "Sierra",
+          "max_mean_ratio": null,
+          "max_risk": 0.0,
+          "mean_risk": 0.0,
+          "top10_share": 0.0
+        },
+        {
+          "county_fips": "06093",
+          "county_name": "Siskiyou",
+          "max_mean_ratio": null,
+          "max_risk": 0.0,
+          "mean_risk": 0.0,
+          "top10_share": 0.0
+        },
+        {
+          "county_fips": "06095",
+          "county_name": "Solano",
+          "max_mean_ratio": null,
+          "max_risk": 0.0,
+          "mean_risk": 0.0,
+          "top10_share": 0.0
+        },
+        {
+          "county_fips": "06097",
+          "county_name": "Sonoma",
+          "max_mean_ratio": null,
+          "max_risk": 0.0,
+          "mean_risk": 0.0,
+          "top10_share": 0.0
+        },
+        {
+          "county_fips": "06099",
+          "county_name": "Stanislaus",
+          "max_mean_ratio": null,
+          "max_risk": 0.0,
+          "mean_risk": 0.0,
+          "top10_share": 0.0
+        },
+        {
+          "county_fips": "06101",
+          "county_name": "Sutter",
+          "max_mean_ratio": null,
+          "max_risk": 0.0,
+          "mean_risk": 0.0,
+          "top10_share": 0.0
+        },
+        {
+          "county_fips": "06103",
+          "county_name": "Tehama",
+          "max_mean_ratio": null,
+          "max_risk": 0.0,
+          "mean_risk": 0.0,
+          "top10_share": 0.0
+        },
+        {
+          "county_fips": "06105",
+          "county_name": "Trinity",
+          "max_mean_ratio": null,
+          "max_risk": 0.0,
+          "mean_risk": 0.0,
+          "top10_share": 0.0
+        },
+        {
+          "county_fips": "06107",
+          "county_name": "Tulare",
+          "max_mean_ratio": null,
+          "max_risk": 0.0,
+          "mean_risk": 0.0,
+          "top10_share": 0.0
+        },
+        {
+          "county_fips": "06109",
+          "county_name": "Tuolumne",
+          "max_mean_ratio": null,
+          "max_risk": 0.0,
+          "mean_risk": 0.0,
+          "top10_share": 0.0
+        },
+        {
+          "county_fips": "06111",
+          "county_name": "Ventura",
+          "max_mean_ratio": null,
+          "max_risk": 0.0,
+          "mean_risk": 0.0,
+          "top10_share": 0.0
+        },
+        {
+          "county_fips": "06113",
+          "county_name": "Yolo",
+          "max_mean_ratio": null,
+          "max_risk": 0.0,
+          "mean_risk": 0.0,
+          "top10_share": 0.0
+        },
+        {
+          "county_fips": "06115",
+          "county_name": "Yuba",
+          "max_mean_ratio": null,
+          "max_risk": 0.0,
+          "mean_risk": 0.0,
+          "top10_share": 0.0
         }
       ],
       "experiment6_ui": {
@@ -172,46 +2468,102 @@
     },
     "external_sources": {
       "burned_labels": "MTBS",
-      "burned_neg": 1982,
-      "burned_pos": 276,
+      "burned_neg": 25317,
+      "burned_pos": 290,
       "fema_nri": "REAL"
     },
     "fema_nri_comparison": {
-      "corr_eal": 1.0,
-      "corr_risk": -1.0,
-      "n_counties": 2,
-      "rmse_eal": 161688402.16258705,
-      "rmse_risk": 96.85798749696058,
+      "corr_eal": 0.18426624267882497,
+      "corr_risk": -0.035028232192067035,
+      "n_counties": 58,
+      "rmse_eal": 1181538505.134279,
+      "rmse_risk": 90.38677555523697,
       "source": "REAL"
     },
-    "fire_overlap_ratio": 0.08333333333333333,
-    "gini_risk": 0.5671599758693953,
+    "fire_overlap_ratio": 0.6758620689655173,
+    "gini_risk": 0.9511343086647663,
     "module_sensitivity": {
       "counties": [
+        "06001",
+        "06003",
+        "06005",
         "06007",
-        "06073"
+        "06009",
+        "06011",
+        "06013",
+        "06015",
+        "06017",
+        "06019",
+        "06021",
+        "06023",
+        "06025",
+        "06027",
+        "06029",
+        "06031",
+        "06033",
+        "06035",
+        "06037",
+        "06039",
+        "06041",
+        "06043",
+        "06045",
+        "06047",
+        "06049",
+        "06051",
+        "06053",
+        "06055",
+        "06057",
+        "06059",
+        "06061",
+        "06063",
+        "06065",
+        "06067",
+        "06069",
+        "06071",
+        "06073",
+        "06075",
+        "06077",
+        "06079",
+        "06081",
+        "06083",
+        "06085",
+        "06087",
+        "06089",
+        "06091",
+        "06093",
+        "06095",
+        "06097",
+        "06099",
+        "06101",
+        "06103",
+        "06105",
+        "06107",
+        "06109",
+        "06111",
+        "06113",
+        "06115"
       ],
       "method": "pearson_r_fisher_z_normal_approx",
       "modules": {
         "exposure": {
-          "n": 2258,
-          "p": 0.0,
-          "r": 0.44317783723124876
+          "n": 25607,
+          "p": 0.0001255219342370939,
+          "r": 0.023962807752025545
         },
         "hazard": {
-          "n": 2258,
-          "p": 9.388637367324648e-06,
-          "r": 0.09303590934435924
+          "n": 25607,
+          "p": 0.0,
+          "r": 0.35401387011386204
         },
         "resilience": {
-          "n": 2258,
+          "n": 25607,
           "p": 0.0,
-          "r": -0.41813250305358307
+          "r": -0.07734289876962863
         },
         "vulnerability": {
-          "n": 2258,
+          "n": 25607,
           "p": 0.0,
-          "r": 0.4248350302981545
+          "r": 0.1014120982858058
         }
       },
       "risk": {
@@ -219,18 +2571,14 @@
       },
       "scope": "all_rows_in_frame"
     },
-    "risk_concentration": 0.45586284841628777
+    "risk_concentration": 0.9720975405726046
   },
   "passed": false,
   "schema_version": 1,
   "threshold_failures": {
-    "mtbs.auc_score": {
-      "min": 0.55,
-      "value": 0.4216380394565583
-    },
-    "mtbs.fire_overlap_ratio": {
+    "fema_nri.corr_risk": {
       "min": 0.1,
-      "value": 0.08333333333333333
+      "value": -0.035028232192067035
     }
   }
 }

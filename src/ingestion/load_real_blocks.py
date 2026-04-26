@@ -2,7 +2,6 @@ import geopandas as gpd
 import numpy as np
 import os
 from pathlib import Path
-from src.ingestion.load_population import load_population
 from src.utils.logger import get_logger
 
 logger = get_logger()
@@ -13,21 +12,28 @@ def load_real_blocks(path="data/raw/block_groups.geojson"):
 
     # If the pipeline is run with a specific county target (same env used by real_data cache),
     # prefer the per-county processed GeoJSON so the frontend bundle stays in sync.
+    # NOTE: For multi-county runs (e.g. scripts/run_all_california.py) we *must* ingest from the
+    # freshly extracted raw TIGER geometry for the current county. Otherwise we risk re-reading a
+    # previously processed per-county export and repeatedly merging/deriving fields.
     county_fips = os.environ.get("WILDFIRE_COUNTY_FIPS")
-    if county_fips:
-        county_fips = str(county_fips).strip().zfill(5)
-        per_county = Path("data") / "processed" / "counties" / county_fips / "blocks.geojson"
-        if per_county.exists():
-            # Guard against accidentally overwriting the per-county file with mock output.
-            # If the file doesn't look like real TIGER/processed geometry, fall back to the raw geometry path.
-            try:
-                tmp = gpd.read_file(per_county)
-                if "STATEFP" in tmp.columns and "COUNTYFP" in tmp.columns and not tmp.empty:
-                    path = str(per_county.as_posix())
-                else:
-                    logger.warning("Per-county GeoJSON did not look like real geometry; using default raw path instead.")
-            except Exception:
-                logger.warning("Failed to read per-county GeoJSON; using default raw path instead.")
+    use_raw = str(os.environ.get("WILDFIRE_USE_RAW_BLOCK_GROUPS", "")).strip() not in ("", "0", "false", "False")
+    if use_raw:
+        logger.info("WILDFIRE_USE_RAW_BLOCK_GROUPS=1 → ingesting from raw block_groups.geojson")
+    else:
+        # Single-county/dev runs: if a processed per-county GeoJSON exists, use it.
+        if county_fips:
+            county_fips = str(county_fips).strip().zfill(5)
+            per_county = Path("data") / "processed" / "counties" / county_fips / "blocks.geojson"
+            if per_county.exists():
+                # If the file doesn't look like real TIGER/processed geometry, fall back to the raw geometry path.
+                try:
+                    tmp = gpd.read_file(per_county)
+                    if "STATEFP" in tmp.columns and "COUNTYFP" in tmp.columns and not tmp.empty:
+                        path = str(per_county.as_posix())
+                    else:
+                        logger.warning("Per-county GeoJSON did not look like real geometry; using default raw path instead.")
+                except Exception:
+                    logger.warning("Failed to read per-county GeoJSON; using default raw path instead.")
 
     gdf = gpd.read_file(path)
 
@@ -64,40 +70,9 @@ def load_real_blocks(path="data/raw/block_groups.geojson"):
     if "county" not in gdf.columns:
         gdf["county"] = "Butte"
 
-    pop_df = load_population()
-
-    if pop_df is not None and "GEOID" in pop_df.columns:
-        logger.info("Merging real population data")
-
-        pop_df["GEOID"] = (
-            pop_df["GEOID"]
-            .astype(str)
-            .str.strip()
-            .str.zfill(12)
-        )
-
-        before_merge = len(gdf)
-
-        gdf = gdf.merge(pop_df, on="GEOID", how="left")
-
-        if "population" in gdf.columns:
-            matched = gdf["population"].notna().sum()
-            logger.info(f"Population matched for {matched}/{before_merge} blocks")
-            gdf["exposure_population"] = gdf["population"].fillna(0).astype(int)
-        else:
-            logger.warning("Population merge did not produce a 'population' column; setting exposure_population=0")
-            gdf["exposure_population"] = 0
-    else:
-        logger.warning("Population data missing → exposure_population set to 0")
-        gdf["exposure_population"] = 0
-
-    logger.info("Sample population values:")
-    logger.info(gdf[["GEOID", "exposure_population"]].head().to_string())
-    logger.info("GeoJSON GEOID sample:")
-    logger.info(gdf["GEOID"].head().to_string())
-
-    if pop_df is not None:
-        logger.info("CSV GEOID sample:")
-        logger.info(pop_df["GEOID"].head().to_string())
+    # Do not merge legacy data/raw/population.csv here.
+    # The canonical population feature is computed in the feature pipeline from Census PL
+    # (data/real_cache), and merging here can cause duplicate columns when re-reading processed exports.
+    gdf["exposure_population"] = 0
 
     return gdf

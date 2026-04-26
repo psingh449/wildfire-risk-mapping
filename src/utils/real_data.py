@@ -956,8 +956,75 @@ def compute_hazard_vegetation_real(gdf: pd.DataFrame) -> pd.DataFrame:
         gdf = gdf.merge(df, on="block_id", how="left")
         gdf["hazard_vegetation"] = gdf["nlcd_vegetation"].fillna(0)
         return mark_proxy(gdf, "hazard_vegetation", method="OSM landcover proxy (generated CSV)")
-    gdf["hazard_vegetation"] = fallback_uniform(gdf, "hazard_vegetation", reason="No NLCD vegetation CSV found")
-    return mark_dummy(gdf, "hazard_vegetation", reason="No NLCD vegetation CSV found")
+
+    # If per-county cache is missing, compute a deterministic OSM-based proxy on the fly
+    # (same approach as scripts/process_nlcd_vegetation.py), and write it to real_cache
+    # so future runs do not re-query OSM.
+    try:
+        import geopandas as gpd  # type: ignore
+        import osmnx as ox  # type: ignore
+
+        blocks = gpd.GeoDataFrame(gdf.copy(), geometry="geometry", crs=getattr(gdf, "crs", None))
+        if blocks.crs is None:
+            # Most pipeline frames are already in EPSG:4326; assume that if CRS is missing.
+            blocks = blocks.set_crs(4326, allow_override=True)
+        blocks_ll = blocks.to_crs(4326)
+        minx, miny, maxx, maxy = blocks_ll.total_bounds
+        pad = 0.02
+        bbox = (minx - pad, miny - pad, maxx + pad, maxy + pad)
+
+        tags_list = [
+            {"landuse": "forest"},
+            {"natural": "wood"},
+            {"natural": "scrub"},
+            {"landuse": "meadow"},
+            {"leisure": "nature_reserve"},
+            {"boundary": "national_park"},
+        ]
+        frames: list[gpd.GeoDataFrame] = []
+        for tags in tags_list:
+            try:
+                f = ox.features_from_bbox(bbox, tags=tags)
+                if f is None or len(f) == 0:
+                    continue
+                f = f.reset_index(drop=True)
+                frames.append(f)
+            except Exception:
+                continue
+
+        if frames:
+            forest = pd.concat(frames, ignore_index=True)
+            forest = gpd.GeoDataFrame(forest, geometry="geometry", crs="EPSG:4326")
+            forest = forest[forest.geometry.type.isin(["Polygon", "MultiPolygon"])].copy()
+        else:
+            forest = gpd.GeoDataFrame(geometry=[], crs="EPSG:4326")
+
+        blocks_m = blocks_ll.to_crs(3857)
+        if len(forest) == 0:
+            ratio = pd.Series(0.0, index=blocks_m.index, dtype="float64")
+        else:
+            forest_m = forest.to_crs(3857)
+            forest_union = forest_m.geometry.unary_union
+            block_area = blocks_m.geometry.area
+            inter_area = blocks_m.geometry.intersection(forest_union).area
+            ratio = (inter_area / block_area).fillna(0.0).clip(lower=0.0, upper=1.0).astype("float64")
+
+        out_df = pd.DataFrame({"block_id": _block_id_series(blocks, "block_id"), "nlcd_vegetation": ratio.astype(float).values})
+        write_dataset(
+            ref,
+            out_df,
+            response_json={"generated": True, "method": "OSM polygons (live)"},
+            request={"generator": "src/utils/real_data.py:compute_hazard_vegetation_real"},
+            schema={"columns": ["block_id", "nlcd_vegetation"], "join_key": "block_id"},
+            overwrite=True,
+        )
+
+        gdf = gdf.copy()
+        gdf["hazard_vegetation"] = ratio.astype(float).values
+        return mark_proxy(gdf, "hazard_vegetation", method="OSM polygons proxy (auto-cached)")
+    except Exception:
+        gdf["hazard_vegetation"] = fallback_uniform(gdf, "hazard_vegetation", reason="No NLCD vegetation CSV found")
+        return mark_dummy(gdf, "hazard_vegetation", reason="No NLCD vegetation CSV found")
 
 def compute_hazard_forest_distance_real(gdf: pd.DataFrame) -> pd.DataFrame:
     """
@@ -988,8 +1055,71 @@ def compute_hazard_forest_distance_real(gdf: pd.DataFrame) -> pd.DataFrame:
         gdf = gdf.merge(df, on="block_id", how="left")
         gdf["hazard_forest_distance"] = gdf["nlcd_forest_distance"].fillna(0)
         return mark_proxy(gdf, "hazard_forest_distance", method="OSM forest-distance proxy (generated CSV)")
-    gdf["hazard_forest_distance"] = fallback_uniform(gdf, "hazard_forest_distance", reason="No NLCD forest distance CSV found")
-    return mark_dummy(gdf, "hazard_forest_distance", reason="No NLCD forest distance CSV found")
+
+    # On-the-fly OSM proxy + auto-cache (same approach as scripts/process_nlcd_forest_distance.py).
+    try:
+        import geopandas as gpd  # type: ignore
+        import osmnx as ox  # type: ignore
+
+        blocks = gpd.GeoDataFrame(gdf.copy(), geometry="geometry", crs=getattr(gdf, "crs", None))
+        if blocks.crs is None:
+            blocks = blocks.set_crs(4326, allow_override=True)
+        blocks_ll = blocks.to_crs(4326)
+        minx, miny, maxx, maxy = blocks_ll.total_bounds
+        pad = 0.02
+        bbox = (minx - pad, miny - pad, maxx + pad, maxy + pad)
+
+        tags_list = [
+            {"landuse": "forest"},
+            {"natural": "wood"},
+            {"natural": "scrub"},
+            {"leisure": "nature_reserve"},
+            {"boundary": "national_park"},
+        ]
+
+        frames: list[gpd.GeoDataFrame] = []
+        for tags in tags_list:
+            try:
+                f = ox.features_from_bbox(bbox, tags=tags)
+                if f is None or len(f) == 0:
+                    continue
+                frames.append(f.reset_index(drop=True))
+            except Exception:
+                continue
+
+        if frames:
+            forest = pd.concat(frames, ignore_index=True)
+            forest = gpd.GeoDataFrame(forest, geometry="geometry", crs="EPSG:4326")
+            forest = forest[forest.geometry.type.isin(["Polygon", "MultiPolygon"])].copy()
+        else:
+            forest = gpd.GeoDataFrame(geometry=[], crs="EPSG:4326")
+
+        blocks_m = blocks_ll.to_crs(3857)
+        if len(forest) == 0:
+            inv = pd.Series(0.0, index=blocks_m.index, dtype="float64")
+        else:
+            forest_m = forest.to_crs(3857)
+            forest_union = forest_m.geometry.unary_union
+            centroids = blocks_m.geometry.centroid
+            dist_km = centroids.distance(forest_union) / 1000.0
+            inv = (1.0 / (1.0 + dist_km)).fillna(0.0).astype("float64")
+
+        out_df = pd.DataFrame({"block_id": _block_id_series(blocks, "block_id"), "nlcd_forest_distance": inv.astype(float).values})
+        write_dataset(
+            ref,
+            out_df,
+            response_json={"generated": True, "method": "OSM polygons (live)"},
+            request={"generator": "src/utils/real_data.py:compute_hazard_forest_distance_real"},
+            schema={"columns": ["block_id", "nlcd_forest_distance"], "join_key": "block_id"},
+            overwrite=True,
+        )
+
+        gdf = gdf.copy()
+        gdf["hazard_forest_distance"] = inv.astype(float).values
+        return mark_proxy(gdf, "hazard_forest_distance", method="OSM polygons distance proxy (auto-cached)")
+    except Exception:
+        gdf["hazard_forest_distance"] = fallback_uniform(gdf, "hazard_forest_distance", reason="No NLCD forest distance CSV found")
+        return mark_dummy(gdf, "hazard_forest_distance", reason="No NLCD forest distance CSV found")
 
 # --- HIFLD Fire Station, Hospital, and Road Access ---
 HIFLD_URL_BASE = "https://services1.arcgis.com/"

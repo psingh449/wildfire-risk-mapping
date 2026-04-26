@@ -331,7 +331,9 @@ function colorScaleForMetric(metric, features) {
 
 function _qualityFor(p, key) {
     const raw = p[key + "_source"] || "MISSING";
-    if (raw === "DUMMY") return "MISSING";
+    // Keep DUMMY distinct from MISSING:
+    // - MISSING means "no value" (render as —)
+    // - DUMMY means "fallback value exists but is low-quality" (render value + [dummy] tag)
     return raw;
 }
 
@@ -358,6 +360,7 @@ function _debugTag(p, key) {
     if (q === "REAL") return `[src:${_abbrToken(prov)}]`;
     if (q === "ESTIMATED") return `[est:${_abbrToken(prov)}]`;
     if (q === "PROXY") return `[px:${_abbrToken(prov)}]`;
+    if (q === "DUMMY") return `[dummy]`;
     return `[missing]`;
 }
 

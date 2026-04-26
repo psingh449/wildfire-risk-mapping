@@ -7,8 +7,6 @@ from src.utils.real_cache import normalize_county_fips
 
 
 def step_export(gdf, path: str = OUTPUT_GEOJSON):
-    export_geojson(gdf, path=path)
-
     # Also publish per-county GeoJSON for the UI.
     # The frontend loads `data/processed/counties/{county_fips}/blocks.geojson` as configured
     # in `data/county_manifest.json`, so we keep that path updated whenever we run the pipeline.
@@ -24,6 +22,10 @@ def step_export(gdf, path: str = OUTPUT_GEOJSON):
         county_fips = normalize_county_fips(county_fips)
         per_county_path = Path("data") / "processed" / "counties" / county_fips / "blocks.geojson"
         export_geojson(gdf, path=str(per_county_path.as_posix()))
+    else:
+        # Only write the legacy single-file export when we don't have a single-county context.
+        # This avoids Windows file locks when running multi-county batch packaging.
+        export_geojson(gdf, path=path)
 
     write_run_summary(gdf)
     return gdf

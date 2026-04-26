@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple, List
 
 import pandas as pd
-import math
 from statistics import NormalDist
 
 from src.pipeline import steps
@@ -240,6 +240,29 @@ def _compute_experiments_summary(gdf: pd.DataFrame) -> Dict[str, Any]:
     }
 
     return out
+
+
+def _sanitize_for_json(value: Any) -> Any:
+    """
+    Ensure exported UI JSON is strict-JSON compatible.
+
+    Python's json.dumps allows NaN/Infinity by default, but browsers' JSON.parse rejects them.
+    """
+    if value is None:
+        return None
+    if isinstance(value, float):
+        if not math.isfinite(value):
+            return None
+        return value
+    if isinstance(value, (int, str, bool)):
+        return value
+    if isinstance(value, list):
+        return [_sanitize_for_json(v) for v in value]
+    if isinstance(value, tuple):
+        return [_sanitize_for_json(v) for v in value]
+    if isinstance(value, dict):
+        return {str(k): _sanitize_for_json(v) for k, v in value.items()}
+    return value
 
 
 def _apply_external_thresholds(metrics: Dict[str, Any], thresholds: Dict[str, Any]) -> Tuple[bool, Dict[str, Any]]:
@@ -480,7 +503,8 @@ def main(argv: Optional[list[str]] = None) -> int:
             "threshold_failures": report.get("threshold_failures") or {},
             "metrics": report.get("metrics") or {},
         }
-        out.write_text(json.dumps(ui_doc, indent=2, sort_keys=True), encoding="utf-8")
+        ui_doc = _sanitize_for_json(ui_doc)
+        out.write_text(json.dumps(ui_doc, indent=2, sort_keys=True, allow_nan=False), encoding="utf-8")
     return 0 if report.get("passed", False) else 2
 
 
