@@ -15,9 +15,7 @@ subgraph ING[INGESTION]
     I2[Load land cover data<br/>-> vegetation hazard value] ---
     I3[Load census population data<br/>-> population exposure] ---
     I4[Load census housing data<br/>-> housing exposure] ---
-    I5[Load community survey data<br/>-> poverty elderly vehicle access<br/>and building value features] 
-    I6[Load critical facilities data<br/>-> fire station and hospital<br/>access features] ---
-    I7[Load road network data<br/>-> road access feature] ---
+    I5[Load community survey data<br/>-> poverty elderly uninsured<br/>income internet vehicle access<br/>and building value features]
     I8[Load historical fire boundaries<br/>-> historical fire dataset] ---
     I9[Load federal risk benchmark<br/>-> benchmark dataset]
 end
@@ -26,7 +24,7 @@ DS --> ING
 
 subgraph PRE[PREPROCESSING]
     J1[Standardize<br/>coordinate system] ---
-    J2[Clip data to<br/>Butte County] ---
+    J2[Clip data to<br/>study counties] ---
     J3[Create analysis blocks<br/>with IDs] ---
     J4[Calculate block<br/>center points]
 end
@@ -52,14 +50,14 @@ subgraph FE[FEATURE ENGINEERING]
     subgraph VL[Vulnerability]
         V1[Build poverty vulnerability feature<br/>-> poverty vulnerability]
         V2[Build elderly vulnerability feature<br/>-> elderly vulnerability]
-        V3[Build vehicle access vulnerability feature<br/>-> vehicle access vulnerability]
+        V3[Build uninsured vulnerability feature<br/>-> uninsured vulnerability]
         V4[Build overall vulnerability score<br/>-> vulnerability score]
     end
 
     subgraph RS[Resilience]
-        R1[Build fire station access feature<br/>-> fire station access]
-        R2[Build hospital access feature<br/>-> hospital access]
-        R3[Build road access feature<br/>-> road access]
+        R1[Build vehicle access resilience feature<br/>-> vehicle access resilience]
+        R2[Build income resilience feature<br/>-> income resilience]
+        R3[Build internet access resilience feature<br/>-> internet resilience]
         R4[Build overall resilience score<br/>-> resilience score]
     end
 

@@ -2,15 +2,13 @@ flowchart TD
 
 subgraph DS["🔍 DATA SOURCES (9 External Data Providers)"]
     direction LR
-    A["🔥 WHP (USFS)<br/>URL: fs.usda.gov/RDS<br/>Storage: data/real/whp_butte.csv<br/>Fallback: Random 0-1"] 
-    B["🌲 NLCD (Land Cover)<br/>URL: mrlc.gov/data<br/>Storage: data/real/nlcd_butte.tif<br/>Fallback: Random pixels"] 
-    C["👥 Census API (Pop)<br/>URL: api.census.gov/2020/pl<br/>Storage: data/real/census_population.csv<br/>Fallback: Random integers"]
-    D["🏠 Census API (Housing)<br/>URL: api.census.gov/2020/pl<br/>Storage: data/real/census_housing.csv<br/>Fallback: Random integers"]
-    E["📊 ACS API (Socioeconomic)<br/>URL: api.census.gov/2021/acs<br/>Storage: data/real/acs_*.csv<br/>Fallback: Random 0-100%"]
-    F["🏥 HIFLD (Fire/Hospital)<br/>URL: opendata.arcgis.com<br/>Storage: data/real/fire_stations.csv<br/>Fallback: Random locations"]
-    G["🛣️ OSM (Roads)<br/>URL: overpass-api.de<br/>Storage: data/real/osm_roads.geojson<br/>Fallback: Random density"]
-    H["🔴 MTBS (Fire History)<br/>URL: mtbs.gov<br/>Storage: data/real/fire_perimeters.geojson<br/>Use: Validation only"]
-    I["📋 FEMA NRI (Risk Index)<br/>URL: hazards.fema.gov/nri<br/>Storage: data/external/fema_nri.csv<br/>Use: Validation only"]
+    A["🔥 WHP (USFS)<br/>Source: raster zonal stats when available<br/>Cache: data/real_cache/counties/{FIPS}/whp/wildfire/"] 
+    B["🌲 Landcover proxy (OSM-based)<br/>Source: OSM polygons (proxy for NLCD)<br/>Cache: data/real_cache/counties/{FIPS}/nlcd/{vegetation|forest_distance}/"] 
+    C["👥 Census PL 2020 (Pop)<br/>API: api.census.gov/data/2020/dec/pl<br/>Cache: data/real_cache/counties/{FIPS}/census_pl_2020/population/"]
+    D["🏠 Census PL 2020 (Housing)<br/>API: api.census.gov/data/2020/dec/pl<br/>Cache: data/real_cache/counties/{FIPS}/census_pl_2020/housing/"]
+    E["📊 ACS 2021 5-year (BG/tract)<br/>API: api.census.gov/data/2021/acs/acs5<br/>Cache: data/real_cache/counties/{FIPS}/acs_2021_5yr/*"]
+    H["🔴 MTBS perimeters (optional)<br/>Cache: data/external/mtbs_fire_perimeters.geojson<br/>Use: Experiments 3–4 only"]
+    I["📋 FEMA NRI counties (optional)<br/>Cache: data/external/fema_nri_county.csv<br/>Use: Experiment 1 only"]
     A --- B --- C --- D --- E --- F --- G --- H --- I
 end
 
@@ -19,9 +17,7 @@ subgraph ING["📥 INGESTION LAYER<br/>File: src/ingestion/load_*.py + src/utils
     I2["fetch_nlcd_data<br/>→ hazard_vegetation<br/>Function: compute_hazard_vegetation<br/>Type: Pixel classification"]
     I3["fetch_census_pop<br/>→ exposure_population<br/>Function: compute_exposure_population_real<br/>Type: Census API call + mapping"]
     I4["fetch_census_housing<br/>→ exposure_housing<br/>Function: compute_exposure_housing_real<br/>Type: Census API call + mapping"]
-    I5["fetch_acs_data<br/>→ vuln_poverty, vuln_elderly,<br/>vuln_vehicle_access,<br/>exposure_building_value<br/>Functions: compute_vuln_*_real<br/>Type: ACS API call + tract→block mapping"]
-    I6["fetch_hifld_data<br/>→ res_fire_station_dist,<br/>res_hospital_dist<br/>Functions: compute_res_*_dist<br/>Type: Point locations + distance calc"]
-    I7["fetch_osm_roads<br/>→ res_road_access<br/>Function: compute_res_road_access<br/>Type: Road network query"]
+    I5["fetch_acs_data<br/>→ vuln_poverty, vuln_elderly, vuln_uninsured<br/>→ res_vehicle_access, res_median_household_income, res_internet_access<br/>→ exposure_building_value<br/>Functions: compute_vuln_*/compute_res_*_real<br/>Type: ACS API call + (optional) tract fallback"]
     I8["fetch_fire_perimeters<br/>→ fire_perimeters_dataset<br/>Function: For validation only<br/>Type: Historical fire boundaries"]
     I9["fetch_fema_nri<br/>→ fema_nri_dataset<br/>Function: For validation comparison<br/>Type: County-level risk index"]
     I1 --- I2 --- I3 --- I4 --- I5 --- I6 --- I7 --- I8 --- I9
@@ -64,7 +60,7 @@ subgraph FE["⚙️ FEATURE ENGINEERING LAYER<br/>File: src/pipeline/feature_pip
     subgraph VL["😟 VULNERABILITY (3 features → 1 score)<br/>Social factors that increase risk"]
         V1["compute_vuln_poverty<br/>Source: ACS (B17001_002E/B17001_001E)<br/>Formula: poverty_persons / total_persons<br/>Type: Normalized rate (0-1)"]
         V2["compute_vuln_elderly<br/>Source: ACS (B01001_020E..049E)<br/>Formula: elderly_pop / total_pop<br/>Type: Normalized ratio (0-1)"]
-        V3["compute_vuln_vehicle_access<br/>Source: ACS (B08201_002E/B08201_001E)<br/>Formula: no_vehicle_HH / total_HH<br/>Type: Normalized ratio (0-1)"]
+        V3["compute_vuln_uninsured<br/>Source: ACS (B27010 bins)<br/>Formula: uninsured / total<br/>Type: Normalized ratio (0-1)"]
         V4["compute_vulnerability_score<br/>Formula: Σ(weight_i * norm(feat_i))<br/>for weight_group='vulnerability_score'<br/>Weights: 0.4, 0.3, 0.3<br/>Range: 0-1"]
         V1 --> V4
         V2 --> V4
@@ -72,10 +68,10 @@ subgraph FE["⚙️ FEATURE ENGINEERING LAYER<br/>File: src/pipeline/feature_pip
     end
 
     subgraph RS["🛡️ RESILIENCE (3 features → 1 score)<br/>Resources that reduce impact and aid recovery"]
-        R1["compute_res_fire_station_dist<br/>Source: HIFLD fire stations<br/>Formula: 1/(1+distance_km)<br/>Type: Normalized distance (0-1)"]
-        R2["compute_res_hospital_dist<br/>Source: HIFLD hospitals<br/>Formula: 1/(1+distance_km)<br/>Type: Normalized distance (0-1)"]
-        R3["compute_res_road_access<br/>Source: OSM road network<br/>Formula: road_km / block_area_km2<br/>Type: Normalized density (0-1)"]
-        R4["compute_resilience_score<br/>Formula: Σ(weight_i * norm(feat_i))<br/>for weight_group='resilience_score'<br/>Weights: 0.333 each<br/>Range: 0-1"]
+        R1["compute_res_vehicle_access<br/>Source: ACS (B08201)<br/>Formula: 1 - (no_vehicle / total)<br/>Type: Share (0-1)"]
+        R2["compute_res_median_household_income<br/>Source: ACS (B19013_001E)<br/>Type: USD (normalized for score)"]
+        R3["compute_res_internet_access<br/>Source: ACS (B28002)<br/>Formula: 1 - (no_internet / total)<br/>Type: Share (0-1)"]
+        R4["compute_resilience_score<br/>Formula: Σ(weight_i * norm(feat_i))<br/>for weight_group='resilience_score'<br/>Weights: from calculations.csv<br/>Range: 0-1"]
         R1 --> R4
         R2 --> R4
         R3 --> R4
@@ -99,8 +95,8 @@ subgraph VAL["✅ VALIDATION LAYER<br/>File: src/validation/metrics.py + src/uti
     VLD2["compute_county_risk_from_blocks<br/>→ county_risk<br/>Aggregation: mean(risk_score)<br/>Validates county-level scores"]
     VLD3["compute_county_eal_from_blocks<br/>→ county_eal<br/>Aggregation: sum(eal)<br/>Validates total county loss"]
     VLD4["compare_with_fema_nri<br/>→ fema_nri_comparison<br/>Compares our risk with FEMA's<br/>Metric: Correlation coefficient<br/>Target: > 0.7 (reasonable agreement)"]
-    VLD5["compute_historical_fire_overlap<br/>→ fire_overlap_ratio<br/>Checks: Do top-risk blocks match<br/>historically burned areas?"]
-    VLD6["compute_auc_fire_prediction<br/>→ auc_score<br/>ML metric: ROC-AUC<br/>Target: > 0.7 (good prediction)"]
+    VLD5["compute_historical_fire_overlap<br/>→ fire_overlap_ratio<br/>Computed only when MTBS perimeters exist; else null"]
+    VLD6["compute_auc_fire_prediction<br/>→ auc_score<br/>Computed only when MTBS perimeters exist; else null"]
     VLD7["compute_risk_concentration<br/>→ risk_concentration<br/>Checks: % of risk in top 10%<br/>Measures: Risk clustering"]
     VLD8["compute_lorenz_curve<br/>→ gini_risk<br/>Calculates: Gini coefficient<br/>Measures: Risk inequality"]
     VLD1 --> VLD2 --> VLD3 --> VLD4

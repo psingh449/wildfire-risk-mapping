@@ -1,34 +1,43 @@
 flowchart TD
     subgraph Ingestion
-        A[Load block geometries]
-        B[Load population/housing]
-        C[Load environmental rasters]
-        D[Load HIFLD/OSM]
+        IG_A[Load block geometries]
+        IG_B[Load population/housing]
+        IG_C[Load environmental rasters]
+        IG_D[Load ACS socioeconomic capacity]
+        IG_E["Load external validation datasets (optional)"]
     end
     subgraph FeatureEngineering
-        E[Compute hazard features]
-        F[Compute exposure features]
-        G[Compute vulnerability features]
-        H[Compute resilience features]
+        FE_E[Compute hazard features]
+        FE_F[Compute exposure features]
+        FE_G[Compute vulnerability features]
+        FE_H[Compute resilience features]
     end
     subgraph Assembly
-        I[Normalize & combine features]
-        J[Compute risk & EAL]
-        K[Add diagnostics & provenance]
+        AS_I["Normalize & combine features"]
+        AS_J["Compute risk & EAL"]
+        AS_K["Add diagnostics & provenance"]
+    end
+    subgraph Validation
+        VA_V["Compute validation + experiments summary"]
     end
     subgraph Export
-        L[Export GeoJSON]
-        M[Export diagnostics report]
+        EX_L[Export GeoJSON]
+        EX_M[Export diagnostics report]
+        EX_N[Export UI validation bundle]
     end
-    A --> E
-    B --> F
-    C --> E
-    D --> H
-    E --> I
-    F --> I
-    G --> I
-    H --> I
-    I --> J
-    J --> K
-    K --> L
-    K --> M
+    IG_A --> FE_E
+    IG_B --> FE_F
+    IG_C --> FE_E
+    IG_D --> FE_G
+    IG_D --> FE_H
+    IG_E --> VA_V
+    FE_E --> AS_I
+    FE_F --> AS_I
+    FE_G --> AS_I
+    FE_H --> AS_I
+    AS_I --> AS_J
+    AS_J --> AS_K
+    AS_K --> VA_V
+    AS_K --> EX_L
+    AS_K --> EX_M
+    VA_V --> EX_N
