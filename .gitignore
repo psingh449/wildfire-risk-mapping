@@ -47,5 +47,8 @@ team155report.md
 *.svg
 *.mmd
 
+# Local-only diagram image exports
+data_flow_diagram.png
+
 # Local-only assignment requirements notes
 cse6242-requirements.md
