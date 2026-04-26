@@ -55,8 +55,8 @@ Example:
 - **Evidence**: unit tests + runner report.
 
 ## geojson_property:fire_overlap_ratio
-- **Definition**: share of *burned* labels that fall in the top decile of `risk_score`. Uses MTBS perimeters if present; otherwise a proxy label based on the 75th percentile of `risk_score`.
-- **Range / type**: float in `[0,1]`.
+- **Definition**: share of *burned* labels (MTBS-derived) that fall in the top decile of `risk_score`. Computed only when MTBS perimeters are present; otherwise the value is `null`.
+- **Range / type**: `null` or float in `[0,1]`.
 - **Dependencies**: `data/external/mtbs_fire_perimeters.geojson` (optional).
 - **Lineage**: `src/validation/metrics.py:compute_historical_fire_overlap`
 - **Evidence**:
@@ -64,8 +64,8 @@ Example:
   - External-truth job (optional) validates thresholds when MTBS perimeters are present.
 
 ## geojson_property:auc_score
-- **Definition**: ROC AUC of `risk_score` vs `_burned_label` (MTBS-derived if present, else proxy).
-- **Range / type**: float in `[0,1]` (uses `0.5` for degenerate label sets).
+- **Definition**: ROC AUC of `risk_score` vs `_burned_label` (MTBS-derived). Computed only when MTBS perimeters are present; otherwise the value is `null`.
+- **Range / type**: `null` or float in `[0,1]` (uses `0.5` for degenerate label sets when MTBS labels exist but are single-class).
 - **Lineage**: `src/validation/metrics.py:compute_auc_fire_prediction`
 - **Evidence**: unit tests + runner report.
 
@@ -73,7 +73,7 @@ Example:
 
 The validation runner and frontend also surface a few supporting fields to make the validation KPIs interpretable:
 
-- `_burned_label_source`: string label provenance (`MTBS` when perimeters are used, else `PROXY`).
+- `_burned_label_source`: string label provenance (`MTBS` when perimeters are used, else `MISSING`).
 - `external_sources.burned_pos` / `external_sources.burned_neg`: counts of positive/negative burned labels used for MTBS overlap/AUC.
 
 ## geojson_property:risk_concentration

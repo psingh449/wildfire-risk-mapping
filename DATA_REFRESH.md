@@ -150,7 +150,7 @@ After refreshing caches and/or `data/real_cache` imports:
 python -m src.pipeline.run_pipeline
 ```
 
-Check `data/real/diagnostics_report.csv` and feature `*_source` columns in `data/processed/blocks.geojson` for `REAL` vs `DUMMY`.
+Check `data/real/diagnostics_report.csv` and feature `*_source` columns in `data/processed/blocks.geojson` for `REAL` / `ESTIMATED` / `PROXY` / `MISSING` (the pipeline does not generate random “DUMMY” feature values in the production paths).
 
 ---
 

@@ -21,7 +21,7 @@ Rows 20–27 in `calculations.csv` are validation/QA outputs that are computed d
 
 Supporting metadata:
 
-- `_burned_label_source`: `MTBS` when burned labels come from MTBS perimeters, else `PROXY`.
+- `_burned_label_source`: `MTBS` when burned labels come from MTBS perimeters. If MTBS perimeters are unavailable, labels are `MISSING` and MTBS-derived metrics (overlap/AUC) are not computed.
 
 ## Where validation KPIs show up in the UI
 

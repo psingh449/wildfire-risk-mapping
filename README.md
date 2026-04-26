@@ -22,8 +22,8 @@ The final output is a **Risk Score** (0-1 range) and **Expected Annual Loss (EAL
 - Weights and min/max bounds are read from `calculations.csv` at runtime for diagnostics; shared numeric constants (e.g. hazard wildfire proxy weights) live in `src/utils/calculations_reference.py` alongside the CSV
 - Pipeline validation logs **warnings** (never fails the build) if an export is missing columns that `calculations.csv` marks as `exists_in_code=Yes`
 - Comprehensive validation with 8 quality check metrics
-- Fallback and synthetic data when live fetches or files are missing
-- Full provenance tracking with quality tiers (`REAL` / `ESTIMATED` / `PROXY` / `MISSING`); the legacy label `DUMMY` may still appear in older runs
+- Full provenance tracking with quality tiers (`REAL` / `ESTIMATED` / `PROXY` / `MISSING`)
+- Missing upstream data is treated explicitly as `MISSING` (the production feature paths do not generate random “DUMMY” synthetic values)
 
 **System Components:**
 
@@ -202,7 +202,7 @@ Each row lists the **GeoJSON property** name, the **calculation** (as implemente
    ```
    The browser UI will auto-load `data/validation/merged_06007_06073.json` (if present) and show a “joint run” panel with the full KPI set:
    - FEMA NRI: `n_counties`, `corr_risk`, `rmse_risk`, `corr_eal`, `rmse_eal`, `source`
-   - MTBS validation: `fire_overlap_ratio`, `auc_score`, plus burned label counts and `_burned_label_source` (MTBS vs PROXY)
+   - MTBS validation: `fire_overlap_ratio`, `auc_score`, plus burned label counts and `_burned_label_source` (`MTBS` when available; otherwise metrics are not computed and UI shows “—”)
    - Distribution diagnostics: `risk_concentration`, `gini_risk`
 
 8. **Fetch external validation datasets (FEMA NRI + MTBS) and rerun validation for Butte:**
@@ -356,15 +356,14 @@ def run():
 - Fetch data from external APIs and local files
 - Compute hazard, exposure, vulnerability, and resilience features
 - Normalize features to 0-1 range
-- Handle missing data with fallback dummy values
-- Track data provenance (REAL vs. DUMMY)
+- Handle missing data explicitly with provenance tiers (REAL/ESTIMATED/PROXY/MISSING)
 
 **Files involved:**
 - `src/pipeline/feature_pipeline.py:run_feature_pipeline()`
 - `src/features/hazard.py` — Hazard features (wildfire, vegetation, forest distance)
 - `src/features/exposure.py` — Exposure features (population, housing, building value)
-- `src/features/vulnerability.py` — Vulnerability features (poverty, elderly, vehicle access)
-- `src/features/resilience.py` — Resilience features (fire stations, hospitals, road access)
+- `src/features/vulnerability.py` — Vulnerability features (poverty, elderly, uninsured)
+- `src/features/resilience.py` — Resilience features (vehicle access, median household income, internet access)
 - `src/utils/real_data.py` — All 9 data source fetching functions
 - `src/utils/dummy_data.py` — Fallback dummy value generation
 
@@ -642,7 +641,7 @@ The program retrieves information from **9 external sources**. Each source is fe
 
 ### 3.5 ACS (American Community Survey)
 
-**What it measures:** Socioeconomic characteristics (poverty, elderly, uninsured, building value)
+**What it measures:** Socioeconomic characteristics (poverty, elderly, uninsured) and economic exposure (building value proxy)
 
 **Source:** US Census Bureau, 2021 American Community Survey (5-year)  
 **API:** https://api.census.gov/data/2021/acs/acs5
@@ -711,7 +710,7 @@ The program retrieves information from **9 external sources**. Each source is fe
 - **Cached locally:**
   - `data/real/fire_stations.csv` (lat, lon, name)
   - `data/real/hospitals.csv` (lat, lon, name)
-**Note:** The codepaths for `res_fire_station_dist` / `res_hospital_dist` remain in `src/utils/real_data.py` for backwards-compatibility and can be removed later.
+**Note:** The codepaths for `res_fire_station_dist` / `res_hospital_dist` / `res_road_access` remain in `src/utils/real_data.py` for backwards-compatibility, but they are not part of the current resilience module used in `resilience_score`.
 
 **How calculations.csv Directs This:**
 
@@ -742,7 +741,7 @@ The program retrieves information from **9 external sources**. Each source is fe
 
 **Python Files (legacy):**
 - Fetcher: `src/utils/real_data.py` → `fetch_osm_roads()`, `compute_res_road_access_real()`
-- Feature: `src/features/resilience.py` → Road access feature (deprecated)
+- Feature: (legacy) road access is not used in the current `resilience_score`
 
 **Data Storage:**
 - **Cached locally:** `data/real/osm_roads.geojson` (road network geometries)
@@ -945,14 +944,14 @@ component_score = Σ (feature_normalized × weight) / Σ weights
 
 4. **Repeat for each component:**
    - Exposure Score (population, housing, building value)
-   - Vulnerability Score (poverty, elderly, vehicle access)
-   - Resilience Score (fire stations, hospitals, road access)
+   - Vulnerability Score (poverty, elderly, uninsured)
+   - Resilience Score (vehicle access, median household income, internet access)
 
 ### 4.3 Fallback and Dummy Data Generation
 
 **When Fallback is Needed:**
 
-If an API call fails (network error, rate limit, service down), the system generates dummy/synthetic data using bounds from calculations.csv.
+If an API call fails (network error, rate limit, service down), the system marks affected fields as `MISSING` with provenance describing the failure. It does not generate random synthetic feature values for the production pipeline outputs.
 
 **Fallback Generation Process:**
 
@@ -973,10 +972,10 @@ If an API call fails (network error, rate limit, service down), the system gener
    dummy_value = random.uniform(min_val, max_val)
    ```
 
-4. **Mark data as DUMMY in provenance:**
+4. **Mark data as MISSING in provenance:**
    ```python
-   gdf["exposure_population_source"] = "DUMMY"
-   gdf["exposure_population_provenance"] = "API failed; generated random [0, 100000]"
+   gdf["exposure_population_source"] = "MISSING"
+   gdf["exposure_population_provenance"] = "MISSING: API failed"
    ```
 
 5. **Log warning and continue pipeline**
@@ -985,7 +984,7 @@ If an API call fails (network error, rate limit, service down), the system gener
 
 - **Validation:** Dummy data must stay within expected ranges
 - **Plotting:** Visualization min/max are realistic
-- **Quality:** Diagnostics flag DUMMY vs. REAL data
+- **Quality:** Diagnostics and UI debug tags distinguish REAL/ESTIMATED/PROXY/MISSING
 
 **Columns Used for Fallback:**
 - `min` — Lower bound for random generation
@@ -997,7 +996,7 @@ Feature: exposure_population
 Expected range: 0 to 100,000 people per block
 If API fails: Generate random integers between 0 and 100,000
 Output: exposure_population = random value in [0, 100000]
-Marked: exposure_population_source = "DUMMY"
+Marked: exposure_population_source = "MISSING"
 ```
 
 ### 4.4 Column-by-Column Usage Mapping
@@ -1343,7 +1342,7 @@ Multiple issues separated by semicolons
 Data origin for each feature:
 ```
 "REAL" — Fetched from API
-"DUMMY" — Generated fallback
+"MISSING" — No defensible value available
 "COMPUTED" — Derived from other features
 ```
 
@@ -1379,9 +1378,9 @@ Detailed explanation:
 3. Check `data/real/` for cached files
 4. Delete cache and retry: `rm data/real/*.csv`
 
-#### Issue: Diagnostics Report Showing Many DUMMY Values
-**Symptom:** diagnostics_report.csv shows most features as DUMMY
-**Meaning:** APIs are failing; using fallback data
+#### Issue: Diagnostics Report Showing Many MISSING Values
+**Symptom:** diagnostics_report.csv shows many features as MISSING
+**Meaning:** upstream APIs/files are unavailable for the run; affected fields were not imputed with synthetic random values
 **Solution:**
 1. Verify internet connectivity
 2. Check for rate limiting (Census API limit ~500 calls/day)
@@ -1499,7 +1498,7 @@ cat calculations.csv | column -t -s, | less
    - Create function in appropriate module (`src/features/hazard.py`, etc.)
    - Load data from external source or API
    - Handle errors with fallback generation
-   - Track provenance (REAL vs. DUMMY)
+   - Track provenance (REAL/ESTIMATED/PROXY/MISSING)
 
 3. **Update feature pipeline:**
    - Add function call to `src/pipeline/feature_pipeline.py`

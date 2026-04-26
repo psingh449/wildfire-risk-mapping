@@ -49,7 +49,7 @@ where `exposure_housing` is from the 2020 Decennial Census (H1) and `median_home
 
 ## Data provenance and quality tiers
 
-Each feature has companion `*_source` and `*_provenance` fields where applicable. Tiers follow `calculations.csv` (`REAL`, `ESTIMATED`, `PROXY`, `MISSING`) rather than a binary REAL/DUMMY split only.
+Each feature has companion `*_source` and `*_provenance` fields where applicable. Tiers follow `calculations.csv` (`REAL`, `ESTIMATED`, `PROXY`, `MISSING`).
 
 Per-county cached tables live under `data/real_cache/counties/{county_fips}/...` (see the `cache_primary` column in `calculations.csv`).
 
@@ -65,5 +65,5 @@ County-level aggregates, FEMA NRI comparison (if `data/external/fema_nri_county.
 
 For interpretability, the validation layer also records:
 
-- `_burned_label_source`: whether burned labels were derived from MTBS perimeters (`MTBS`) or a proxy fallback (`PROXY`).
+- `_burned_label_source`: whether burned labels were derived from MTBS perimeters (`MTBS`). If MTBS perimeters are unavailable, labels are marked `MISSING` and MTBS-derived metrics (overlap/AUC) are not computed.
 - `fema_nri_comparison.n_counties`: how many county points participated in the FEMA join (correlations are only meaningful when many counties are present; the repo avoids enforcing correlation thresholds on tiny `n_counties`).

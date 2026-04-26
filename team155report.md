@@ -12,7 +12,7 @@ Wildfire risk in the United States is increasing because of the interaction betw
 
 This project addresses that limitation by building a neighborhood-scale wildfire risk mapping framework at **Census block group resolution** (as implemented in the repository’s GeoJSON and pipeline). Block groups are small statistical areas—larger than individual census blocks but still fine enough to reveal local hotspots that county averages may obscure. Two nearby small areas can face very different wildfire conditions because of differences in burnable vegetation, distance to forest edges, density of people and homes, poverty levels, age structure, vehicle access, and proximity to emergency services. A neighborhood-level system therefore provides a more actionable view of where wildfire danger is concentrated and where communities may face the greatest consequences if a fire occurs.
 
-Our framework follows a standard disaster-risk perspective in which wildfire risk depends on four major components: **hazard, exposure, vulnerability, and resilience**. Hazard represents the likelihood or intensity of wildfire-related threat. Exposure captures the people, housing, and economic assets that could be affected. Vulnerability represents social conditions that can make evacuation, response, and recovery more difficult. Resilience represents the capacity of a community to respond and recover, including access to roads, hospitals, and fire stations. Rather than studying wildfire hazard alone, this approach models wildfire risk as a combination of physical threat and human consequence.
+Our framework follows a standard disaster-risk perspective in which wildfire risk depends on four major components: **hazard, exposure, vulnerability, and resilience**. Hazard represents the likelihood or intensity of wildfire-related threat. Exposure captures the people, housing, and economic assets that could be affected. Vulnerability represents social conditions that can make evacuation, response, and recovery more difficult. Resilience represents the capacity of a community to respond and recover; in the current implemented model this is captured by **vehicle access, median household income, and internet access** (ACS-derived capacity proxies). Rather than studying wildfire hazard alone, this approach models wildfire risk as a combination of physical threat and human consequence.
 
 The project is designed as a reproducible data pipeline built from public datasets and transparent calculations. As documented in `calculations.csv`, the system computes wildfire-related features from sources including the U.S. Forest Service Wildfire Hazard Potential data, National Land Cover Database land-cover data, Census population and housing counts, ACS socioeconomic variables, HIFLD critical infrastructure layers, and OpenStreetMap road networks. These inputs are processed into standardized block-group-level indicators and combined into interpretable composite scores for hazard, exposure, vulnerability, resilience, overall risk, and expected annual loss. The canonical schema in `calculations.csv` now also stores composite-weight metadata through `weight_group` and `weight` columns, so both feature definitions and default weighting rules are documented in one place. The resulting outputs are validated, exported to GeoJSON, and visualized in an interactive frontend so users can inspect risk patterns spatially.
 
@@ -43,8 +43,8 @@ Each component score is built from lower-level features defined in `calculations
 
 - `H(b)` from wildfire probability, vegetation/fuel proxy, and distance to forest
 - `E(b)` from population, housing units, and estimated building value
-- `V(b)` from poverty, elderly population share, and vehicle access proxy
-- `R(b)` from distance to fire stations, distance to hospitals, and road access
+- `V(b)` from poverty, elderly population share, and uninsured share
+- `R(b)` from vehicle access, median household income, and internet access
 
 The implemented wildfire risk model is:
 
@@ -117,8 +117,8 @@ A central problem in coarse disaster reporting is that averaging can combine ver
 | Input geometry | Census blocks or project block geometries | Block | GeoDataFrame |
 | Hazard inputs | WHP, NLCD, forest distance | Block or raster-to-block | Numeric features |
 | Exposure inputs | Population, housing, building value estimate | Block / block-group joined to block | Numeric features |
-| Vulnerability inputs | Poverty, elderly, vehicle access | Block-group allocated to block | Numeric features |
-| Resilience inputs | Fire stations, hospitals, road access | Block | Numeric features |
+| Vulnerability inputs | Poverty, elderly, uninsured | Block group | Numeric features |
+| Resilience inputs | Vehicle access, median household income, internet access | Block group | Numeric features |
 | Primary output | `risk_score` | Block | Float in `[0,1]` |
 | Economic output | `eal`, `eal_norm` | Block | Float |
 | Validation outputs | county aggregates, FEMA comparison, fire overlap, AUC, Gini | County / global / attached to blocks | Metrics + diagnostics |
