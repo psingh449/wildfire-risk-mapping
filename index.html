@@ -25,9 +25,6 @@
         <section class="experiments-dashboard" aria-label="Experiments dashboard">
             <div class="experiments-dashboard__header">
                 <h2 class="experiments-dashboard__title">Evaluation dashboard</h2>
-                <div class="experiments-dashboard__subtitle">
-                    Summaries computed across all packaged counties available (today: your downloaded counties; later: CA 58 counties).
-                </div>
             </div>
             <div id="experimentsDashboard" class="experiments-dashboard__body" aria-live="polite"></div>
         </section>
@@ -107,42 +104,41 @@
             <ul class="map-detail-legend__bullets" role="list">
                 <li><b>FEMA</b>: Federal Emergency Management Agency (United States).</li>
                 <li><b>NRI</b>: National Risk Index (FEMA county-level baseline used for comparison). For wildfire: <code>NRI ≈ EAL × SocialVulnerability × (1 − CommunityResilience)</code>.</li>
-                <li><b>AUC</b>: Area Under the ROC Curve (0.5 = random ranking, 1.0 = perfect ranking).</li>
+                <li><b>AUC</b>: Area Under the Curve (a score that summarizes a ROC curve; 0.5 = random ranking, 1.0 = perfect ranking).</li>
+                <li><b>ROC</b>: Receiver Operating Characteristic curve (plots true-positive rate vs false-positive rate as the threshold changes).</li>
                 <li><b>MTBS</b>: Monitoring Trends in Burn Severity (USGS/USFS historical wildfire perimeters).</li>
-            </ul>
-            <div class="map-detail-legend__subhead"><b>Quality / stars</b></div>
-            <ul class="map-detail-legend__bullets" role="list">
-                <li>If the building value uses an estimate (e.g., county-mean median value), the UI may show a <code>*</code>.</li>
-                <li>Turn on <code>?debug=1</code> (or use the debug toggle) to see tags like <code>[src:acs]</code>, <code>[est:county-mean]</code>, <code>[missing]</code>.</li>
-            </ul>
-            <div class="map-detail-legend__subhead"><b>Why you may see “ESTIMATED”</b></div>
-            <ul class="map-detail-legend__bullets" role="list">
-                <li>Some ACS tables come back as all-null at block group for a county.</li>
-                <li>When that happens, we use tract-level values and assign them to block groups in that tract.</li>
-                <li>The UI marks those as <code>*</code> and, in debug mode, tags like <code>[est:tract]</code>.</li>
             </ul>
             <div class="map-detail-legend__subhead"><b>Data source</b></div>
             <ul class="map-detail-legend__bullets" role="list">
-                <li><code>[src:census]</code>: value comes from decennial Census inputs (e.g., population / housing baselines).</li>
-                <li><code>[src:acs]</code>: value comes from ACS tables (e.g., median home value, poverty, elderly, vehicle access).</li>
-                <li><code>[src:whp]</code>: hazard signal sourced from wildfire probability / hazard products (USFS/related).</li>
-                <li><code>[src:hifld]</code>: access-distance inputs sourced from HIFLD (e.g., hospitals, fire stations).</li>
-                <li><code>[src:osm]</code>: access/connectivity proxy sourced from OpenStreetMap-derived features (roads / connectivity).</li>
+                <li><code>[src:census]</code>: decennial Census API (population / housing). <a href="https://api.census.gov/data/2020/dec/pl" target="_blank" rel="noreferrer">https://api.census.gov/data/2020/dec/pl</a></li>
+                <li><code>[src:acs]</code>: ACS API (poverty, elderly, uninsured, income, home value, internet, etc.). <a href="https://api.census.gov/data/2021/acs/acs5" target="_blank" rel="noreferrer">https://api.census.gov/data/2021/acs/acs5</a></li>
+                <li><code>[src:whp]</code>: wildfire hazard product (downloaded raster; not a live API).</li>
+                <li><code>[src:hifld]</code>: HIFLD open data (facilities/access layers). <a href="https://hifld-geoplatform.opendata.arcgis.com/" target="_blank" rel="noreferrer">https://hifld-geoplatform.opendata.arcgis.com/</a></li>
+                <li><code>[src:osm]</code>: OpenStreetMap data (roads/connectivity proxy). <a href="https://overpass-api.de/api/interpreter" target="_blank" rel="noreferrer">https://overpass-api.de/api/interpreter</a></li>
                 <li><code>[px:…]</code>: “proxy path” used when a primary dataset is missing at build time (still informative, but flagged).</li>
                 <li><code>[est:county-mean]</code>: county-mean imputation used (e.g., missing block-group median).</li>
                 <li><code>[est:tract]</code>: tract-level value assigned down to block groups when block-group ACS is missing.</li>
                 <li><code>[missing]</code>: both primary and proxy paths are missing → shown as <code>—</code>.</li>
             </ul>
-            <div class="map-detail-legend__subhead"><b>How to read the evaluation cards</b></div>
+            <div class="map-detail-legend__subhead"><b>Data quality</b></div>
+            <ul class="map-detail-legend__bullets" role="list">
+                <li>If the building value uses an estimate (e.g., county-mean median value), the UI may show a <code>*</code>.</li>
+                <li>Some ACS tables come back as all-null at block group for a county.</li>
+                <li>When that happens, we use tract-level values and assign them to block groups in that tract (debug tag <code>[est:tract]</code>).</li>
+                <li>Turn on <code>?debug=1</code> to see tags like <code>[src:acs]</code>, <code>[est:county-mean]</code>, <code>[missing]</code>.</li>
+            </ul>
+            <div class="map-detail-legend__subhead"><b>Evaluation Dashboard</b></div>
             <ul class="map-detail-legend__bullets" role="list">
                 <li><b>#1 (FEMA NRI)</b>: do our county-level rankings agree with FEMA’s National Risk Index? (correlation <code>r</code>).</li>
                 <li><b>#2 (Largest losses)</b>: which counties have the highest expected annual loss (EAL) in our model?</li>
-                <li><b>#3–#4 (Fire history)</b>: do areas we label high-risk align with historical fire perimeters? (overlap) and does our score rank burned vs unburned areas well? (AUC).</li>
+                <li><b>#3 (Fire overlap)</b>: among the top 10% highest-risk areas, what fraction intersected a historical fire perimeter?</li>
+                <li><b>#4 (AUC)</b>: does our <code>risk_score</code> rank burned vs unburned areas correctly across thresholds?</li>
                 <li><b>#5 (Concentration)</b>: is risk spread evenly or concentrated into a few hot spots within counties? (top-10% share, Gini).</li>
             </ul>
-            <div class="map-detail-legend__note">
-                Alpine County has a single 2020 Census block group at our chosen geography, so it appears as one polygon; within-county normalization uses a neutral value when there is no variation.
-            </div>
+            <div class="map-detail-legend__subhead"><b>Miscellaneous</b></div>
+            <ul class="map-detail-legend__bullets" role="list">
+                <li>Alpine County has a single 2020 Census block group at our chosen geography, so it appears as one polygon; within-county normalization uses a neutral value when there is no variation.</li>
+            </ul>
         </section>
         </div>
     </div>

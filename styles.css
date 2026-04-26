@@ -65,12 +65,6 @@ select.county-select {
     min-height: 1.2em;
 }
 
-.map-detail-legend__note {
-    margin-top: 10px;
-    font-size: 12px;
-    color: #444;
-    line-height: 1.35;
-}
 
 button {
     cursor: pointer;
