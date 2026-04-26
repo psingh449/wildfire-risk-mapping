@@ -1896,7 +1896,9 @@
         }
       },
       "perimeters_path": "data/external/calfire_perimeters_2015_2024.geojson",
+      "perimeters_used": 2773,
       "source": "CALFIRE",
+      "year_field": "YEAR_",
       "year_max": 2024,
       "year_min": 2015
     },
@@ -1986,8 +1988,424 @@
           "sum_eal": 0.0
         }
       ],
+      "experiment2_exposure_building_value_source_counts": {
+        "ESTIMATED": 25554,
+        "REAL": 53
+      },
+      "experiment3_4_by_county": [
+        {
+          "auc": null,
+          "burned": 0,
+          "county_fips": "06001",
+          "n": 1134,
+          "overlap": null
+        },
+        {
+          "auc": null,
+          "burned": 0,
+          "county_fips": "06003",
+          "n": 1,
+          "overlap": null
+        },
+        {
+          "auc": null,
+          "burned": 0,
+          "county_fips": "06005",
+          "n": 30,
+          "overlap": null
+        },
+        {
+          "auc": 0.3026190476190476,
+          "burned": 60,
+          "county_fips": "06007",
+          "n": 200,
+          "overlap": 0.15
+        },
+        {
+          "auc": null,
+          "burned": 0,
+          "county_fips": "06009",
+          "n": 36,
+          "overlap": null
+        },
+        {
+          "auc": null,
+          "burned": 0,
+          "county_fips": "06011",
+          "n": 20,
+          "overlap": null
+        },
+        {
+          "auc": null,
+          "burned": 0,
+          "county_fips": "06013",
+          "n": 708,
+          "overlap": null
+        },
+        {
+          "auc": null,
+          "burned": 0,
+          "county_fips": "06015",
+          "n": 19,
+          "overlap": null
+        },
+        {
+          "auc": null,
+          "burned": 0,
+          "county_fips": "06017",
+          "n": 154,
+          "overlap": null
+        },
+        {
+          "auc": null,
+          "burned": 0,
+          "county_fips": "06019",
+          "n": 637,
+          "overlap": null
+        },
+        {
+          "auc": null,
+          "burned": 0,
+          "county_fips": "06021",
+          "n": 27,
+          "overlap": null
+        },
+        {
+          "auc": null,
+          "burned": 0,
+          "county_fips": "06023",
+          "n": 115,
+          "overlap": null
+        },
+        {
+          "auc": null,
+          "burned": 0,
+          "county_fips": "06025",
+          "n": 114,
+          "overlap": null
+        },
+        {
+          "auc": null,
+          "burned": 0,
+          "county_fips": "06027",
+          "n": 16,
+          "overlap": null
+        },
+        {
+          "auc": null,
+          "burned": 0,
+          "county_fips": "06029",
+          "n": 600,
+          "overlap": null
+        },
+        {
+          "auc": null,
+          "burned": 0,
+          "county_fips": "06031",
+          "n": 84,
+          "overlap": null
+        },
+        {
+          "auc": null,
+          "burned": 0,
+          "county_fips": "06033",
+          "n": 59,
+          "overlap": null
+        },
+        {
+          "auc": null,
+          "burned": 0,
+          "county_fips": "06035",
+          "n": 24,
+          "overlap": null
+        },
+        {
+          "auc": null,
+          "burned": 0,
+          "county_fips": "06037",
+          "n": 6591,
+          "overlap": null
+        },
+        {
+          "auc": null,
+          "burned": 0,
+          "county_fips": "06039",
+          "n": 98,
+          "overlap": null
+        },
+        {
+          "auc": null,
+          "burned": 0,
+          "county_fips": "06041",
+          "n": 181,
+          "overlap": null
+        },
+        {
+          "auc": null,
+          "burned": 0,
+          "county_fips": "06043",
+          "n": 17,
+          "overlap": null
+        },
+        {
+          "auc": null,
+          "burned": 0,
+          "county_fips": "06045",
+          "n": 86,
+          "overlap": null
+        },
+        {
+          "auc": null,
+          "burned": 0,
+          "county_fips": "06047",
+          "n": 164,
+          "overlap": null
+        },
+        {
+          "auc": null,
+          "burned": 0,
+          "county_fips": "06049",
+          "n": 11,
+          "overlap": null
+        },
+        {
+          "auc": null,
+          "burned": 0,
+          "county_fips": "06051",
+          "n": 16,
+          "overlap": null
+        },
+        {
+          "auc": null,
+          "burned": 0,
+          "county_fips": "06053",
+          "n": 272,
+          "overlap": null
+        },
+        {
+          "auc": null,
+          "burned": 0,
+          "county_fips": "06055",
+          "n": 108,
+          "overlap": null
+        },
+        {
+          "auc": null,
+          "burned": 0,
+          "county_fips": "06057",
+          "n": 80,
+          "overlap": null
+        },
+        {
+          "auc": 0.5,
+          "burned": 1,
+          "county_fips": "06059",
+          "n": 2049,
+          "overlap": 1.0
+        },
+        {
+          "auc": null,
+          "burned": 0,
+          "county_fips": "06061",
+          "n": 253,
+          "overlap": null
+        },
+        {
+          "auc": 0.5,
+          "burned": 3,
+          "county_fips": "06063",
+          "n": 22,
+          "overlap": 1.0
+        },
+        {
+          "auc": 0.5,
+          "burned": 5,
+          "county_fips": "06065",
+          "n": 1394,
+          "overlap": 1.0
+        },
+        {
+          "auc": null,
+          "burned": 0,
+          "county_fips": "06067",
+          "n": 1024,
+          "overlap": null
+        },
+        {
+          "auc": null,
+          "burned": 0,
+          "county_fips": "06069",
+          "n": 46,
+          "overlap": null
+        },
+        {
+          "auc": null,
+          "burned": 0,
+          "county_fips": "06071",
+          "n": 1275,
+          "overlap": null
+        },
+        {
+          "auc": 0.4832182209353762,
+          "burned": 216,
+          "county_fips": "06073",
+          "n": 2058,
+          "overlap": 0.10185185185185185
+        },
+        {
+          "auc": null,
+          "burned": 0,
+          "county_fips": "06075",
+          "n": 681,
+          "overlap": null
+        },
+        {
+          "auc": null,
+          "burned": 0,
+          "county_fips": "06077",
+          "n": 501,
+          "overlap": null
+        },
+        {
+          "auc": null,
+          "burned": 0,
+          "county_fips": "06079",
+          "n": 181,
+          "overlap": null
+        },
+        {
+          "auc": null,
+          "burned": 0,
+          "county_fips": "06081",
+          "n": 500,
+          "overlap": null
+        },
+        {
+          "auc": null,
+          "burned": 0,
+          "county_fips": "06083",
+          "n": 315,
+          "overlap": null
+        },
+        {
+          "auc": null,
+          "burned": 0,
+          "county_fips": "06085",
+          "n": 1173,
+          "overlap": null
+        },
+        {
+          "auc": null,
+          "burned": 0,
+          "county_fips": "06087",
+          "n": 150,
+          "overlap": null
+        },
+        {
+          "auc": null,
+          "burned": 0,
+          "county_fips": "06089",
+          "n": 133,
+          "overlap": null
+        },
+        {
+          "auc": null,
+          "burned": 0,
+          "county_fips": "06091",
+          "n": 5,
+          "overlap": null
+        },
+        {
+          "auc": null,
+          "burned": 0,
+          "county_fips": "06093",
+          "n": 45,
+          "overlap": null
+        },
+        {
+          "auc": null,
+          "burned": 0,
+          "county_fips": "06095",
+          "n": 298,
+          "overlap": null
+        },
+        {
+          "auc": null,
+          "burned": 0,
+          "county_fips": "06097",
+          "n": 404,
+          "overlap": null
+        },
+        {
+          "auc": null,
+          "burned": 0,
+          "county_fips": "06099",
+          "n": 340,
+          "overlap": null
+        },
+        {
+          "auc": null,
+          "burned": 0,
+          "county_fips": "06101",
+          "n": 69,
+          "overlap": null
+        },
+        {
+          "auc": 0.5,
+          "burned": 2,
+          "county_fips": "06103",
+          "n": 45,
+          "overlap": 1.0
+        },
+        {
+          "auc": null,
+          "burned": 0,
+          "county_fips": "06105",
+          "n": 12,
+          "overlap": null
+        },
+        {
+          "auc": null,
+          "burned": 0,
+          "county_fips": "06107",
+          "n": 305,
+          "overlap": null
+        },
+        {
+          "auc": null,
+          "burned": 0,
+          "county_fips": "06109",
+          "n": 55,
+          "overlap": null
+        },
+        {
+          "auc": null,
+          "burned": 0,
+          "county_fips": "06111",
+          "n": 479,
+          "overlap": null
+        },
+        {
+          "auc": null,
+          "burned": 0,
+          "county_fips": "06113",
+          "n": 137,
+          "overlap": null
+        },
+        {
+          "auc": 0.5,
+          "burned": 3,
+          "county_fips": "06115",
+          "n": 56,
+          "overlap": 1.0
+        }
+      ],
+      "experiment3_4_n_dropped": 0,
+      "experiment3_4_n_used": 25607,
       "experiment3_fire_overlap_ratio": 0.6758620689655173,
+      "experiment3_fire_overlap_ratio_macro": 0.7502645502645502,
       "experiment4_auc_score": 0.9081068601852647,
+      "experiment4_auc_score_macro": 0.46940532407920343,
       "experiment5_concentration": 0.9720975405726046,
       "experiment5_gini": 0.9511343086647663,
       "experiment5_heterogeneity_by_county": [

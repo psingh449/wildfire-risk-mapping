@@ -13,6 +13,8 @@ to keep the artifact small (the validation runner uses the packaged counties as 
 from __future__ import annotations
 
 import json
+import hashlib
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Iterable, List
 
@@ -151,8 +153,29 @@ def fetch_calfire_perimeters_2015_2024(out_geojson: Path) -> None:
 
 def main() -> int:
     out = REPO_ROOT / "data" / "external" / "calfire_perimeters_2015_2024.geojson"
+    meta = REPO_ROOT / "data" / "external" / "calfire_perimeters_2015_2024.manifest.json"
     print(f"[external] Fetching CAL FIRE perimeters (2015–2024) -> {out}")
     fetch_calfire_perimeters_2015_2024(out)
+    if out.exists():
+        h = hashlib.sha256()
+        with out.open("rb") as f:
+            for chunk in iter(lambda: f.read(1024 * 1024), b""):
+                h.update(chunk)
+        meta.write_text(
+            json.dumps(
+                {
+                    "generated_at_utc": datetime.now(timezone.utc).isoformat(),
+                    "source_url": CALFIRE_FEATURESERVER,
+                    "where": "YEAR_ >= 2015 AND YEAR_ <= 2024",
+                    "out_fields": ["FIRE_NAME", "YEAR_", "ALARM_DATE", "CONT_DATE", "AGENCY", "UNIT_ID", "CAUSE", "GIS_ACRES", "INC_NUM"],
+                    "path": str(out.relative_to(REPO_ROOT)),
+                    "sha256": h.hexdigest(),
+                },
+                indent=2,
+                sort_keys=True,
+            ),
+            encoding="utf-8",
+        )
     print("[external] Done.")
     return 0
 

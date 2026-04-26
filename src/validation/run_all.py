@@ -224,13 +224,75 @@ def _compute_experiments_summary(gdf: pd.DataFrame) -> Dict[str, Any]:
     out["experiment2_county_eal_top10"] = top_eal[
         [c for c in ["county_fips", "county_name", "sum_eal", "mean_risk", "mean_risk_popw"] if c in top_eal.columns]
     ].to_dict(orient="records")
+    # Exposure value provenance coverage (EAL depends on exposure_building_value quality).
+    if "exposure_building_value_source" in gdf.columns:
+        src_counts = (
+            gdf["exposure_building_value_source"]
+            .astype(str)
+            .str.upper()
+            .value_counts(dropna=False)
+            .to_dict()
+        )
+        out["experiment2_exposure_building_value_source_counts"] = {str(k): int(v) for k, v in src_counts.items()}
+    else:
+        out["experiment2_exposure_building_value_source_counts"] = {}
 
     # --- Experiment 3/4 (report): historical overlap + AUC ---
     # Use the scalar metrics already computed for the full frame.
     # The UI will also show per-county CAL FIRE overlap/AUC via the calfire_validation blob.
     out["experiment3_fire_overlap_ratio"] = float(gdf["fire_overlap_ratio"].dropna().iloc[0]) if "fire_overlap_ratio" in gdf.columns and gdf["fire_overlap_ratio"].notna().any() else None
     out["experiment4_auc_score"] = float(gdf["auc_score"].dropna().iloc[0]) if "auc_score" in gdf.columns and gdf["auc_score"].notna().any() else None
-    out["fire_labels_source"] = str(gdf["_burned_label_source"].dropna().iloc[0]) if "_burned_label_source" in gdf.columns and gdf["_burned_label_source"].notna().any() else "UNKNOWN"
+    labels_source = str(gdf["_burned_label_source"].dropna().iloc[0]) if "_burned_label_source" in gdf.columns and gdf["_burned_label_source"].notna().any() else "UNKNOWN"
+    out["fire_labels_source"] = labels_source
+
+    # Add robust coverage + macro/micro variants when MTBS labels are available.
+    if str(labels_source).upper() == "MTBS" and "_burned_label" in gdf.columns and "risk_score" in gdf.columns:
+        y = pd.to_numeric(gdf["_burned_label"], errors="coerce")
+        s = pd.to_numeric(gdf["risk_score"], errors="coerce")
+        ok = y.notna() & s.notna()
+        out["experiment3_4_n_used"] = int(ok.sum())
+        out["experiment3_4_n_dropped"] = int((~ok).sum())
+
+        # Micro (pooled rows) already provided by scalar metrics. Now add macro (mean across counties).
+        def auc_from_scores(y_true: pd.Series, y_score: pd.Series) -> float | None:
+            y_true = pd.to_numeric(y_true, errors="coerce").dropna().astype(int)
+            y_score = pd.to_numeric(y_score, errors="coerce")
+            m = y_true.index.intersection(y_score.dropna().index)
+            y_true = y_true.loc[m]
+            y_score = y_score.loc[m]
+            n_pos = int((y_true == 1).sum())
+            n_neg = int((y_true == 0).sum())
+            if n_pos == 0 or n_neg == 0 or len(y_true) == 0:
+                return None
+            ranks = y_score.rank(method="average")
+            rank_sum_pos = float(ranks[y_true == 1].sum())
+            auc = (rank_sum_pos - (n_pos * (n_pos + 1) / 2.0)) / (n_pos * n_neg)
+            return float(max(0.0, min(1.0, auc)))
+
+        per = []
+        for cf, sub in gdf.loc[ok].groupby("county_fips"):
+            cf = str(cf).zfill(5)
+            yy = pd.to_numeric(sub["_burned_label"], errors="coerce").fillna(0).astype(int)
+            ss = pd.to_numeric(sub["risk_score"], errors="coerce")
+            # overlap within county: burned in top decile / total burned (same definition as metrics.py)
+            thr = float(ss.quantile(0.9)) if ss.notna().any() else 0.0
+            top = ss >= thr
+            total_burned = int(yy.sum())
+            overlap = None
+            if total_burned > 0:
+                overlap = float(int(((yy == 1) & top).sum()) / total_burned)
+            auc_c = auc_from_scores(yy, ss)
+            per.append({"county_fips": cf, "overlap": overlap, "auc": auc_c, "n": int(len(sub)), "burned": total_burned})
+        out["experiment3_4_by_county"] = per
+        overlaps = [p["overlap"] for p in per if p.get("overlap") is not None]
+        aucs = [p["auc"] for p in per if p.get("auc") is not None]
+        out["experiment3_fire_overlap_ratio_macro"] = float(sum(overlaps) / len(overlaps)) if overlaps else None
+        out["experiment4_auc_score_macro"] = float(sum(aucs) / len(aucs)) if aucs else None
+    else:
+        out["experiment3_4_n_used"] = 0
+        out["experiment3_4_n_dropped"] = int(len(gdf)) if gdf is not None else 0
+        out["experiment3_fire_overlap_ratio_macro"] = None
+        out["experiment4_auc_score_macro"] = None
 
     # --- Experiment 5 (report): concentration + inequality + selected heterogeneity table ---
     out["experiment5_concentration"] = float(gdf["risk_concentration"].dropna().iloc[0]) if "risk_concentration" in gdf.columns and gdf["risk_concentration"].notna().any() else None
