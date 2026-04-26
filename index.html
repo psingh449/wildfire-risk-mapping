@@ -127,13 +127,11 @@
                 <li>When that happens, we use tract-level values and assign them to block groups in that tract (debug tag <code>[est:tract]</code>).</li>
                 <li>Turn on <code>?debug=1</code> to see tags like <code>[src:acs]</code>, <code>[est:county-mean]</code>, <code>[missing]</code>.</li>
             </ul>
-            <div class="map-detail-legend__subhead"><b>Evaluation Dashboard</b></div>
+            <div class="map-detail-legend__subhead"><b>Evaluation dashboard</b></div>
             <ul class="map-detail-legend__bullets" role="list">
-                <li><b>#1 (FEMA NRI)</b>: do our county-level rankings agree with FEMA’s National Risk Index? (correlation <code>r</code>).</li>
                 <li><b>#2 (Largest losses)</b>: which counties have the highest expected annual loss (EAL) in our model?</li>
-                <li><b>#3 (Fire overlap)</b>: among the top 10% highest-risk areas, what fraction intersected a historical fire perimeter?</li>
-                <li><b>#4 (AUC)</b>: does our <code>risk_score</code> rank burned vs unburned areas correctly across thresholds?</li>
-                <li><b>#5 (Concentration)</b>: is risk spread evenly or concentrated into a few hot spots within counties? (top-10% share, Gini).</li>
+                <li><b>#3–#4 (Fire overlap / AUC)</b>: top-10% overlap with fire perimeters and AUC of <code>risk_score</code> for burned vs not burned.</li>
+                <li><b>#5 (Concentration / heterogeneity)</b>: statewide concentration (Gini, top-10% share) and <b>one example row</b> of within-county unevenness (San Diego when present).</li>
             </ul>
             <div class="map-detail-legend__subhead"><b>Miscellaneous</b></div>
             <ul class="map-detail-legend__bullets" role="list">

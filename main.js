@@ -1221,13 +1221,6 @@ function renderExperimentsDashboard() {
     const exp1 = exp.experiment1_fema_nri || {};
     const exp2 = Array.isArray(exp.experiment2_county_eal_top10) ? exp.experiment2_county_eal_top10 : [];
 
-    const femaUw = exp1.pearson_unweighted || {};
-    const femaPw = exp1.pearson_pop_weighted || {};
-    const rUw = femaUw.r != null ? Number(femaUw.r).toFixed(3) : "—";
-    const pUw = femaUw.p != null ? Number(femaUw.p).toExponential(2) : (femaUw.n != null && Number(femaUw.n) < 4 ? "n<4" : "—");
-    const rPw = femaPw.r != null ? Number(femaPw.r).toFixed(3) : "—";
-    const pPw = femaPw.p != null ? Number(femaPw.p).toExponential(2) : (femaPw.n != null && Number(femaPw.n) < 4 ? "n<4" : "—");
-
     const overlap = exp.experiment3_fire_overlap_ratio != null ? Number(exp.experiment3_fire_overlap_ratio).toFixed(3) : "—";
     const auc = exp.experiment4_auc_score != null ? Number(exp.experiment4_auc_score).toFixed(3) : "—";
     const conc = exp.experiment5_concentration != null ? Number(exp.experiment5_concentration).toFixed(3) : "—";
@@ -1244,11 +1237,6 @@ function renderExperimentsDashboard() {
                 <div class="exp-card__title">Coverage</div>
                 <div class="exp-card__value">${_escapeHtml(countiesCompared)}</div>
                 <div class="exp-card__meta">counties in FEMA join; blocks in bundle: <b>${_escapeHtml(blocks)}</b></div>
-            </div>
-            <div class="exp-card">
-                <div class="exp-card__title">Agreement with FEMA county index</div>
-                <div class="exp-card__value">r ${_escapeHtml(rUw)}</div>
-                <div class="exp-card__meta">How similar are our county rankings to FEMA’s NRI? (unweighted) <span class="exp-card__tag">#1</span></div>
             </div>
             <div class="exp-card">
                 <div class="exp-card__title">Does “high risk” match fire history?</div>
@@ -1282,17 +1270,19 @@ function renderExperimentsDashboard() {
     }).join("");
 
     const het = Array.isArray(exp.experiment5_heterogeneity_by_county) ? exp.experiment5_heterogeneity_by_county : [];
-    const selected = ["06073", "06037", "06059"];
-    const selRows = selected.map((fips) => het.find((r) => String(r.county_fips || "") === fips)).filter(Boolean);
-    const hetRows = (selRows.length ? selRows : het.slice(0, 10)).map((r) => {
-        const fips = r.county_fips != null ? String(r.county_fips) : "—";
-        const name = r.county_name != null ? String(r.county_name) : "";
-        const mean = r.mean_risk != null ? Number(r.mean_risk).toFixed(4) : "—";
-        const mx = r.max_risk != null ? Number(r.max_risk).toFixed(4) : "—";
-        const ratio = r.max_mean_ratio != null ? Number(r.max_mean_ratio).toFixed(1) + "×" : "—";
-        const top10 = r.top10_share != null ? (Number(r.top10_share) * 100).toFixed(1) + "%" : "—";
-        return `<tr><td>${_escapeHtml(fips)}</td><td>${_escapeHtml(name)}</td><td>${_escapeHtml(mean)}</td><td>${_escapeHtml(mx)}</td><td>${_escapeHtml(ratio)}</td><td>${_escapeHtml(top10)}</td></tr>`;
-    }).join("");
+    const pickHet = het.find((r) => String(r.county_fips || "") === "06073") || het[0] || null;
+    const hetRows = pickHet
+        ? (() => {
+              const r = pickHet;
+              const fips = r.county_fips != null ? String(r.county_fips) : "—";
+              const name = r.county_name != null ? String(r.county_name) : "";
+              const mean = r.mean_risk != null ? Number(r.mean_risk).toFixed(4) : "—";
+              const mx = r.max_risk != null ? Number(r.max_risk).toFixed(4) : "—";
+              const ratio = r.max_mean_ratio != null ? Number(r.max_mean_ratio).toFixed(1) + "×" : "—";
+              const top10 = r.top10_share != null ? (Number(r.top10_share) * 100).toFixed(1) + "%" : "—";
+              return `<tr><td>${_escapeHtml(fips)}</td><td>${_escapeHtml(name)}</td><td>${_escapeHtml(mean)}</td><td>${_escapeHtml(mx)}</td><td>${_escapeHtml(ratio)}</td><td>${_escapeHtml(top10)}</td></tr>`;
+          })()
+        : "";
 
     const tables = `
         <div class="exp-tables">
@@ -1305,8 +1295,8 @@ function renderExperimentsDashboard() {
                 <div class="exp-card__meta" style="margin-top:6px">Totals are sums of block-group <code>eal</code> within each county. <span class="exp-card__tag">#2</span></div>
             </div>
             <div class="exp-table-wrap">
-                <div class="exp-table-wrap__title">How uneven is risk within a county?</div>
-                <table class="exp-table" aria-label="Within-county heterogeneity (selected)">
+                <div class="exp-table-wrap__title">How uneven is risk within a county? (one row)</div>
+                <table class="exp-table" aria-label="Within-county heterogeneity (one row)">
                     <thead><tr><th>County</th><th>Name</th><th>Block mean</th><th>Block max</th><th>Max/Mean</th><th>Top-10% share</th></tr></thead>
                     <tbody>${hetRows || `<tr><td colspan="6">—</td></tr>`}</tbody>
                 </table>
