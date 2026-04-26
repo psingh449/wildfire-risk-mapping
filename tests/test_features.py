@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 from src.features import hazard, exposure, vulnerability, resilience
-from src.features.build_features import _get_component_weights
+from src.features.build_features import _get_component_weights, minmax
 
 
 def test_hazard_features():
@@ -62,6 +62,20 @@ def test_resilience_features():
     assert gdf["res_internet_access"].between(0, 1).all()
     assert "res_internet_access_source" in gdf
     assert "res_internet_access_provenance" in gdf
+
+
+def test_minmax_singleton_and_constant_columns_use_neutral_not_zero():
+    # Alpine County (CA) is a single 2020 census block group: min==max for every in-county column.
+    # Old behavior: (x - min) / (max - min + eps) → 0, wiping all *_norm and risk_score.
+    s1 = pd.Series([0.73], dtype="float64")
+    assert (minmax(s1) - 0.5).abs().max() < 1e-9
+    s2 = pd.Series([0.2, 0.2, 0.2], dtype="float64")
+    assert (minmax(s2) - 0.5).abs().max() < 1e-9
+    s3 = pd.Series([0.0, 0.5, 1.0], dtype="float64")
+    m3 = minmax(s3)
+    assert m3.iloc[0] < 1e-12
+    assert m3.iloc[2] > 0.99  # (1-0)/(range+EPSILON) < 1 when EPSILON>0
+    assert 0.45 < m3.iloc[1] < 0.55
 
 
 def test_component_weights_loaded_from_calculations_csv():

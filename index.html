@@ -14,7 +14,7 @@
 
         <div class="controls">
             <label for="county">County:</label>
-            <select id="county" class="county-select" title="Bold options are priority demo counties (browser-prefetched when packaged)."></select>
+            <select id="county" class="county-select"></select>
             <label class="map-detail-control" for="mapDetail">
                 <input type="checkbox" id="mapDetail" class="map-detail-control__input" checked />
                 <span>Detail</span>
@@ -126,6 +126,9 @@
                 <li><code>[est:tract]</code>: tract-level value assigned down to block groups when block-group ACS is missing.</li>
                 <li><code>[missing]</code>: both primary and proxy paths are missing → shown as <code>—</code>.</li>
             </ul>
+            <div class="map-detail-legend__note">
+                Alpine County has a single 2020 Census block group at our chosen geography, so it appears as one polygon; within-county normalization uses a neutral value when there is no variation.
+            </div>
         </section>
         </div>
     </div>

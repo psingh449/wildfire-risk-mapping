@@ -1,4 +1,7 @@
+import numpy as np
+
 from src.utils.config import (
+    EPSILON,
     HAZARD_WEIGHTS,
     EXPOSURE_WEIGHTS,
     VULNERABILITY_WEIGHTS,
@@ -72,8 +75,27 @@ def _get_component_weights():
     }
 
 
-def minmax(series):
-    return (series - series.min()) / (series.max() - series.min() + 1e-9)
+def minmax(series: pd.Series) -> pd.Series:
+    """
+    Min–max to [0,1] within the current frame (typically one county's block groups).
+
+    When a column is constant (e.g. a single block group in Alpine County, or
+    all rows share the same ACS value), min == max and the naive ratio becomes 0/ε → 0,
+    which zeroes out every *_norm and collapses risk_score. In that case use 0.5
+    (uninformative within-county rank — neutral) so component scores stay meaningful.
+    """
+    s = pd.to_numeric(series, errors="coerce")
+    valid = s.notna() & np.isfinite(s)
+    if not valid.any():
+        return pd.Series(0.0, index=series.index, dtype="float64")
+    mn = float(s.loc[valid].min())
+    mx = float(s.loc[valid].max())
+    if mx == mn:
+        out = s.astype("float64")
+        out.loc[valid] = 0.5
+        return out
+    scaled = (s - mn) / (mx - mn + EPSILON)
+    return scaled
 
 
 def weighted_sum(df, weights):

@@ -16,3 +16,33 @@ def test_compute_risk():
     assert (gdf["eal"] >= 0).all()
     assert "eal_norm" in gdf
     assert gdf["eal_norm"].between(0, 1).all()
+
+
+def test_eal_norm_single_block_group_is_neutral():
+    gdf = pd.DataFrame(
+        {
+            "hazard_score": [0.2],
+            "exposure_score": [0.3],
+            "vulnerability_score": [0.4],
+            "resilience_score": [0.1],
+            "exposure_building_value": [1_000_000.0],
+        }
+    )
+    gdf = compute_risk(gdf)
+    assert gdf["eal"].iloc[0] > 0
+    assert float(gdf["eal_norm"].iloc[0]) == 0.5
+
+
+def test_eal_norm_all_eal_zero_stays_zero():
+    gdf = pd.DataFrame(
+        {
+            "hazard_score": [0.0],
+            "exposure_score": [0.0],
+            "vulnerability_score": [0.0],
+            "resilience_score": [0.0],
+            "exposure_building_value": [100.0],
+        }
+    )
+    gdf = compute_risk(gdf)
+    assert float(gdf["eal"].iloc[0]) == 0.0
+    assert float(gdf["eal_norm"].iloc[0]) == 0.0

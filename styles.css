@@ -58,15 +58,18 @@ select.county-select {
     max-width: 480px;
 }
 
-select.county-select option.prefetched {
-    font-weight: 700;
-}
-
 .county-message {
     margin: 0 0 8px 0;
     font-size: 13px;
     color: #8b4513;
     min-height: 1.2em;
+}
+
+.map-detail-legend__note {
+    margin-top: 10px;
+    font-size: 12px;
+    color: #444;
+    line-height: 1.35;
 }
 
 button {

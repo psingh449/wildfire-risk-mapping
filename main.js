@@ -1343,7 +1343,6 @@ function loadCounty(id, manifest) {
 
 function populateCountySelect(list, manifest) {
     const sel = document.getElementById("county");
-    const prefetched = new Set(manifest.prefetched_county_ids || []);
     sel.innerHTML = "";
 
     function _isCaliforniaCountyId(id) {
@@ -1365,7 +1364,6 @@ function populateCountySelect(list, manifest) {
         const o = document.createElement("option");
         o.value = c.id;
         o.textContent = _normalizeCountyLabel(c.label);
-        if (prefetched.has(c.id)) o.className = "prefetched";
         sel.appendChild(o);
     }
     const datasets = manifest.datasets || {};
