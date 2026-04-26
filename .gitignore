@@ -39,3 +39,13 @@ data/processed/blocks.geojson
 data/processed/counties/06007/blocks.geojson
 data/processed/run_summary.json
 data/real_cache/counties/06007/acs_2021_5yr/vehicle_access_tract/manifest.json
+
+# Keep local-only report draft
+team155report.md
+
+# Local-only design/diagram artifacts
+*.svg
+*.mmd
+
+# Local-only assignment requirements notes
+cse6242-requirements.md
