@@ -7,7 +7,7 @@ import pandas as pd
 from pathlib import Path
 from typing import Tuple, Optional, Dict, Any
 from src.utils.dummy_data import generate_uniform, generate_int
-from src.utils.source_tracker import mark_real, mark_dummy, mark_estimated
+from src.utils.source_tracker import mark_real, mark_missing, mark_dummy, mark_estimated
 from src.utils.config import REAL_DATA_DIR, USE_STORED_REAL_DATA
 from src.utils.real_cache import DatasetRef, normalize_county_fips, split_county_fips, write_dataset
 
@@ -227,8 +227,8 @@ def compute_exposure_population_real(gdf: pd.DataFrame) -> pd.DataFrame:
         DataFrame with exposure_population column
     """
     if "GEOID" not in gdf.columns:
-        gdf["exposure_population"] = fallback_int(gdf, "exposure_population", reason="No GEOID column")
-        return mark_dummy(gdf, "exposure_population", reason="No GEOID column")
+        gdf["exposure_population"] = 0
+        return mark_missing(gdf, "exposure_population", reason="No GEOID column")
     if USE_STORED_REAL_DATA:
         pop_dict = fetch_census_population_local()
         provenance = "local_census_population.csv"
@@ -247,8 +247,8 @@ def compute_exposure_population_real(gdf: pd.DataFrame) -> pd.DataFrame:
                 overwrite=True,
             )
     if pop_dict is None:
-        gdf["exposure_population"] = fallback_int(gdf, "exposure_population", reason="No real data available")
-        return mark_dummy(gdf, "exposure_population", reason="No real data available")
+        gdf["exposure_population"] = 0
+        return mark_missing(gdf, "exposure_population", reason="No real data available")
     gdf["exposure_population"] = gdf["GEOID"].map(pop_dict).fillna(0).astype(int)
     return mark_real(gdf, "exposure_population", source=provenance)
 
@@ -314,8 +314,8 @@ def compute_exposure_housing_real(gdf: pd.DataFrame) -> pd.DataFrame:
         DataFrame with exposure_housing column
     """
     if "GEOID" not in gdf.columns:
-        gdf["exposure_housing"] = fallback_int(gdf, "exposure_housing", reason="No GEOID column")
-        return mark_dummy(gdf, "exposure_housing", reason="No GEOID column")
+        gdf["exposure_housing"] = 0
+        return mark_missing(gdf, "exposure_housing", reason="No GEOID column")
     if USE_STORED_REAL_DATA:
         housing_dict = fetch_census_housing_local()
         provenance = "local_census_housing.csv"
@@ -333,8 +333,8 @@ def compute_exposure_housing_real(gdf: pd.DataFrame) -> pd.DataFrame:
                 overwrite=True,
             )
     if housing_dict is None:
-        gdf["exposure_housing"] = fallback_int(gdf, "exposure_housing", reason="No real data available")
-        return mark_dummy(gdf, "exposure_housing", reason="No real data available")
+        gdf["exposure_housing"] = 0
+        return mark_missing(gdf, "exposure_housing", reason="No real data available")
     gdf["exposure_housing"] = gdf["GEOID"].map(housing_dict).fillna(0).astype(int)
     return mark_real(gdf, "exposure_housing", source=provenance)
 
@@ -443,8 +443,8 @@ def compute_vuln_poverty_real(gdf: pd.DataFrame) -> pd.DataFrame:
     """
     # Map block to block group
     if "GEOID" not in gdf.columns:
-        gdf["vuln_poverty"] = fallback_uniform(gdf, "vuln_poverty", reason="No GEOID column")
-        return mark_dummy(gdf, "vuln_poverty", reason="No GEOID column")
+        gdf["vuln_poverty"] = 0.0
+        return mark_missing(gdf, "vuln_poverty", reason="No GEOID column")
     bg_col = block_group_geoid_series(gdf)
     tr_col = tract_geoid_series(gdf)
     if USE_STORED_REAL_DATA:
@@ -481,8 +481,8 @@ def compute_vuln_poverty_real(gdf: pd.DataFrame) -> pd.DataFrame:
                 overwrite=True,
             )
     if acs is None:
-        gdf["vuln_poverty"] = fallback_uniform(gdf, "vuln_poverty", reason="No real data available")
-        return mark_dummy(gdf, "vuln_poverty", reason="No real data available")
+        gdf["vuln_poverty"] = 0.0
+        return mark_missing(gdf, "vuln_poverty", reason="No real data available")
     acs["B17001_002E"] = pd.to_numeric(acs.get("B17001_002E"), errors="coerce")
     acs["B17001_001E"] = pd.to_numeric(acs.get("B17001_001E"), errors="coerce")
     acs["poverty_rate"] = acs["B17001_002E"] / acs["B17001_001E"]
@@ -532,8 +532,8 @@ def compute_vuln_elderly_real(gdf: pd.DataFrame) -> pd.DataFrame:
         DataFrame with vuln_elderly and blockgroup columns
     """
     if "GEOID" not in gdf.columns:
-        gdf["vuln_elderly"] = fallback_uniform(gdf, "vuln_elderly", reason="No GEOID column")
-        return mark_dummy(gdf, "vuln_elderly", reason="No GEOID column")
+        gdf["vuln_elderly"] = 0.0
+        return mark_missing(gdf, "vuln_elderly", reason="No GEOID column")
     bg_col = block_group_geoid_series(gdf)
     if USE_STORED_REAL_DATA:
         acs = fetch_acs_bg_local("acs_elderly.csv")
@@ -553,8 +553,8 @@ def compute_vuln_elderly_real(gdf: pd.DataFrame) -> pd.DataFrame:
                 overwrite=True,
             )
     if acs is None:
-        gdf["vuln_elderly"] = fallback_uniform(gdf, "vuln_elderly", reason="No real data available")
-        return mark_dummy(gdf, "vuln_elderly", reason="No real data available")
+        gdf["vuln_elderly"] = 0.0
+        return mark_missing(gdf, "vuln_elderly", reason="No real data available")
     # Convert only measure columns to numeric; keep GEOID as a string join key.
     for c in ["B01001_001E"] + [f"B01001_{i:03d}E" for i in range(20, 26)]:
         if c in acs.columns:
@@ -578,8 +578,8 @@ def compute_vuln_vehicle_access_real(gdf: pd.DataFrame) -> pd.DataFrame:
         DataFrame with vuln_vehicle_access and blockgroup columns
     """
     if "GEOID" not in gdf.columns:
-        gdf["vuln_vehicle_access"] = fallback_uniform(gdf, "vuln_vehicle_access", reason="No GEOID column")
-        return mark_dummy(gdf, "vuln_vehicle_access", reason="No GEOID column")
+        gdf["vuln_vehicle_access"] = 0.0
+        return mark_missing(gdf, "vuln_vehicle_access", reason="No GEOID column")
     bg_col = block_group_geoid_series(gdf)
     tr_col = tract_geoid_series(gdf)
     if USE_STORED_REAL_DATA:
@@ -618,8 +618,8 @@ def compute_vuln_vehicle_access_real(gdf: pd.DataFrame) -> pd.DataFrame:
                 overwrite=True,
             )
     if acs is None:
-        gdf["vuln_vehicle_access"] = fallback_uniform(gdf, "vuln_vehicle_access", reason="No real data available")
-        return mark_dummy(gdf, "vuln_vehicle_access", reason="No real data available")
+        gdf["vuln_vehicle_access"] = 0.0
+        return mark_missing(gdf, "vuln_vehicle_access", reason="No real data available")
     # Convert only measure columns to numeric; keep GEOID as a string join key.
     for c in ["B08201_002E", "B08201_001E"]:
         if c in acs.columns:
@@ -670,8 +670,8 @@ def compute_vuln_uninsured_real(gdf: pd.DataFrame) -> pd.DataFrame:
       uninsured_rate = (B27010_017E + B27010_033E + B27010_050E + B27010_066E) / B27010_001E
     """
     if "GEOID" not in gdf.columns:
-        gdf["vuln_uninsured"] = fallback_uniform(gdf, "vuln_uninsured", reason="No GEOID column")
-        return mark_dummy(gdf, "vuln_uninsured", reason="No GEOID column")
+        gdf["vuln_uninsured"] = 0.0
+        return mark_missing(gdf, "vuln_uninsured", reason="No GEOID column")
     bg_col = block_group_geoid_series(gdf)
     if USE_STORED_REAL_DATA:
         acs = fetch_acs_bg_local("acs_uninsured.csv")
@@ -691,8 +691,8 @@ def compute_vuln_uninsured_real(gdf: pd.DataFrame) -> pd.DataFrame:
                 overwrite=True,
             )
     if acs is None:
-        gdf["vuln_uninsured"] = fallback_uniform(gdf, "vuln_uninsured", reason="No real data available")
-        return mark_dummy(gdf, "vuln_uninsured", reason="No real data available")
+        gdf["vuln_uninsured"] = 0.0
+        return mark_missing(gdf, "vuln_uninsured", reason="No real data available")
     for c in ["B27010_001E", "B27010_017E", "B27010_033E", "B27010_050E", "B27010_066E"]:
         if c in acs.columns:
             acs[c] = pd.to_numeric(acs[c], errors="coerce")
@@ -726,16 +726,16 @@ def compute_res_vehicle_access_real(gdf: pd.DataFrame) -> pd.DataFrame:
         gdf["res_vehicle_access_provenance"] = tmp["vuln_vehicle_access_provenance"]
     # If vehicle access is missing entirely, fall back to dummy.
     if gdf["res_vehicle_access"].notna().sum() == 0:
-        gdf["res_vehicle_access"] = fallback_uniform(gdf, "res_vehicle_access", reason="No vehicle access available")
-        return mark_dummy(gdf, "res_vehicle_access", reason="No vehicle access available")
+        gdf["res_vehicle_access"] = 0.0
+        return mark_missing(gdf, "res_vehicle_access", reason="No vehicle access available")
     return gdf
 
 
 def compute_res_median_household_income_real(gdf: pd.DataFrame) -> pd.DataFrame:
     """Resilience input: ACS median household income (B19013_001E)."""
     if "GEOID" not in gdf.columns:
-        gdf["res_median_household_income"] = fallback_uniform(gdf, "res_median_household_income", reason="No GEOID column")
-        return mark_dummy(gdf, "res_median_household_income", reason="No GEOID column")
+        gdf["res_median_household_income"] = 0.0
+        return mark_missing(gdf, "res_median_household_income", reason="No GEOID column")
     bg_col = block_group_geoid_series(gdf)
     if USE_STORED_REAL_DATA:
         acs = fetch_acs_bg_local("acs_median_household_income.csv")
@@ -755,8 +755,8 @@ def compute_res_median_household_income_real(gdf: pd.DataFrame) -> pd.DataFrame:
                 overwrite=True,
             )
     if acs is None:
-        gdf["res_median_household_income"] = fallback_uniform(gdf, "res_median_household_income", reason="No real data available")
-        return mark_dummy(gdf, "res_median_household_income", reason="No real data available")
+        gdf["res_median_household_income"] = 0.0
+        return mark_missing(gdf, "res_median_household_income", reason="No real data available")
     if "B19013_001E" in acs.columns:
         acs["B19013_001E"] = pd.to_numeric(acs["B19013_001E"], errors="coerce")
         acs.loc[acs["B19013_001E"] == -666666666, "B19013_001E"] = np.nan
@@ -777,8 +777,8 @@ def compute_res_internet_access_real(gdf: pd.DataFrame) -> pd.DataFrame:
       internet_access = 1 - (B28002_013E / B28002_001E)
     """
     if "GEOID" not in gdf.columns:
-        gdf["res_internet_access"] = fallback_uniform(gdf, "res_internet_access", reason="No GEOID column")
-        return mark_dummy(gdf, "res_internet_access", reason="No GEOID column")
+        gdf["res_internet_access"] = 0.0
+        return mark_missing(gdf, "res_internet_access", reason="No GEOID column")
     bg_col = block_group_geoid_series(gdf)
     if USE_STORED_REAL_DATA:
         acs = fetch_acs_bg_local("acs_internet_access.csv")
@@ -798,8 +798,8 @@ def compute_res_internet_access_real(gdf: pd.DataFrame) -> pd.DataFrame:
                 overwrite=True,
             )
     if acs is None:
-        gdf["res_internet_access"] = fallback_uniform(gdf, "res_internet_access", reason="No real data available")
-        return mark_dummy(gdf, "res_internet_access", reason="No real data available")
+        gdf["res_internet_access"] = 0.0
+        return mark_missing(gdf, "res_internet_access", reason="No real data available")
     for c in ["B28002_001E", "B28002_013E"]:
         if c in acs.columns:
             acs[c] = pd.to_numeric(acs[c], errors="coerce")
@@ -825,8 +825,8 @@ def compute_exposure_building_value_real(gdf: pd.DataFrame) -> pd.DataFrame:
         DataFrame with exposure_building_value and blockgroup columns
     """
     if "GEOID" not in gdf.columns:
-        gdf["exposure_building_value"] = fallback_uniform(gdf, "exposure_building_value", reason="No GEOID column")
-        return mark_dummy(gdf, "exposure_building_value", reason="No GEOID column")
+        gdf["exposure_building_value"] = 0.0
+        return mark_missing(gdf, "exposure_building_value", reason="No GEOID column")
     bg_col = block_group_geoid_series(gdf)
     if USE_STORED_REAL_DATA:
         acs = fetch_acs_bg_local("acs_building_value.csv")
@@ -846,8 +846,8 @@ def compute_exposure_building_value_real(gdf: pd.DataFrame) -> pd.DataFrame:
                 overwrite=True,
             )
     if acs is None:
-        gdf["exposure_building_value"] = fallback_uniform(gdf, "exposure_building_value", reason="No real data available")
-        return mark_dummy(gdf, "exposure_building_value", reason="No real data available")
+        gdf["exposure_building_value"] = 0.0
+        return mark_missing(gdf, "exposure_building_value", reason="No real data available")
     # Convert only measure columns to numeric; keep GEOID as a string join key.
     if "B25077_001E" in acs.columns:
         acs["B25077_001E"] = pd.to_numeric(acs["B25077_001E"], errors="coerce")
@@ -880,7 +880,7 @@ def compute_hazard_wildfire_real(gdf: pd.DataFrame) -> pd.DataFrame:
     """
     import os
     import pandas as pd
-    from src.utils.source_tracker import mark_real, mark_dummy, mark_proxy
+    from src.utils.source_tracker import mark_real, mark_missing, mark_proxy
     county_fips = _get_county_fips()
     ref = DatasetRef(county_fips=county_fips, source_id="whp", quantity_id="wildfire")
     csv_path = ref.data_path
@@ -924,8 +924,8 @@ def compute_hazard_wildfire_real(gdf: pd.DataFrame) -> pd.DataFrame:
             method=f"{wv}*vegetation + {wf}*forest_proximity (OSM proxy)",
         )
     except Exception:
-        gdf["hazard_wildfire"] = fallback_uniform(gdf, "hazard_wildfire", reason="No WHP zonal stats CSV found")
-        return mark_dummy(gdf, "hazard_wildfire", reason="No WHP zonal stats CSV found")
+        gdf["hazard_wildfire"] = 0.0
+        return mark_missing(gdf, "hazard_wildfire", reason="No WHP zonal stats CSV found")
 
 def compute_hazard_vegetation_real(gdf: pd.DataFrame) -> pd.DataFrame:
     """
@@ -937,7 +937,7 @@ def compute_hazard_vegetation_real(gdf: pd.DataFrame) -> pd.DataFrame:
     """
     import os
     import pandas as pd
-    from src.utils.source_tracker import mark_dummy, mark_proxy
+    from src.utils.source_tracker import mark_missing, mark_proxy
     county_fips = _get_county_fips()
     ref = DatasetRef(county_fips=county_fips, source_id="nlcd", quantity_id="vegetation")
     csv_path = ref.data_path
@@ -1023,8 +1023,8 @@ def compute_hazard_vegetation_real(gdf: pd.DataFrame) -> pd.DataFrame:
         gdf["hazard_vegetation"] = ratio.astype(float).values
         return mark_proxy(gdf, "hazard_vegetation", method="OSM polygons proxy (auto-cached)")
     except Exception:
-        gdf["hazard_vegetation"] = fallback_uniform(gdf, "hazard_vegetation", reason="No NLCD vegetation CSV found")
-        return mark_dummy(gdf, "hazard_vegetation", reason="No NLCD vegetation CSV found")
+        gdf["hazard_vegetation"] = 0.0
+        return mark_missing(gdf, "hazard_vegetation", reason="No vegetation proxy available")
 
 def compute_hazard_forest_distance_real(gdf: pd.DataFrame) -> pd.DataFrame:
     """
@@ -1036,7 +1036,7 @@ def compute_hazard_forest_distance_real(gdf: pd.DataFrame) -> pd.DataFrame:
     """
     import os
     import pandas as pd
-    from src.utils.source_tracker import mark_dummy, mark_proxy
+    from src.utils.source_tracker import mark_missing, mark_proxy
     county_fips = _get_county_fips()
     ref = DatasetRef(county_fips=county_fips, source_id="nlcd", quantity_id="forest_distance")
     csv_path = ref.data_path
@@ -1118,8 +1118,8 @@ def compute_hazard_forest_distance_real(gdf: pd.DataFrame) -> pd.DataFrame:
         gdf["hazard_forest_distance"] = inv.astype(float).values
         return mark_proxy(gdf, "hazard_forest_distance", method="OSM polygons distance proxy (auto-cached)")
     except Exception:
-        gdf["hazard_forest_distance"] = fallback_uniform(gdf, "hazard_forest_distance", reason="No NLCD forest distance CSV found")
-        return mark_dummy(gdf, "hazard_forest_distance", reason="No NLCD forest distance CSV found")
+        gdf["hazard_forest_distance"] = 0.0
+        return mark_missing(gdf, "hazard_forest_distance", reason="No forest-distance proxy available")
 
 # --- HIFLD Fire Station, Hospital, and Road Access ---
 HIFLD_URL_BASE = "https://services1.arcgis.com/"
@@ -1257,7 +1257,7 @@ def compute_res_fire_station_dist_real(gdf: pd.DataFrame) -> pd.DataFrame:
     """
     import os
     import pandas as pd
-    from src.utils.source_tracker import mark_real, mark_dummy
+    from src.utils.source_tracker import mark_real, mark_missing
     county_fips = _get_county_fips()
     ref = DatasetRef(county_fips=county_fips, source_id="hifld", quantity_id="fire_stations_distance")
     csv_path = ref.data_path
@@ -1277,8 +1277,8 @@ def compute_res_fire_station_dist_real(gdf: pd.DataFrame) -> pd.DataFrame:
         # Invert and scale: 1/(1+distance_km)
         gdf["res_fire_station_dist"] = 1 / (1 + gdf["fire_station_dist"].fillna(0))
         return mark_real(gdf, "res_fire_station_dist", source=str(csv_path if csv_path.exists() else legacy))
-    gdf["res_fire_station_dist"] = fallback_uniform(gdf, "res_fire_station_dist", reason="No fire station dist CSV found")
-    return mark_dummy(gdf, "res_fire_station_dist", reason="No fire station dist CSV found")
+    gdf["res_fire_station_dist"] = 0.0
+    return mark_missing(gdf, "res_fire_station_dist", reason="No fire station dist CSV found")
 
 def compute_res_hospital_dist_real(gdf: pd.DataFrame) -> pd.DataFrame:
     """
@@ -1290,7 +1290,7 @@ def compute_res_hospital_dist_real(gdf: pd.DataFrame) -> pd.DataFrame:
     """
     import os
     import pandas as pd
-    from src.utils.source_tracker import mark_real, mark_dummy
+    from src.utils.source_tracker import mark_real, mark_missing
     county_fips = _get_county_fips()
     ref = DatasetRef(county_fips=county_fips, source_id="hifld", quantity_id="hospitals_distance")
     csv_path = ref.data_path
@@ -1310,8 +1310,8 @@ def compute_res_hospital_dist_real(gdf: pd.DataFrame) -> pd.DataFrame:
         # Invert and scale: 1/(1+distance_km)
         gdf["res_hospital_dist"] = 1 / (1 + gdf["hospital_dist"].fillna(0))
         return mark_real(gdf, "res_hospital_dist", source=str(csv_path if csv_path.exists() else legacy))
-    gdf["res_hospital_dist"] = fallback_uniform(gdf, "res_hospital_dist", reason="No hospital dist CSV found")
-    return mark_dummy(gdf, "res_hospital_dist", reason="No hospital dist CSV found")
+    gdf["res_hospital_dist"] = 0.0
+    return mark_missing(gdf, "res_hospital_dist", reason="No hospital dist CSV found")
 
 def compute_res_road_access_real(gdf: pd.DataFrame) -> pd.DataFrame:
     """
@@ -1323,7 +1323,7 @@ def compute_res_road_access_real(gdf: pd.DataFrame) -> pd.DataFrame:
     """
     import os
     import pandas as pd
-    from src.utils.source_tracker import mark_real, mark_dummy
+    from src.utils.source_tracker import mark_real, mark_missing
     county_fips = _get_county_fips()
     ref = DatasetRef(county_fips=county_fips, source_id="osm", quantity_id="roads_access")
     csv_path = ref.data_path
@@ -1354,5 +1354,5 @@ def compute_res_road_access_real(gdf: pd.DataFrame) -> pd.DataFrame:
         else:
             gdf["res_road_access"] = 0.0
         return mark_real(gdf, "res_road_access", source=str(csv_path if csv_path.exists() else legacy))
-    gdf["res_road_access"] = fallback_uniform(gdf, "res_road_access", reason="No road length CSV found")
-    return mark_dummy(gdf, "res_road_access", reason="No road length CSV found")
+    gdf["res_road_access"] = 0.0
+    return mark_missing(gdf, "res_road_access", reason="No road length CSV found")

@@ -3,39 +3,40 @@ from src.utils.real_data import (
     compute_hazard_forest_distance_real,
     compute_hazard_vegetation_real,
 )
-from src.utils.real_data import fallback_uniform
-from src.utils.source_tracker import mark_dummy
+from src.utils.source_tracker import mark_missing
 
 def compute_hazard_wildfire(gdf):
-    # Try real data, fallback to dummy
     try:
         return compute_hazard_wildfire_real(gdf)
     except Exception as e:
-        gdf["hazard_wildfire"] = fallback_uniform(gdf, "hazard_wildfire")
-        return mark_dummy(gdf, "hazard_wildfire")
+        gdf["hazard_wildfire"] = 0.0
+        return mark_missing(gdf, "hazard_wildfire", reason=f"real_data_error: {type(e).__name__}")
 
 def compute_hazard_vegetation(gdf):
     try:
         return compute_hazard_vegetation_real(gdf)
-    except Exception:
-        gdf["hazard_vegetation"] = fallback_uniform(gdf, "hazard_vegetation")
-        return mark_dummy(gdf, "hazard_vegetation")
+    except Exception as e:
+        gdf["hazard_vegetation"] = 0.0
+        return mark_missing(gdf, "hazard_vegetation", reason=f"real_data_error: {type(e).__name__}")
 
 def compute_hazard_forest_distance(gdf):
     try:
         return compute_hazard_forest_distance_real(gdf)
     except Exception as e:
-        gdf["hazard_forest_distance"] = fallback_uniform(gdf, "hazard_forest_distance")
-        return mark_dummy(gdf, "hazard_forest_distance")
+        gdf["hazard_forest_distance"] = 0.0
+        return mark_missing(gdf, "hazard_forest_distance", reason=f"real_data_error: {type(e).__name__}")
 
 def compute_hazard_weather(gdf):
-    gdf["hazard_weather"] = fallback_uniform(gdf, "hazard_weather")
-    return mark_dummy(gdf, "hazard_weather")
+    # Deprecated placeholder; kept only so older notebooks don't break.
+    gdf["hazard_weather"] = 0.0
+    return mark_missing(gdf, "hazard_weather", reason="deprecated_placeholder")
 
 def compute_hazard_temperature(gdf):
-    gdf["hazard_temperature"] = fallback_uniform(gdf, "hazard_temperature")
-    return mark_dummy(gdf, "hazard_temperature")
+    # Deprecated placeholder; kept only so older notebooks don't break.
+    gdf["hazard_temperature"] = 0.0
+    return mark_missing(gdf, "hazard_temperature", reason="deprecated_placeholder")
 
 def compute_hazard_wind(gdf):
-    gdf["hazard_wind"] = fallback_uniform(gdf, "hazard_wind")
-    return mark_dummy(gdf, "hazard_wind")
+    # Deprecated placeholder; kept only so older notebooks don't break.
+    gdf["hazard_wind"] = 0.0
+    return mark_missing(gdf, "hazard_wind", reason="deprecated_placeholder")

@@ -76,8 +76,15 @@ def compare_with_fema_nri(gdf: pd.DataFrame, fema_path: str = "data/external/fem
         "n_counties": 0,
     }
 
-    if os.path.exists(fema_path):
-        fema = pd.read_csv(fema_path, dtype={"county_fips": str})
+    from pathlib import Path
+
+    resolved = Path(fema_path)
+    if not resolved.is_absolute():
+        # Resolve relative to repo root (two levels above src/validation)
+        resolved = Path(__file__).resolve().parents[2] / fema_path
+
+    if resolved.exists():
+        fema = pd.read_csv(resolved, dtype={"county_fips": str})
         fema["county_fips"] = fema["county_fips"].astype(str).str.zfill(5)
 
         risk_col = "nri_risk" if "nri_risk" in fema.columns else ("risk" if "risk" in fema.columns else None)
@@ -251,6 +258,33 @@ def compute_calfire_historical_validation(
             if fire.empty:
                 raise ValueError("empty fire perimeter file")
 
+            # Attempt to honor the requested year window.
+            # CAL FIRE/FRAP perimeters may store year in different columns across vintages.
+            year_field = None
+            for cand in ["YEAR_", "YEAR", "FIRE_YEAR", "YEARSTART", "ALARM_DATE", "IGNITION", "DATE_"]:
+                if cand in fire.columns:
+                    year_field = cand
+                    break
+            if year_field is not None:
+                try:
+                    if year_field in ["ALARM_DATE", "IGNITION", "DATE_"]:
+                        yrs = pd.to_datetime(fire[year_field], errors="coerce").dt.year
+                    else:
+                        yrs = pd.to_numeric(fire[year_field], errors="coerce").astype("Int64")
+                    mask = yrs.notna() & (yrs >= int(year_min)) & (yrs <= int(year_max))
+                    fire = fire.loc[mask].copy()
+                    summary["year_field"] = year_field
+                    summary["perimeters_used"] = int(len(fire))
+                except Exception:
+                    summary["year_field"] = year_field
+                    summary["year_filter_applied"] = False
+            else:
+                summary["year_field"] = None
+                summary["year_filter_applied"] = False
+
+            if fire.empty:
+                raise ValueError("no perimeters left after year filtering")
+
             if (
                 hasattr(gdf, "crs")
                 and hasattr(fire, "crs")
@@ -332,10 +366,9 @@ def _compute_burned_labels_with_source(
             return labels, "MTBS"
         except Exception:
             pass
-
-    risk = _safe_series(gdf, "risk_score", 0.0)
-    threshold = float(risk.quantile(0.75)) if len(risk) else 0.0
-    return (risk >= threshold).astype(int), "PROXY"
+    # No independent burned-label source available.
+    # IMPORTANT: do NOT synthesize labels from model outputs (leakage).
+    return pd.Series([0] * len(gdf), index=gdf.index, dtype=int), "MISSING"
 
 
 def _compute_burned_labels(gdf: pd.DataFrame, fire_path: str = "data/external/mtbs_fire_perimeters.geojson") -> pd.Series:
@@ -352,6 +385,13 @@ def compute_historical_fire_overlap(gdf: pd.DataFrame, fire_path: str = "data/ex
         gdf["fire_overlap_ratio"] = []
         gdf["_burned_label"] = []
         gdf["_burned_label_source"] = []
+        return gdf
+
+    if str(burned_source).upper() != "MTBS":
+        # No external labels; do not compute overlap.
+        gdf["fire_overlap_ratio"] = np.nan
+        gdf["_burned_label"] = burned
+        gdf["_burned_label_source"] = burned_source
         return gdf
 
     threshold = float(risk.quantile(0.9)) if len(risk) else 0.0
@@ -390,6 +430,17 @@ def compute_auc_fire_prediction(gdf: pd.DataFrame) -> pd.DataFrame:
     elif "_burned_label_source" not in gdf.columns:
         # Best-effort source inference for older frames.
         gdf["_burned_label_source"] = "UNKNOWN"
+
+    if len(gdf) and "_burned_label_source" in gdf.columns:
+        s = gdf["_burned_label_source"].dropna()
+        src = str(s.iloc[0]) if len(s) else "UNKNOWN"
+    else:
+        src = "UNKNOWN"
+    src = str(src).upper()
+    if src != "MTBS":
+        # No external labels; do not compute AUC.
+        gdf["auc_score"] = np.nan
+        return gdf
 
     auc = _roc_auc_from_scores(gdf["_burned_label"], _safe_series(gdf, "risk_score", 0.0)) if len(gdf) else 0.5
     gdf["auc_score"] = np.clip(float(auc), 0.0, 1.0)

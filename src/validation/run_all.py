@@ -47,12 +47,14 @@ def _parse_json_cell(value: Any) -> Dict[str, Any]:
 
 def _extract_scalar_metrics(gdf: pd.DataFrame) -> Dict[str, Any]:
     # These are stored as constants repeated across rows; take first non-null.
-    def first_value(col: str, default: Any = None) -> Any:
+    def first_value(col: str, default: Any = None, *, preserve_all_null: bool = False) -> Any:
         if col not in gdf.columns or len(gdf) == 0:
             return default
         s = gdf[col]
-        s = s.dropna()
-        return s.iloc[0] if len(s) else default
+        s_non_null = s.dropna()
+        if len(s_non_null):
+            return s_non_null.iloc[0]
+        return None if preserve_all_null else default
 
     fema = _parse_json_cell(first_value("fema_nri_comparison", "{}"))
     module_sens = _parse_json_cell(first_value("module_sensitivity", "{}"))
@@ -67,8 +69,16 @@ def _extract_scalar_metrics(gdf: pd.DataFrame) -> Dict[str, Any]:
 
     return {
         "block_rows": int(len(gdf)),
-        "fire_overlap_ratio": float(first_value("fire_overlap_ratio", 0.0) or 0.0),
-        "auc_score": float(first_value("auc_score", 0.5) or 0.5),
+        "fire_overlap_ratio": (
+            None
+            if first_value("fire_overlap_ratio", None, preserve_all_null=True) is None
+            else float(first_value("fire_overlap_ratio", 0.0) or 0.0)
+        ),
+        "auc_score": (
+            None
+            if first_value("auc_score", None, preserve_all_null=True) is None
+            else float(first_value("auc_score", 0.5) or 0.5)
+        ),
         "risk_concentration": float(first_value("risk_concentration", 0.0) or 0.0),
         "gini_risk": float(first_value("gini_risk", 0.0) or 0.0),
         "fema_nri_comparison": fema,
