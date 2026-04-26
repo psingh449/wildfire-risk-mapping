@@ -1236,6 +1236,8 @@ function renderExperimentsDashboard() {
     const countiesCompared = exp1.counties_compared != null ? String(exp1.counties_compared) : "—";
     const blocks = _mergedAllUiDoc.metrics.block_rows != null ? String(_mergedAllUiDoc.metrics.block_rows) : "—";
 
+    const labelsSrc = String(exp.fire_labels_source || "UNKNOWN");
+
     const cards = `
         <div class="exp-cards">
             <div class="exp-card">
@@ -1244,24 +1246,34 @@ function renderExperimentsDashboard() {
                 <div class="exp-card__meta">counties in FEMA join; blocks in bundle: <b>${_escapeHtml(blocks)}</b></div>
             </div>
             <div class="exp-card">
-                <div class="exp-card__title">Exp1 – FEMA NRI</div>
+                <div class="exp-card__title">Agreement with FEMA county index</div>
                 <div class="exp-card__value">r ${_escapeHtml(rUw)}</div>
-                <div class="exp-card__meta">unweighted p ${_escapeHtml(pUw)}; pop‑weighted r ${_escapeHtml(rPw)} (p ${_escapeHtml(pPw)})</div>
+                <div class="exp-card__meta">How similar are our county rankings to FEMA’s NRI? (unweighted) <span class="exp-card__tag">#1</span></div>
             </div>
             <div class="exp-card">
-                <div class="exp-card__title">Exp3/4 – Fire history</div>
+                <div class="exp-card__title">Does “high risk” match fire history?</div>
                 <div class="exp-card__value">AUC ${_escapeHtml(auc)}</div>
-                <div class="exp-card__meta">overlap@top10: <b>${_escapeHtml(overlap)}</b> (labels: ${_escapeHtml(String(exp.fire_labels_source || "UNKNOWN"))})</div>
+                <div class="exp-card__meta">Overlap (top 10%) <b>${_escapeHtml(overlap)}</b>; labels: ${_escapeHtml(labelsSrc)} <span class="exp-card__tag">#3–#4</span></div>
             </div>
             <div class="exp-card">
-                <div class="exp-card__title">Exp5 – Concentration</div>
+                <div class="exp-card__title">Are “hot spots” concentrated?</div>
                 <div class="exp-card__value">${_escapeHtml(conc)}</div>
-                <div class="exp-card__meta">top10 share; gini ${_escapeHtml(gini)}</div>
+                <div class="exp-card__meta">Share of risk in top 10% areas; Gini ${_escapeHtml(gini)} <span class="exp-card__tag">#5</span></div>
+            </div>
+            <div class="exp-card">
+                <div class="exp-card__title">What AUC means (quick)</div>
+                <div class="exp-card__value">${_escapeHtml(auc)}</div>
+                <div class="exp-card__meta">0.5 = random ranking, 1.0 = perfect separation of burned vs unburned <span class="exp-card__tag">#4</span></div>
+            </div>
+            <div class="exp-card">
+                <div class="exp-card__title">How overlap is computed</div>
+                <div class="exp-card__value">${_escapeHtml(overlap)}</div>
+                <div class="exp-card__meta">Among the top 10% highest-risk areas, what fraction intersected a historical fire perimeter? <span class="exp-card__tag">#3</span></div>
             </div>
         </div>
     `;
 
-    const ealRows = exp2.slice(0, 10).map((r, i) => {
+    const ealRows = exp2.slice(0, 3).map((r, i) => {
         const fips = r.county_fips != null ? String(r.county_fips) : "—";
         const name = r.county_name != null ? String(r.county_name) : "";
         const eal = _fmtMoneyShort(r.sum_eal);
@@ -1285,18 +1297,20 @@ function renderExperimentsDashboard() {
     const tables = `
         <div class="exp-tables">
             <div class="exp-table-wrap">
-                <div class="exp-table-wrap__title">Exp2 – County Expected Annual Loss (top 10)</div>
-                <table class="exp-table" aria-label="Experiment 2 county EAL ranking">
+                <div class="exp-table-wrap__title">Largest expected losses (top 3)</div>
+                <table class="exp-table" aria-label="County expected annual loss ranking (top 3)">
                     <thead><tr><th>#</th><th>County</th><th>Name</th><th>county_eal (sum)</th><th>mean risk</th></tr></thead>
                     <tbody>${ealRows || `<tr><td colspan="5">—</td></tr>`}</tbody>
                 </table>
+                <div class="exp-card__meta" style="margin-top:6px">Totals are sums of block-group <code>eal</code> within each county. <span class="exp-card__tag">#2</span></div>
             </div>
             <div class="exp-table-wrap">
-                <div class="exp-table-wrap__title">Exp5 – Within-county heterogeneity (selected)</div>
-                <table class="exp-table" aria-label="Experiment 5 within-county heterogeneity">
+                <div class="exp-table-wrap__title">How uneven is risk within a county?</div>
+                <table class="exp-table" aria-label="Within-county heterogeneity (selected)">
                     <thead><tr><th>County</th><th>Name</th><th>Block mean</th><th>Block max</th><th>Max/Mean</th><th>Top-10% share</th></tr></thead>
                     <tbody>${hetRows || `<tr><td colspan="6">—</td></tr>`}</tbody>
                 </table>
+                <div class="exp-card__meta" style="margin-top:6px">Higher “Max/Mean” and “Top‑10% share” means a few hot spots dominate. <span class="exp-card__tag">#5</span></div>
             </div>
         </div>
     `;
