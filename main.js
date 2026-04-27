@@ -11,7 +11,7 @@ const MAP_PANELS = [
 // HTML is authored here so we can mix bullets + inline <code> + bold/colored section headers.
 const PANEL_DETAIL_HTML = {
     eal_norm: `
-        <p class="map-calc__lede"><span class="metric-accent metric-accent-el"><b>Expected Annual Loss is our “economic consequence” view:</b></span> how much $ loss we expect in a typical year for each block group</p>
+        <p class="map-calc__lede"><span class="metric-accent metric-accent-el"><b>Expected Annual Loss is our “economic consequence” view:</b></span> <b>how much $ loss we expect in a typical year for each block group</b></p>
         <div class="map-calc__subhead"><b>Calculation</b></div>
         <ul class="map-calc__sublist">
             <li class="map-calc__item">Two numbers exist: <code class="map-calc__inline">eal</code> (USD) and <code class="map-calc__inline">eal_norm</code> (0–1).</li>
@@ -35,7 +35,7 @@ const PANEL_DETAIL_HTML = {
         </ul>
     `,
     risk_score: `
-        <p class="map-calc__lede"><span class="metric-accent metric-accent-risk"><b>Risk is the “overall ranking” score:</b></span> where is wildfire risk comparatively higher inside a county?</p>
+        <p class="map-calc__lede"><span class="metric-accent metric-accent-risk"><b>Risk is the “overall ranking” score:</b></span> <b>where is wildfire risk comparatively higher inside a county?</b></p>
         <div class="map-calc__subhead"><b>Conceptual model</b></div>
         <ul class="map-calc__sublist">
             <li class="map-calc__item">Hazard = how fire-prone the place is.</li>
@@ -67,7 +67,7 @@ const PANEL_DETAIL_HTML = {
         </ul>
     `,
     hazard_score: `
-        <p class="map-calc__lede"><span class="metric-accent metric-accent-hazard"><b>Hazard asks:</b></span> is this place physically conducive to wildfire?</p>
+        <p class="map-calc__lede"><span class="metric-accent metric-accent-hazard"><b>Hazard asks:</b></span> <b>is this place physically conducive to wildfire?</b></p>
         <div class="map-calc__subhead"><b>Three building blocks</b></div>
         <ul class="map-calc__sublist">
             <li class="map-calc__item">Wildfire probability (<code class="map-calc__inline">hazard_wildfire</code>)</li>
@@ -94,7 +94,7 @@ const PANEL_DETAIL_HTML = {
         </ul>
     `,
     exposure_score: `
-        <p class="map-calc__lede"><span class="metric-accent metric-accent-exposure"><b>Exposure asks:</b></span> how much is in the way if a fire happens?</p>
+        <p class="map-calc__lede"><span class="metric-accent metric-accent-exposure"><b>Exposure asks:</b></span> <b>how much is in the way if a fire happens?</b></p>
         <div class="map-calc__subhead"><b>What counts as “exposed” here</b></div>
         <ul class="map-calc__sublist">
             <li class="map-calc__item">People (<code class="map-calc__inline">exposure_population</code>)</li>
@@ -120,7 +120,7 @@ const PANEL_DETAIL_HTML = {
         </ul>
     `,
     vulnerability_score: `
-        <p class="map-calc__lede"><span class="metric-accent metric-accent-vulnerability"><b>Vulnerability asks:</b></span> if a fire happens, who might face a harder time responding?</p>
+        <p class="map-calc__lede"><span class="metric-accent metric-accent-vulnerability"><b>Vulnerability asks:</b></span> <b>if a fire happens, who might face a harder time responding?</b></p>
         <div class="map-calc__subhead"><b>The three signals</b></div>
         <ul class="map-calc__sublist">
             <li class="map-calc__item">Poverty share (<code class="map-calc__inline">vuln_poverty</code>)</li>
@@ -142,7 +142,7 @@ const PANEL_DETAIL_HTML = {
         </ul>
     `,
     resilience_score: `
-        <p class="map-calc__lede"><span class="metric-accent metric-accent-resilience"><b>Resilience asks:</b></span> how much response capacity is nearby, and how connected is the area?</p>
+        <p class="map-calc__lede"><span class="metric-accent metric-accent-resilience"><b>Resilience asks:</b></span> <b>how much response capacity is nearby, and how connected is the area?</b></p>
         <div class="map-calc__subhead"><b>Three pieces of “capacity”</b></div>
         <ul class="map-calc__sublist">
             <li class="map-calc__item">Vehicle access (<code class="map-calc__inline">res_vehicle_access</code>)</li>
@@ -1221,10 +1221,10 @@ function renderExperimentsDashboard() {
     const exp1 = exp.experiment1_fema_nri || {};
     const exp2 = Array.isArray(exp.experiment2_county_eal_top10) ? exp.experiment2_county_eal_top10 : [];
 
-    const overlap = exp.experiment3_fire_overlap_ratio != null ? Number(exp.experiment3_fire_overlap_ratio).toFixed(3) : "—";
-    const auc = exp.experiment4_auc_score != null ? Number(exp.experiment4_auc_score).toFixed(3) : "—";
-    const conc = exp.experiment5_concentration != null ? Number(exp.experiment5_concentration).toFixed(3) : "—";
-    const gini = exp.experiment5_gini != null ? Number(exp.experiment5_gini).toFixed(3) : "—";
+    const overlap = exp.experiment3_fire_overlap_ratio != null ? Number(exp.experiment3_fire_overlap_ratio).toFixed(2) : "—";
+    const auc = exp.experiment4_auc_score != null ? Number(exp.experiment4_auc_score).toFixed(2) : "—";
+    const conc = exp.experiment5_concentration != null ? Number(exp.experiment5_concentration).toFixed(2) : "—";
+    const gini = exp.experiment5_gini != null ? Number(exp.experiment5_gini).toFixed(2) : "—";
 
     const countiesCompared = exp1.counties_compared != null ? String(exp1.counties_compared) : "—";
     const blocks = _mergedAllUiDoc.metrics.block_rows != null ? String(_mergedAllUiDoc.metrics.block_rows) : "—";
