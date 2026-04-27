@@ -11,7 +11,7 @@ const MAP_PANELS = [
 // HTML is authored here so we can mix bullets + inline <code> + bold/colored section headers.
 const PANEL_DETAIL_HTML = {
     eal_norm: `
-        <p class="map-calc__lede"><span class="metric-accent metric-accent-el"><b>Expected Annual Loss is our “economic consequence” view:</b></span> <b>how much $ loss we expect in a typical year for each block group</b></p>
+        <p class="map-calc__lede"><span class="metric-accent metric-accent-el"><b>Expected Annual Loss:</b></span> <b>is how much $ annual loss we expect for the block</b></p>
         <div class="map-calc__subhead"><b>Calculation</b></div>
         <ul class="map-calc__sublist">
             <li class="map-calc__item">Two numbers exist: <code class="map-calc__inline">eal</code> (USD) and <code class="map-calc__inline">eal_norm</code> (0–1).</li>
@@ -38,10 +38,10 @@ const PANEL_DETAIL_HTML = {
         <p class="map-calc__lede"><span class="metric-accent metric-accent-risk"><b>Risk is the “overall ranking” score:</b></span> <b>where is wildfire risk comparatively higher inside a county?</b></p>
         <div class="map-calc__subhead"><b>Conceptual model</b></div>
         <ul class="map-calc__sublist">
-            <li class="map-calc__item">Hazard = how fire-prone the place is.</li>
-            <li class="map-calc__item">Exposure = how many people/structures are in the way.</li>
-            <li class="map-calc__item">Vulnerability = who may be less able to cope/evacuate.</li>
-            <li class="map-calc__item">Resilience = response/recovery capacity (help close by).</li>
+            <li class="map-calc__item"><b>Hazard = how fire-prone the place is.</b></li>
+            <li class="map-calc__item"><b>Exposure = how many people/structures are in the way.</b></li>
+            <li class="map-calc__item"><b>Vulnerability = who may be less able to cope/evacuate.</b></li>
+            <li class="map-calc__item"><b>Resilience = response/recovery capacity (help close by).</b></li>
         </ul>
         <div class="map-calc__subhead"><b>The formula (why it behaves this way)</b></div>
         <ul class="map-calc__sublist">
@@ -68,11 +68,11 @@ const PANEL_DETAIL_HTML = {
     `,
     hazard_score: `
         <p class="map-calc__lede"><span class="metric-accent metric-accent-hazard"><b>Hazard asks:</b></span> <b>is this place physically conducive to wildfire?</b></p>
-        <div class="map-calc__subhead"><b>Three building blocks</b></div>
+        <div class="map-calc__subhead"><b>This comprises of:</b></div>
         <ul class="map-calc__sublist">
-            <li class="map-calc__item">Wildfire probability (<code class="map-calc__inline">hazard_wildfire</code>)</li>
-            <li class="map-calc__item">Fuel / vegetation proxy (<code class="map-calc__inline">hazard_vegetation</code>)</li>
-            <li class="map-calc__item">Proximity to forest-like land (<code class="map-calc__inline">hazard_forest_distance</code>)</li>
+            <li class="map-calc__item"><b>Wildfire probability</b> (<code class="map-calc__inline">hazard_wildfire</code>)</li>
+            <li class="map-calc__item"><b>Fuel / vegetation proxy</b> (<code class="map-calc__inline">hazard_vegetation</code>)</li>
+            <li class="map-calc__item"><b>Proximity to forest-like land</b> (<code class="map-calc__inline">hazard_forest_distance</code>)</li>
         </ul>
         <div class="map-calc__subhead"><b>Why there are “proxy” paths</b></div>
         <ul class="map-calc__sublist">
@@ -95,11 +95,11 @@ const PANEL_DETAIL_HTML = {
     `,
     exposure_score: `
         <p class="map-calc__lede"><span class="metric-accent metric-accent-exposure"><b>Exposure asks:</b></span> <b>how much is in the way if a fire happens?</b></p>
-        <div class="map-calc__subhead"><b>What counts as “exposed” here</b></div>
+        <div class="map-calc__subhead"><b>This comprises of:</b></div>
         <ul class="map-calc__sublist">
-            <li class="map-calc__item">People (<code class="map-calc__inline">exposure_population</code>)</li>
-            <li class="map-calc__item">Homes (<code class="map-calc__inline">exposure_housing</code>)</li>
-            <li class="map-calc__item">Residential value proxy (<code class="map-calc__inline">exposure_building_value</code>)</li>
+            <li class="map-calc__item"><b>People</b> (<code class="map-calc__inline">exposure_population</code>)</li>
+            <li class="map-calc__item"><b>Homes</b> (<code class="map-calc__inline">exposure_housing</code>)</li>
+            <li class="map-calc__item"><b>Residential value proxy</b> (<code class="map-calc__inline">exposure_building_value</code>)</li>
         </ul>
         <div class="map-calc__subhead"><b>Value proxy (why it’s reasonable)</b></div>
         <ul class="map-calc__sublist">
@@ -121,11 +121,11 @@ const PANEL_DETAIL_HTML = {
     `,
     vulnerability_score: `
         <p class="map-calc__lede"><span class="metric-accent metric-accent-vulnerability"><b>Vulnerability asks:</b></span> <b>if a fire happens, who might face a harder time responding?</b></p>
-        <div class="map-calc__subhead"><b>The three signals</b></div>
+        <div class="map-calc__subhead"><b>This comprises of:</b></div>
         <ul class="map-calc__sublist">
-            <li class="map-calc__item">Poverty share (<code class="map-calc__inline">vuln_poverty</code>)</li>
-            <li class="map-calc__item">Older adult share (<code class="map-calc__inline">vuln_elderly</code>)</li>
-            <li class="map-calc__item">Uninsured share (<code class="map-calc__inline">vuln_uninsured</code>)</li>
+            <li class="map-calc__item"><b>Poverty share</b> (<code class="map-calc__inline">vuln_poverty</code>)</li>
+            <li class="map-calc__item"><b>Older adult share</b> (<code class="map-calc__inline">vuln_elderly</code>)</li>
+            <li class="map-calc__item"><b>Uninsured share</b> (<code class="map-calc__inline">vuln_uninsured</code>)</li>
         </ul>
         <div class="map-calc__subhead"><b>Important direction rule (insurance)</b></div>
         <ul class="map-calc__sublist">
@@ -143,11 +143,11 @@ const PANEL_DETAIL_HTML = {
     `,
     resilience_score: `
         <p class="map-calc__lede"><span class="metric-accent metric-accent-resilience"><b>Resilience asks:</b></span> <b>how much response capacity is nearby, and how connected is the area?</b></p>
-        <div class="map-calc__subhead"><b>Three pieces of “capacity”</b></div>
+        <div class="map-calc__subhead"><b>This comprises of:</b></div>
         <ul class="map-calc__sublist">
-            <li class="map-calc__item">Vehicle access (<code class="map-calc__inline">res_vehicle_access</code>)</li>
-            <li class="map-calc__item">Median household income (<code class="map-calc__inline">res_median_household_income</code>)</li>
-            <li class="map-calc__item">Internet access (<code class="map-calc__inline">res_internet_access</code>)</li>
+            <li class="map-calc__item"><b>Vehicle access</b> (<code class="map-calc__inline">res_vehicle_access</code>)</li>
+            <li class="map-calc__item"><b>Median household income</b> (<code class="map-calc__inline">res_median_household_income</code>)</li>
+            <li class="map-calc__item"><b>Internet access</b> (<code class="map-calc__inline">res_internet_access</code>)</li>
         </ul>
         <div class="map-calc__subhead"><b>How to interpret the direction</b></div>
         <ul class="map-calc__sublist">
