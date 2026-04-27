@@ -1221,13 +1221,23 @@ function renderExperimentsDashboard() {
     const exp1 = exp.experiment1_fema_nri || {};
     const exp2 = Array.isArray(exp.experiment2_county_eal_top10) ? exp.experiment2_county_eal_top10 : [];
 
-    const overlap = exp.experiment3_fire_overlap_ratio != null ? Number(exp.experiment3_fire_overlap_ratio).toFixed(2) : "—";
-    const auc = exp.experiment4_auc_score != null ? Number(exp.experiment4_auc_score).toFixed(2) : "—";
-    const conc = exp.experiment5_concentration != null ? Number(exp.experiment5_concentration).toFixed(2) : "—";
-    const gini = exp.experiment5_gini != null ? Number(exp.experiment5_gini).toFixed(2) : "—";
+    const overlapNum = exp.experiment3_fire_overlap_ratio != null ? Number(exp.experiment3_fire_overlap_ratio) : null;
+    const aucNum = exp.experiment4_auc_score != null ? Number(exp.experiment4_auc_score) : null;
+    const concNum = exp.experiment5_concentration != null ? Number(exp.experiment5_concentration) : null;
+    const giniNum = exp.experiment5_gini != null ? Number(exp.experiment5_gini) : null;
+
+    const overlap = overlapNum != null && Number.isFinite(overlapNum) ? overlapNum.toFixed(2) : "—";
+    const auc = aucNum != null && Number.isFinite(aucNum) ? aucNum.toFixed(2) : "—";
+    const conc = concNum != null && Number.isFinite(concNum) ? concNum.toFixed(2) : "—";
+    const gini = giniNum != null && Number.isFinite(giniNum) ? giniNum.toFixed(2) : "—";
+
+    const concPct = concNum != null && Number.isFinite(concNum) ? Math.round(concNum * 100) : null;
+    const overlapPct = overlapNum != null && Number.isFinite(overlapNum) ? Math.round(overlapNum * 100) : null;
 
     const countiesCompared = exp1.counties_compared != null ? String(exp1.counties_compared) : "—";
-    const blocks = _mergedAllUiDoc.metrics.block_rows != null ? String(_mergedAllUiDoc.metrics.block_rows) : "—";
+    const blocksRaw = _mergedAllUiDoc.metrics.block_rows != null ? _mergedAllUiDoc.metrics.block_rows : null;
+    const blocksNum = blocksRaw != null ? Number(blocksRaw) : NaN;
+    const blocks = Number.isFinite(blocksNum) ? blocksNum.toLocaleString() : "—";
 
     const labelsSrc = String(exp.fire_labels_source || "UNKNOWN");
 
@@ -1235,28 +1245,23 @@ function renderExperimentsDashboard() {
         <div class="exp-cards">
             <div class="exp-card">
                 <div class="exp-card__title">Coverage</div>
-                <div class="exp-card__value">${_escapeHtml(countiesCompared)}</div>
-                <div class="exp-card__meta">counties in FEMA join; blocks in bundle: <b>${_escapeHtml(blocks)}</b></div>
+                <div class="exp-card__value">${_escapeHtml(countiesCompared)}${countiesCompared === "—" ? "" : " counties"}</div>
+                <div class="exp-card__meta"><b>covering ${_escapeHtml(blocks)} blocks</b></div>
             </div>
             <div class="exp-card">
-                <div class="exp-card__title">Does “high risk” match fire history?</div>
+                <div class="exp-card__title">Does “high Risk” match &quot;fire history&quot; ?</div>
                 <div class="exp-card__value">AUC ${_escapeHtml(auc)}</div>
-                <div class="exp-card__meta">Overlap (top 10%) <b>${_escapeHtml(overlap)}</b>; labels: ${_escapeHtml(labelsSrc)} <span class="exp-card__tag">#3–#4</span></div>
+                <div class="exp-card__meta"><b>AUC (Area Under Curve)</b> asks: if you compare one burned and one unburned spot, does the burned one have the higher score? <b>${_escapeHtml(auc)}</b> ≈ yes ~${_escapeHtml(auc)} of the time; 0.5 = there is no relation; 1 = perfect relation.</div>
             </div>
             <div class="exp-card">
-                <div class="exp-card__title">Are “hot spots” concentrated?</div>
+                <div class="exp-card__title">Are “hot spots (top 10% risk)” concentrated ?</div>
                 <div class="exp-card__value">${_escapeHtml(conc)}</div>
-                <div class="exp-card__meta">Share of risk in top 10% areas; Gini ${_escapeHtml(gini)} <span class="exp-card__tag">#5</span></div>
+                <div class="exp-card__meta">This means that <b>Risk isn’t spread out evenly:</b> ${concPct != null ? `<b>${_escapeHtml(concPct)}%</b>` : "<b>—</b>"} of total risk is captured by the top 10% riskiest blocks.</div>
             </div>
             <div class="exp-card">
-                <div class="exp-card__title">What AUC means (quick)</div>
-                <div class="exp-card__value">${_escapeHtml(auc)}</div>
-                <div class="exp-card__meta">0.5 = random ranking, 1.0 = perfect separation of burned vs unburned <span class="exp-card__tag">#4</span></div>
-            </div>
-            <div class="exp-card">
-                <div class="exp-card__title">How overlap is computed</div>
+                <div class="exp-card__title">&quot;Overlap&quot; - &quot;burnt area&quot; and &quot;hot spot&quot; ?</div>
                 <div class="exp-card__value">${_escapeHtml(overlap)}</div>
-                <div class="exp-card__meta">Among the top 10% highest-risk areas, what fraction intersected a historical fire perimeter? <span class="exp-card__tag">#3</span></div>
+                <div class="exp-card__meta"><b>Overlap</b> = how much the “burned” set lands inside the “hotspot” (i.e. top 10% risk) set. <b>${_escapeHtml(overlap)}</b> means the hotspot set captures about ${overlapPct != null ? `<b>${_escapeHtml(overlapPct)}%</b>` : "<b>—</b>"} of burned block groups.</div>
             </div>
         </div>
     `;

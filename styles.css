@@ -113,7 +113,8 @@ button {
 
 .exp-cards {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    /* Favor card 4 width; keep cards aligned in one row. */
+    grid-template-columns: 0.75fr 1fr 1.1fr 1.15fr;
     gap: 10px;
 }
 

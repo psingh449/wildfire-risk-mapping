@@ -110,11 +110,11 @@
             </ul>
             <div class="map-detail-legend__subhead"><b>Data source</b></div>
             <ul class="map-detail-legend__bullets" role="list">
-                <li><code>[src:census]</code>: decennial Census API (population / housing). <a href="https://api.census.gov/data/2020/dec/pl" target="_blank" rel="noreferrer">https://api.census.gov/data/2020/dec/pl</a></li>
-                <li><code>[src:acs]</code>: ACS API (poverty, elderly, uninsured, income, home value, internet, etc.). <a href="https://api.census.gov/data/2021/acs/acs5" target="_blank" rel="noreferrer">https://api.census.gov/data/2021/acs/acs5</a></li>
+                <li><code>[src:census]</code>: decennial Census API (population / housing). <a href="https://api.census.gov/data/2020/dec/pl" target="_blank" rel="noreferrer noopener">https://api.census.gov/data/2020/dec/pl</a></li>
+                <li><code>[src:acs]</code>: ACS API (poverty, elderly, uninsured, income, home value, internet, etc.). <a href="https://api.census.gov/data/2021/acs/acs5" target="_blank" rel="noreferrer noopener">https://api.census.gov/data/2021/acs/acs5</a></li>
                 <li><code>[src:whp]</code>: wildfire hazard product (downloaded raster; not a live API).</li>
-                <li><code>[src:hifld]</code>: HIFLD open data (facilities/access layers). <a href="https://hifld-geoplatform.opendata.arcgis.com/" target="_blank" rel="noreferrer">https://hifld-geoplatform.opendata.arcgis.com/</a></li>
-                <li><code>[src:osm]</code>: OpenStreetMap data (roads/connectivity proxy). <a href="https://overpass-api.de/api/interpreter" target="_blank" rel="noreferrer">https://overpass-api.de/api/interpreter</a></li>
+                <li><code>[src:hifld]</code>: HIFLD open data (facilities/access layers). <a href="https://hifld-geoplatform.opendata.arcgis.com/" target="_blank" rel="noreferrer noopener">https://hifld-geoplatform.opendata.arcgis.com/</a></li>
+                <li><code>[src:osm]</code>: OpenStreetMap data (roads/connectivity proxy). <a href="https://overpass-api.de/api/interpreter" target="_blank" rel="noreferrer noopener">https://overpass-api.de/api/interpreter</a></li>
                 <li><code>[px:…]</code>: “proxy path” used when a primary dataset is missing at build time (still informative, but flagged).</li>
                 <li><code>[est:county-mean]</code>: county-mean imputation used (e.g., missing block-group median).</li>
                 <li><code>[est:tract]</code>: tract-level value assigned down to block groups when block-group ACS is missing.</li>
@@ -126,12 +126,6 @@
                 <li>Some ACS tables come back as all-null at block group for a county.</li>
                 <li>When that happens, we use tract-level values and assign them to block groups in that tract (debug tag <code>[est:tract]</code>).</li>
                 <li>Turn on <code>?debug=1</code> to see tags like <code>[src:acs]</code>, <code>[est:county-mean]</code>, <code>[missing]</code>.</li>
-            </ul>
-            <div class="map-detail-legend__subhead"><b>Evaluation dashboard</b></div>
-            <ul class="map-detail-legend__bullets" role="list">
-                <li><b>#2 (Largest losses)</b>: which counties have the highest expected annual loss (EAL) in our model?</li>
-                <li><b>#3–#4 (Fire overlap / AUC)</b>: top-10% overlap with fire perimeters and AUC of <code>risk_score</code> for burned vs not burned.</li>
-                <li><b>#5 (Concentration / heterogeneity)</b>: statewide concentration (Gini, top-10% share) and <b>one example row</b> of within-county unevenness (San Diego when present).</li>
             </ul>
             <div class="map-detail-legend__subhead"><b>Miscellaneous</b></div>
             <ul class="map-detail-legend__bullets" role="list">
