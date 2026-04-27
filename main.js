@@ -13,18 +13,9 @@ const PANEL_DETAIL_HTML = {
     eal_norm: `
         <p class="map-calc__lede"><span class="metric-accent metric-accent-el"><b>Expected Annual Loss:</b></span> <b>is how much $ annual loss we expect for the block</b></p>
         <div class="map-calc__subhead"><b>Calculation</b></div>
-        <ul class="map-calc__sublist">
-            <li class="map-calc__item">Two numbers exist: <code class="map-calc__inline">eal</code> (USD) and <code class="map-calc__inline">eal_norm</code> (0–1).</li>
-            <li class="map-calc__item">This panel maps <code class="map-calc__inline">eal_norm</code> so the choropleth has contrast even when dollar values span huge ranges.</li>
-            <li class="map-calc__item">Interpretation: darker = higher expected annual loss (relative within the run), not “guaranteed loss.”</li>
-        </ul>
-        <div class="map-calc__subhead"><b>How Expected Annual Loss built</b></div>
-        <ul class="map-calc__sublist">
-            <li class="map-calc__item">compute overall Risk on 0–1.</li>
-            <li class="map-calc__item">estimate “value at stake” (<code class="map-calc__inline">exposure_building_value</code>).</li>
-            <li class="map-calc__item">multiply: <code class="map-calc__inline">eal = risk_score × exposure_building_value</code></li>
-            <li class="map-calc__item">Then rescale for the map: <code class="map-calc__inline">eal_norm = (eal − min) / (max − min)</code></li>
-            <li class="map-calc__item"><b>Why normalize?</b> Without it, almost every block group would look the same color when a few very-large-dollar areas dominate the scale.</li>
+        <ul class="map-calc__sublist map-calc__list--tight">
+            <li class="map-calc__item"><b>Expected Annual Loss = Risk x Number of Housing Units x Median Home Value</b></li>
+            <li class="map-calc__item"><code class="map-calc__inline">eal = risk_score × exposure_building_value</code></li>
         </ul>
         <div class="map-calc__subhead"><b>Relevant code / fields</b></div>
         <ul class="map-calc__sublist">
@@ -37,25 +28,9 @@ const PANEL_DETAIL_HTML = {
     risk_score: `
         <p class="map-calc__lede"><span class="metric-accent metric-accent-risk"><b>Risk is the “overall ranking” score:</b></span> <b>where is wildfire risk comparatively higher inside a county?</b></p>
         <div class="map-calc__subhead"><b>Conceptual model</b></div>
-        <ul class="map-calc__sublist">
-            <li class="map-calc__item"><b>Hazard = how fire-prone the place is.</b></li>
-            <li class="map-calc__item"><b>Exposure = how many people/structures are in the way.</b></li>
-            <li class="map-calc__item"><b>Vulnerability = who may be less able to cope/evacuate.</b></li>
-            <li class="map-calc__item"><b>Resilience = response/recovery capacity (help close by).</b></li>
-        </ul>
-        <div class="map-calc__subhead"><b>The formula (why it behaves this way)</b></div>
-        <ul class="map-calc__sublist">
+        <ul class="map-calc__sublist map-calc__list--tight">
+            <li class="map-calc__item"><b>Risk = Hazard x Exposure x Vulnerability x (1 - Resilience)</b></li>
             <li class="map-calc__item"><code class="map-calc__inline">risk_score = hazard_score × exposure_score × vulnerability_score × (1 − resilience_score)</code></li>
-            <li class="map-calc__item">Multiplication matters: if any component is near 0, overall risk shrinks fast.</li>
-            <li class="map-calc__item">Resilience reduces risk: bigger resilience ⇒ bigger <code class="map-calc__inline">(1 − resilience)</code> reduction.</li>
-            <li class="map-calc__item">Practical consequence: values can be very small (e.g., <code class="map-calc__inline">0.003</code>), especially when all components are fractions.</li>
-        </ul>
-        <div class="map-calc__subhead"><b>How to read the colors</b></div>
-        <ul class="map-calc__sublist">
-            <li class="map-calc__item">The number is always the same raw value (<code class="map-calc__inline">risk_score</code>).</li>
-            <li class="map-calc__item">The colors are stretched within the selected county so tiny-but-real differences remain visible.</li>
-            <li class="map-calc__item">This is visual scaling only (no additional <code class="map-calc__inline">risk_score_norm</code> column is created).</li>
-            <li class="map-calc__item">If you switch counties, the Risk colors can shift because the min/max window changes — that’s expected.</li>
         </ul>
         <div class="map-calc__subhead"><b>Relevant code / fields</b></div>
         <ul class="map-calc__sublist">
