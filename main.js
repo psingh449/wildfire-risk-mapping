@@ -1294,18 +1294,18 @@ function renderExperimentsDashboard() {
             <div class="exp-table-wrap">
                 <div class="exp-table-wrap__title">Largest expected losses (top 3)</div>
                 <table class="exp-table" aria-label="County expected annual loss ranking (top 3)">
-                    <thead><tr><th>#</th><th>County</th><th>Name</th><th>county_eal (sum)</th><th>mean risk</th></tr></thead>
+                    <thead><tr><th>#</th><th>County</th><th>Name</th><th>Expected loss</th><th>mean risk</th></tr></thead>
                     <tbody>${ealRows || `<tr><td colspan="5">—</td></tr>`}</tbody>
                 </table>
-                <div class="exp-card__meta" style="margin-top:6px">Totals are sums of block-group <code>eal</code> within each county. <span class="exp-card__tag">#2</span></div>
+                <div class="exp-card__meta" style="margin-top:6px"></div>
             </div>
             <div class="exp-table-wrap">
-                <div class="exp-table-wrap__title">How uneven is risk within a county? (one row)</div>
+                <div class="exp-table-wrap__title">How uneven is risk within a county?</div>
                 <table class="exp-table" aria-label="Within-county heterogeneity (one row)">
                     <thead><tr><th>County</th><th>Name</th><th>Block mean</th><th>Block max</th><th>Max/Mean</th><th>Top-10% share</th></tr></thead>
                     <tbody>${hetRows || `<tr><td colspan="6">—</td></tr>`}</tbody>
                 </table>
-                <div class="exp-card__meta" style="margin-top:6px">Higher “Max/Mean” and “Top‑10% share” means a few hot spots dominate. <span class="exp-card__tag">#5</span></div>
+                <div class="exp-card__meta" style="margin-top:6px">Higher “Max/Mean” and “Top‑10% share” means a few hot spots dominate.</div>
             </div>
         </div>
     `;
